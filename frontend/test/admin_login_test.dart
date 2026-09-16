@@ -25,7 +25,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Lamazon admin'), findsOneWidget);
+    expect(find.text('Unimiunte admin'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Username'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
     expect(find.text('Sign in'), findsOneWidget);

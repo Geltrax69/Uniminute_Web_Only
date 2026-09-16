@@ -11,9 +11,9 @@ import 'package:lamazon/widgets/banner_media.dart';
 /// the way out, and a clip must never be the reason the home screen is blank.
 
 const _cloud = 'https://res.cloudinary.com/dq3da5bkb';
-const _photo = '$_cloud/image/upload/v1/Lamazon/Campaigns/diwali.jpg';
-const _gif = '$_cloud/image/upload/v1/Lamazon/Campaigns/diwali.gif';
-const _clip = '$_cloud/video/upload/v1/Lamazon/Campaigns/diwali.mp4';
+const _photo = '$_cloud/image/upload/v1/Unimiunte/Campaigns/diwali.jpg';
+const _gif = '$_cloud/image/upload/v1/Unimiunte/Campaigns/diwali.gif';
+const _clip = '$_cloud/video/upload/v1/Unimiunte/Campaigns/diwali.mp4';
 
 String _urlOf(WidgetTester tester) =>
     (tester.widget<Image>(find.byType(Image)).image as NetworkImage).url;
@@ -52,7 +52,7 @@ void main() {
     expect(moving, contains('ac_none'), reason: 'a shop must not make a noise');
     expect(
       moving,
-      endsWith('/v1/Lamazon/Campaigns/diwali.gif'),
+      endsWith('/v1/Unimiunte/Campaigns/diwali.gif'),
       reason: 'the original is still what is addressed',
     );
   });
@@ -84,7 +84,7 @@ void main() {
     final video = bannerVideo(_clip);
     expect(video, contains('ac_none'));
     expect(video, contains('c_limit,w_1280'));
-    expect(video, endsWith('/v1/Lamazon/Campaigns/diwali.mp4'));
+    expect(video, endsWith('/v1/Unimiunte/Campaigns/diwali.mp4'));
   });
 
   test('what is not ours, and what is already done, is left alone', () {

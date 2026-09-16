@@ -122,7 +122,7 @@ class MyOrders extends ChangeNotifier {
       _error = null;
     } catch (e) {
       logApiFailure('my orders', e);
-      _error = 'Could not reach Lamazon — try again in a moment.';
+      _error = 'Could not reach Unimiunte — try again in a moment.';
     }
     _loading = false;
     notifyListeners();

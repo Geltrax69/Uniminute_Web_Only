@@ -455,13 +455,13 @@ class _ServiceHeader extends StatelessWidget {
                   // shop's name is its h1 — without one a screen reader has no
                   // top of page to jump to. It sits outside the address
                   // control rather than inside it: a heading that is also a
-                  // button is neither, and tapping the word "Lamazon" opened
+                  // button is neither, and tapping the word "Unimiunte" opened
                   // the address picker, which it has nothing to do with.
                   Semantics(
                     headingLevel: 1,
                     container: true,
                     child: Text(
-                      'Lamazon',
+                      'Unimiunte',
                       style: TextStyle(
                         fontFamily: 'InterTight',
                         fontSize: 22,

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.lamazon" "\0"
-            VALUE "FileDescription", "lamazon" "\0"
+            VALUE "FileDescription", "Unimiunte" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "lamazon" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.lamazon. All rights reserved." "\0"
             VALUE "OriginalFilename", "lamazon.exe" "\0"
-            VALUE "ProductName", "lamazon" "\0"
+            VALUE "ProductName", "Unimiunte" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

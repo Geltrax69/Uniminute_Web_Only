@@ -16,7 +16,7 @@ firebase.initializeApp(self.lamazonFirebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.info('[Lamazon push] background FCM payload', payload);
+  console.info('[Unimiunte push] background FCM payload', payload);
   showLamazonNotification({ ...(payload.notification || {}), ...(payload.data || {}) });
 });
 
@@ -47,7 +47,7 @@ function showLamazonNotification(payload) {
   // Telling the page it was drawn separates "push is broken" from "you did
   // not tap it" — two very different problems that looked identical before.
   if (confirm) tellClients({ type: 'push-delivered' });
-  return self.registration.showNotification(payload.title || 'Lamazon', options);
+  return self.registration.showNotification(payload.title || 'Unimiunte', options);
 }
 
 function tellClients(message) {

@@ -145,7 +145,7 @@ class HelpScreen extends StatelessWidget {
                     const SizedBox(height: 22),
                     Center(
                       child: Text(
-                        'Lamazon · ${AppInfo.version}',
+                        'Unimiunte · ${AppInfo.version}',
                         style: TextStyle(
                           fontSize: 12,
                           color: LamazonTheme.muted,

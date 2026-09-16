@@ -273,12 +273,12 @@ class ProfileScreen extends StatelessWidget {
                         label: 'About us',
                         onTap: () => showAboutDialog(
                           context: context,
-                          applicationName: 'Lamazon',
+                          applicationName: 'Unimiunte',
                         ),
                       ),
                       _Row(
                         icon: LucideIcons.store,
-                        label: _sells ? 'Your store' : 'Sell on Lamazon',
+                        label: _sells ? 'Your store' : 'Sell on Unimiunte',
                         onTap: () => _openSeller(context),
                       ),
                     ],
@@ -314,7 +314,7 @@ class ProfileScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           const Text(
-                            'Lamazon',
+                            'Unimiunte',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,

@@ -13,7 +13,7 @@ import 'home_screen.dart';
 import 'policy_screen.dart';
 import 'profile_setup_screen.dart';
 
-/// Opening screen: drifting product tiles, the Lamazon mark, and an email
+/// Opening screen: drifting product tiles, the Unimiunte mark, and an email
 /// sign-in that can be skipped.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

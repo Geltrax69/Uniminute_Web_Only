@@ -91,7 +91,7 @@ class LamazonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Lamazon',
+      title: 'Unimiunte',
       debugShowCheckedModeBanner: false,
       theme: LamazonTheme.data,
       // Shared responsive canvas; individual screens choose their reading width.

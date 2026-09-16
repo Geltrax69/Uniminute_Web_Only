@@ -32,7 +32,7 @@ class Product {
     this.availableStock,
     this.mrp = 0,
     required this.imageUrl,
-    this.store = 'Lamazon Store',
+    this.store = 'Unimiunte Store',
     required this.description,
     this.sizes = const [],
     this.extraImages = const [],

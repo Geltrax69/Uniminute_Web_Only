@@ -3,14 +3,14 @@ import 'package:lamazon/data/catalog.dart';
 
 void main() {
   const cloud =
-      'https://res.cloudinary.com/dq3da5bkb/image/upload/v1786549855/Lamazon/PURE_BITES/burger.png';
+      'https://res.cloudinary.com/dq3da5bkb/image/upload/v1786549855/Unimiunte/PURE_BITES/burger.png';
 
   test('an upload is padded to a square for a tile', () {
     expect(
       padded(cloud),
       'https://res.cloudinary.com/dq3da5bkb/image/upload/'
       'c_pad,w_512,h_512,b_rgb:$padFill,f_auto,q_auto/'
-      'v1786549855/Lamazon/PURE_BITES/burger.png',
+      'v1786549855/Unimiunte/PURE_BITES/burger.png',
     );
   });
 

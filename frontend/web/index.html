@@ -44,7 +44,7 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Lamazon">
+  <meta name="apple-mobile-web-app-title" content="Unimiunte">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -62,7 +62,7 @@
   <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <link rel="dns-prefetch" href="https://api.geltrax.engineer">
 
-  <title>Lamazon</title>
+  <title>Unimiunte</title>
   <link rel="manifest" href="manifest.json">
   <!-- Render at no more than 2x, whatever the screen reports.
        CanvasKit rasterises the whole scene itself every frame; there is no
@@ -112,7 +112,7 @@
 
     if (!app) {
       console.warn(
-        'Lamazon: firebase-env.js did not load, so push is off for this ' +
+        'Unimiunte: firebase-env.js did not load, so push is off for this ' +
         'build. Deploy it alongside index.html.',
       );
     }
@@ -137,10 +137,10 @@
       if (!foregroundHandlerReady) {
         foregroundHandlerReady = true;
         onMessage(messaging, (payload) => {
-          console.info('[Lamazon push] foreground FCM payload', payload);
+          console.info('[Unimiunte push] foreground FCM payload', payload);
           const data = payload?.data || {};
           const notification = payload?.notification || {};
-          const title = data.title || notification.title || 'Lamazon';
+          const title = data.title || notification.title || 'Unimiunte';
           const body = data.body || notification.body || '';
           const confirm = data.confirm === 'true' || data.confirm === true;
           if (title || body) {
@@ -155,7 +155,7 @@
                 : [],
               requireInteraction: confirm,
             }).catch((error) => {
-              console.error('[Lamazon push] showNotification failed', error);
+              console.error('[Unimiunte push] showNotification failed', error);
               if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification(title, { body, icon: '/icons/Icon-192.png' });
               }
@@ -231,8 +231,8 @@
       #boot .bar i { animation: none; width: 100%; opacity: .55; }
     }
   </style>
-  <div id="boot" role="status" aria-live="polite" aria-label="Loading Lamazon">
-    <div class="mark">Lamazon<span>.</span></div>
+  <div id="boot" role="status" aria-live="polite" aria-label="Loading Unimiunte">
+    <div class="mark">Unimiunte<span>.</span></div>
     <div class="bar"><i></i></div>
     <div class="line">Local choice. Global experience.</div>
   </div>

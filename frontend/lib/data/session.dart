@@ -90,7 +90,7 @@ class Session extends ChangeNotifier {
     await AddressBook.instance.load();
     // The store lives on the server, so a fresh sign-in has to fetch it.
     // Without this the app forgets someone is a seller the moment they log
-    // out, and offers them "Sell on Lamazon" for a store they already have.
+    // out, and offers them "Sell on Unimiunte" for a store they already have.
     if (isSeller) await Seller.instance.load();
   }
 

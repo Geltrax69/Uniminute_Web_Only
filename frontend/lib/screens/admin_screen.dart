@@ -132,7 +132,7 @@ class _AdminLoginState extends State<_AdminLogin> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Lamazon admin',
+                      'Unimiunte admin',
                       textAlign: TextAlign.center,
                       style: LamazonTheme.titleText,
                     ),

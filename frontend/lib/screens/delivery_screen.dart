@@ -84,7 +84,7 @@ class _RiderLoginState extends State<_RiderLogin> {
                   const Icon(LucideIcons.bike, size: 40, color: _green),
                   const SizedBox(height: 16),
                   const Text(
-                    'Lamazon delivery',
+                    'Unimiunte delivery',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,

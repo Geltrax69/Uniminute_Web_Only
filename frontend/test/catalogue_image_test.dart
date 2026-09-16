@@ -9,7 +9,7 @@ import 'package:lamazon/widgets/design_system.dart';
 
 const _real =
     'https://res.cloudinary.com/dq3da5bkb/image/upload/'
-    'v1786549855/Lamazon/PURE_BITES/PURE_BITES_Aloo_TIkki_Burger_1.png';
+    'v1786549855/Unimiunte/PURE_BITES/PURE_BITES_Aloo_TIkki_Burger_1.png';
 
 void main() {
   test('every tile is asked for as a centred, filled square', () {
@@ -27,7 +27,7 @@ void main() {
     expect(
       catalogueImage(_real),
       contains(
-        'v1786549855/Lamazon/PURE_BITES/PURE_BITES_Aloo_TIkki_Burger_1.png',
+        'v1786549855/Unimiunte/PURE_BITES/PURE_BITES_Aloo_TIkki_Burger_1.png',
       ),
     );
     expect(

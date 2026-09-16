@@ -346,7 +346,7 @@ const products = [
         'Lightweight slip-on casual shoe in grey canvas with a cushioned '
         'insole and flexible rubber sole. Easy to pair with any outfit.',
     sizes: ['S', 'M', 'L', 'XL'],
-    offers: [ShopOffer('Urban Threads', 1099), ShopOffer('Lamazon Store', 949)],
+    offers: [ShopOffer('Urban Threads', 1099), ShopOffer('Unimiunte Store', 949)],
   ),
   Product(
     id: 'p3',

@@ -10,7 +10,7 @@ const shippedPolicies = <Map<String, String>>[
     'slug': 'terms',
     'title': 'Terms and Conditions',
     'body': '''## Who we are
-Lamazon is a campus marketplace, operated under the name Lamazon. Shops on
+Unimiunte is a campus marketplace, operated under the name Unimiunte. Shops on
 campus list what they sell, students and staff order it, and a delivery partner
 brings it across. We run the platform; we do not make or own the goods.
 
@@ -38,7 +38,7 @@ delivery is charged per order and the amount is shown before you place it. We
 may cancel an order that was listed at an incorrect price, and anything already
 paid is refunded in full.
 
-## Selling on Lamazon
+## Selling on Unimiunte
 Anyone on campus can open a store, and an admin reviews it before shoppers can
 see it. You are responsible for what you list: that it is yours to sell, that
 it is described honestly, and that it is safe to eat, use or wear. We can take
@@ -55,7 +55,7 @@ applicable Indian law, including the Consumer Protection Act, 2019.
 ## Changes
 We may update these terms. The latest version is always the one in the app, and
 the date it last changed is shown at the top of this page. If a change matters
-to how you use Lamazon we will say so before it takes effect.''',
+to how you use Unimiunte we will say so before it takes effect.''',
   },
   {
     'slug': 'privacy',
@@ -94,7 +94,7 @@ them to keep may remain with them.
 
 ## Who else sees it
 The shop you ordered from, the rider delivering it, and the services we use to
-run Lamazon:
+run Unimiunte:
 
 - Resend, to send sign-in codes and order email.
 - Cloudinary, to store and serve store and product photographs.
@@ -195,7 +195,7 @@ account page. With those two we can find anything.''',
 touch. We would rather hear about a problem than have you work around it.
 
 ## How to reach us
-- Reply to any Lamazon email you have had from us — a sign-in code or an order
+- Reply to any Unimiunte email you have had from us — a sign-in code or an order
   update. Replies reach the same inbox we answer from.
 - Use Help in the app, which opens this page and the rest of our policies.
 

@@ -51,7 +51,7 @@ void main() {
       await tester.pump();
 
       // The thing the header is actually for survived the removal.
-      expect(find.text('Lamazon'), findsWidgets);
+      expect(find.text('Unimiunte'), findsWidgets);
       expect(find.text('Choose delivery location'), findsOneWidget);
       // Its affordance travels with it.
       expect(find.byIcon(LucideIcons.chevronDown), findsWidgets);
