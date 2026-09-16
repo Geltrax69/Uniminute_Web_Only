@@ -79,22 +79,6 @@
       "destination": "/app/index.html"
     },
     {
-      "source": "/",
-      "destination": "https://api.geltrax.engineer/"
-    },
-    {
-      "source": "/search",
-      "destination": "https://api.geltrax.engineer/search"
-    },
-    {
-      "source": "/login",
-      "destination": "https://api.geltrax.engineer/login"
-    },
-    {
-      "source": "/p/:id",
-      "destination": "https://api.geltrax.engineer/p/:id"
-    },
-    {
       "source": "/(.*)",
       "destination": "/app/index.html"
     }
