@@ -1,0 +1,168 @@
+package pages
+
+// account.templ — ProfileScreen: who you are to the shop (id and role chips,
+// avatar, name, email), orders and help tiles, then menu cards for settings,
+// your information, the rest, and signing out.
+
+import (
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+templ AccountPage(p viewdata.Page) {
+	@layouts.Base(p.Title, p.Description, "", accountBody(p))
+}
+
+templ accountBody(p viewdata.Page) {
+	// On a desktop: who you are on the left, kept in view, and every menu on
+	// the right. A phone reads them as the app's one column.
+	<main id="main" class="mx-auto w-full max-w-readable px-4 pb-[calc(104px+env(safe-area-inset-bottom))] pt-2 lg:grid lg:max-w-[1000px] lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-gutter lg:pt-8">
+		<div class="lg:sticky lg:top-[104px] lg:rounded-featured lg:bg-surface lg:p-6 lg:shadow-surface">
+		<button
+			type="button"
+			x-data
+			x-on:click="history.length > 1 ? history.back() : location.assign('/')"
+			aria-label="Back"
+			class="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-white text-text lg:hidden">
+			@ui.Icon("arrow-left", "h-[18px] w-[18px]")
+		</button>
+		if p.User != nil {
+			<div class="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
+				if p.User.PublicID != "" {
+					@profileChip(p.User.PublicID, "#EDEDEA")
+				}
+				for _, role := range p.User.Roles {
+					@profileChip(tpl.When(role == "seller", "Seller", "Buyer"), tpl.When(role == "seller", "#DCEBD2", "#E3ECF6"))
+				}
+			</div>
+			if p.User.Phone != "" {
+				<p class="mt-1.5 text-center text-[13px] text-muted">{ p.User.Phone }</p>
+			}
+		}
+		<div class="mx-auto mt-[18px] flex h-[92px] w-[92px] items-center justify-center rounded-full bg-white text-text">
+			@ui.Icon("user", "h-11 w-11")
+		</div>
+		<h1 class="mt-3.5 text-center text-[24px] font-extrabold text-text">{ profileName(p) }</h1>
+		<p class="mt-1 text-center text-[14px] text-muted">{ tpl.When(p.User != nil, profileEmail(p), "Log in to view your complete profile") }</p>
+		<div class="h-[18px]"></div>
+		if p.User == nil {
+			<a href="/login?next=/account" class="flex w-full items-center justify-center rounded-small border border-strong py-[14px] text-[16px] font-bold text-strong hover:bg-strong/[.06]">Continue</a>
+		}
+		<div class="mt-3.5 flex gap-2.5">
+			@profileTile("package", "Your orders", "/orders")
+			@profileTile("message-circle", "Need help?", "/help")
+		</div>
+		</div>
+		<div class="lg:min-w-0">
+		<div class="mt-3.5 lg:mt-0">
+			@menuCard() {
+				@menuRow("settings", "Settings", "/settings", false)
+			}
+		</div>
+		@profileSection("Your information")
+		@menuCard() {
+			@menuRow("book-open", "Address book", "/addresses", false)
+			@menuDivider()
+			@menuRow("heart", "Saved items", "/saved", false)
+			@menuDivider()
+			@menuRow("bell", "Notifications", "/notifications", false)
+		}
+		@profileSection("Other information")
+		@menuCard() {
+			<button
+				type="button"
+				x-data
+				x-on:click="navigator.clipboard.writeText(location.origin).then(() => window.dispatchEvent(new CustomEvent('lw:toast', {detail: {message: 'App link copied'}})))"
+				class="flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-strong/[.04]">
+				@menuRowInner("share", "Share the app", false)
+			</button>
+			@menuDivider()
+			<div x-data>
+				<button type="button" x-on:click="$refs.about.showModal()" class="flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-strong/[.04]">
+					@menuRowInner("info", "About us", false)
+				</button>
+				<dialog x-ref="about" class="w-[min(360px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
+					<p class="text-title">Lamazon</p>
+					<div class="mt-6 flex justify-end">
+						<button type="button" x-on:click="$refs.about.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Close</button>
+					</div>
+				</dialog>
+			</div>
+			@menuDivider()
+			@menuRow("store", tpl.When(p.User != nil && p.User.HasStore, "Your store", "Sell on Lamazon"), "/seller", false)
+		}
+		if p.User != nil {
+			<div class="mt-3.5">
+				@menuCard() {
+					<form method="post" action="/logout">
+						<button type="submit" class="flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-danger/[.04]">
+							@menuRowInner("log-out", "Log out", true)
+						</button>
+					</form>
+				}
+			</div>
+		}
+		<div class="mt-[26px] p-4 text-center">
+			<p class="text-[24px] font-extrabold text-text">Lamazon</p>
+			<p class="mt-1 text-body text-muted">Version { tpl.AppVersion }</p>
+		</div>
+		</div>
+	</main>
+	@navigation.BottomNav(p, "account")
+}
+
+templ profileChip(label, colour string) {
+	<span class="rounded-[20px] px-2.5 py-1 text-[11.5px] font-bold text-text" style={ templ.SafeCSS("background-color:" + colour) }>{ label }</span>
+}
+
+templ profileTile(icon, label, href string) {
+	<a href={ templ.SafeURL(href) } class="flex min-w-0 flex-1 flex-col items-center rounded bg-white px-1.5 py-4 text-text hover:bg-[#FAFAF7]">
+		@ui.Icon(icon, "h-6 w-6")
+		<span class="mt-2.5 max-w-full truncate text-[12.5px] font-bold">{ label }</span>
+	</a>
+}
+
+templ profileSection(text string) {
+	<h2 class="px-1 pb-2.5 pt-5 text-[16px] font-extrabold text-text">{ text }</h2>
+}
+
+templ menuCard() {
+	<div class="overflow-hidden rounded bg-white">
+		{ children... }
+	</div>
+}
+
+templ menuDivider() {
+	<div class="ml-[52px] h-px bg-canvas"></div>
+}
+
+templ menuRow(icon, label, href string, danger bool) {
+	<a href={ templ.SafeURL(href) } class="flex min-h-14 items-center pl-4 pr-6 hover:bg-strong/[.04]">
+		@menuRowInner(icon, label, danger)
+	</a>
+}
+
+templ menuRowInner(icon, label string, danger bool) {
+	<span class={ "flex min-w-0 flex-1 items-center " + tpl.When(danger, "text-danger", "text-text") }>
+		@ui.Icon(icon, "h-5 w-5 shrink-0")
+		<span class="ml-5 truncate text-[14.5px] font-semibold">{ label }</span>
+	</span>
+	@ui.Icon("chevron-right", "ml-4 h-4 w-4 shrink-0 text-muted")
+}
+
+func profileName(p viewdata.Page) string {
+	if p.User != nil && p.User.Name != "" {
+		return p.User.Name
+	}
+	return "Your account"
+}
+
+func profileEmail(p viewdata.Page) string {
+	if p.User == nil {
+		return ""
+	}
+	return p.User.Email
+}

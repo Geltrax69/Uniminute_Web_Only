@@ -1,0 +1,48 @@
+package layouts
+
+// base.templ — the document skeleton every page renders inside. Fonts and
+// tokens come from tailwind.css (built from tailwind.config.js, which carries
+// the Flutter theme verbatim); htmx and alpine are vendored under /static/js.
+
+import (
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/tpl"
+)
+
+templ Base(title, description, canonical string, content templ.Component) {
+	<!doctype html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<meta name="description" content={ description }/>
+			if canonical != "" {
+				<link rel="canonical" href={ canonical }/>
+			}
+			<link rel="icon" href="/static/images/logo.png"/>
+			<link rel="preload" href="/static/fonts/InterTight-Variable.ttf" as="font" type="font/ttf" crossorigin/>
+			// tailwind.css is app.css compiled; app.css itself is only its source.
+			<link rel="stylesheet" href={ "/static/css/tailwind.css?v=" + tpl.AssetVersion }/>
+			<script src="/static/js/htmx.min.js" defer></script>
+			<script src={ "/static/js/app.js?v=" + tpl.AssetVersion } defer></script>
+			<script src="/static/js/alpine/cdn.min.js" defer></script>
+			// Chromium renders the next page before the click lands: the tabs as
+			// soon as a page is up, any other link on hover or press. Nothing
+			// that signs in or out, and no staff panel.
+			<script type="speculationrules">
+				{"prerender":[
+					{"where":{"selector_matches":"nav[aria-label^=Main] a"},"eagerness":"eager"},
+					{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/logout","/login*","/register","/admin*","/delivery*","/staff-api/*","/api/*","/seller*"]}}]},"eagerness":"moderate"}
+				]}
+			</script>
+		</head>
+		<body class="min-h-screen bg-canvas font-sans text-body leading-[1.2414] text-text antialiased">
+			<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-small focus:bg-surface focus:px-4 focus:py-2 focus:shadow-raised">Skip to content</a>
+			<div class="mx-auto min-h-screen w-full max-w-shell">
+				@content
+			</div>
+			@ui.ToastRegion()
+		</body>
+	</html>
+}

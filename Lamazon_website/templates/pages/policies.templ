@@ -1,0 +1,142 @@
+package pages
+
+// policies.templ — PolicyScreen and PolicyLinks from policy_screen.dart. A
+// policy is plain text with one piece of formatting: a block starting "## "
+// is a heading. Hard-wrapped lines join into paragraphs; list lines stay put.
+
+import (
+	"strings"
+
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/viewdata"
+)
+
+type PoliciesPageData struct {
+	Page     viewdata.Page
+	Policies []backend.Policy
+}
+
+templ PoliciesPage(d PoliciesPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, policiesBody(d)))
+}
+
+templ policiesBody(d PoliciesPageData) {
+	<main id="main" class="mx-auto w-full max-w-[700px] pb-6">
+		@navigation.ScreenHeader("Policies")
+		<div class="px-5 pt-1">
+			<div class="overflow-hidden rounded-[20px] bg-white">
+				for i, pol := range d.Policies {
+					if i > 0 {
+						<div class="ml-14 h-px bg-track"></div>
+					}
+					<a href={ templ.SafeURL("/policy/" + pol.Slug) } class="flex min-h-14 items-center pl-4 pr-6 hover:bg-strong/[.04]">
+						@ui.Icon(policyIcon(pol.Slug), "h-[19px] w-[19px] shrink-0 text-text")
+						<span class="ml-[21px] min-w-0 flex-1 truncate text-[14px] font-semibold text-text">{ pol.Title }</span>
+						@ui.Icon("chevron-right", "ml-4 h-4 w-4 shrink-0 text-muted")
+					</a>
+				}
+			</div>
+		</div>
+	</main>
+}
+
+type PolicyPageData struct {
+	Page   viewdata.Page
+	Policy backend.Policy
+}
+
+templ PolicyPage(d PolicyPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, policyBody(d)))
+}
+
+templ policyBody(d PolicyPageData) {
+	<main id="main" class="mx-auto w-full max-w-[700px] pb-8">
+		@navigation.ScreenHeader(d.Policy.Title)
+		<article class="px-5 pt-1">
+			if d.Policy.Published && !d.Policy.UpdatedAt.IsZero() {
+				<p class="mb-3.5 text-body text-muted">Last updated { d.Policy.UpdatedAt.Local().Format("2 January 2006") }</p>
+			}
+			for _, b := range policyBlocks(d.Policy.Body) {
+				if b.Heading {
+					<h2 class="pb-1.5 pt-[18px] text-[15px] font-extrabold text-text">{ b.Text }</h2>
+				} else {
+					<p class="mb-2.5 whitespace-pre-line text-[13.5px] leading-[1.55] text-[#3A3A3A]">{ b.Text }</p>
+				}
+			}
+		</article>
+	</main>
+}
+
+type policyBlock struct {
+	Heading bool
+	Text    string
+}
+
+// policyBlocks is PolicyBody: blank lines separate blocks, "## " marks a
+// heading, and a single line break becomes a space unless the next line is a
+// list item.
+func policyBlocks(body string) []policyBlock {
+	var out []policyBlock
+	for _, block := range splitBlankLines(body) {
+		trimmed := strings.TrimSpace(block)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "## ") {
+			// Deliberately not the app's behaviour: its PolicyBody styles the
+			// whole block as a heading, and the stored text puts each
+			// paragraph directly under its "## " line, so whole paragraphs
+			// came out bold. Only the "## " line is the heading here.
+			heading, rest, _ := strings.Cut(trimmed, "\n")
+			out = append(out, policyBlock{Heading: true, Text: strings.TrimSpace(heading[3:])})
+			if trimmed = strings.TrimSpace(rest); trimmed == "" {
+				continue
+			}
+		}
+		lines := strings.Split(trimmed, "\n")
+		var b strings.Builder
+		for i, line := range lines {
+			if i > 0 {
+				if strings.HasPrefix(line, "-") {
+					b.WriteString("\n")
+				} else {
+					b.WriteString(" ")
+				}
+			}
+			b.WriteString(line)
+		}
+		out = append(out, policyBlock{Text: b.String()})
+	}
+	return out
+}
+
+func splitBlankLines(s string) []string {
+	var blocks []string
+	var cur []string
+	for _, line := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n") {
+		if strings.TrimSpace(line) == "" {
+			blocks = append(blocks, strings.Join(cur, "\n"))
+			cur = nil
+			continue
+		}
+		cur = append(cur, line)
+	}
+	return append(blocks, strings.Join(cur, "\n"))
+}
+
+func policyIcon(slug string) string {
+	switch slug {
+	case "privacy":
+		return "shield-check"
+	case "shipping":
+		return "truck"
+	case "refunds":
+		return "receipt"
+	case "contact":
+		return "mail"
+	}
+	return "file-text"
+}

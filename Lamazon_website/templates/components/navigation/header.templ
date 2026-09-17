@@ -1,0 +1,71 @@
+package navigation
+
+// header.templ — the _ServiceHeader from home_screen.dart, ported line for
+// line: a forest (or season) card with the shop's name as the page's h1 and,
+// under it, the delivery location; then the search launch tile; then the
+// department strip. On the website the same chrome tops every shop page.
+
+import (
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/viewdata"
+)
+
+templ Header(p viewdata.Page) {
+	<header class="px-gutter pt-4" style={ p.SeasonCSS() }>
+		// The card a festival repaints: gradient ground, ink text, accent pin.
+		<div
+			class="rounded-featured p-4 pb-[15px] shadow-raised"
+			style="background-image:linear-gradient(135deg, var(--season-ground), var(--season-ground-shade))">
+			<div class="flex items-start justify-between gap-3">
+				<div class="min-w-0">
+					<h1 class="text-[22px] font-semibold leading-[28px] tracking-[-0.7px]" style="color:var(--season-ink)">Lamazon</h1>
+					<div class="mt-0.5"></div>
+					if p.Address != nil {
+						<a
+							href="/account#addresses"
+							class="group -mb-1 inline-flex min-h-touch items-center gap-[5px] rounded-small px-1 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--season-accent)]">
+							@ui.Icon("map-pin", "h-[15px] w-[15px]")
+							<span class="truncate text-[13.5px] leading-[18px] tracking-[0.2px]" style="color:color-mix(in srgb, var(--season-ink) 82%, transparent)">{ p.Address.Label } · { p.Address.Line }</span>
+							@ui.Icon("chevron-down", "h-4 w-4")
+						</a>
+					} else {
+						<a
+							href={ templ.URL(signInTarget(p)) }
+							class="group -mb-1 inline-flex min-h-touch items-center gap-[5px] rounded-small px-1 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--season-accent)]">
+							@ui.Icon("map-pin", "h-[15px] w-[15px]")
+							<span class="text-[13.5px] leading-[18px] tracking-[0.2px]" style="color:color-mix(in srgb, var(--season-ink) 82%, transparent)">Choose delivery location</span>
+							@ui.Icon("chevron-down", "h-4 w-4")
+						</a>
+					}
+				</div>
+				// The only desktop-only addition: a menu button below md, where
+				// the department strip is a swipe away rather than a scan.
+				<button
+					class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full md:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--season-accent)]"
+					style="color:var(--season-ink)"
+					x-on:click="$store.drawers.open('mobile-menu')"
+					aria-label="Open menu">
+					@ui.Icon("menu", "h-5 w-5")
+				</button>
+			</div>
+		</div>
+		<div class="h-3"></div>
+		// _SearchLaunch: a surface tile that opens search. On the website it is
+		// the search page itself, focused.
+		<a
+			href="/search"
+			class="flex items-center gap-3 rounded-featured bg-surface px-4 py-[14px] shadow-raised hover:brightness-[.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong"
+			aria-label="Search products and stores">
+			@ui.Icon("search", "h-[21px] w-[21px] text-strong")
+			<span class="flex-1 truncate text-[15px] tracking-[0.2px] text-muted">Search products, shops and more</span>
+			@ui.Icon("arrow-up-right", "h-[18px] w-[18px] text-strong")
+		</a>
+	</header>
+}
+
+func signInTarget(p viewdata.Page) string {
+	if p.User != nil {
+		return "/account#addresses"
+	}
+	return "/login?next=/account"
+}

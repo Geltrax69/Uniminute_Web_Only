@@ -1,0 +1,50 @@
+package pages
+
+// saved.templ — WishlistScreen: a plain white back disc, "Wishlist", and the
+// saved products in the catalogue's own order, or the empty state.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/viewdata"
+)
+
+templ SavedPage(p viewdata.Page, items []backend.Product) {
+	@layouts.Base(p.Title, p.Description, "", savedBody(p, items))
+}
+
+templ savedBody(p viewdata.Page, items []backend.Product) {
+	<main id="main" class="mx-auto w-full max-w-[820px] lg:max-w-[1464px] lg:px-3 pb-[calc(108px+env(safe-area-inset-bottom))]">
+		<div class="flex items-center justify-between px-5 pb-3 pt-2">
+			<button
+				type="button"
+				x-data
+				x-on:click="history.length > 1 ? history.back() : location.assign('/')"
+				aria-label="Back"
+				class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-white text-text">
+				@ui.Icon("arrow-left", "h-[18px] w-[18px]")
+			</button>
+			<h1 class="text-[17px] font-bold text-text">Wishlist</h1>
+			<div class="w-[46px] shrink-0"></div>
+		</div>
+		if len(items) == 0 {
+			<div class="flex min-h-[calc(100dvh-144px)] items-center justify-center">
+				@ui.EmptyState("heart", "Nothing saved yet", "Tap the heart on a product to keep it here.", "Explore products", "/")
+			</div>
+		} else {
+			<div class="px-5 pt-2">
+				@product.Grid(items, product.GridOpts{
+					Spaced:    true,
+					ShowStore: shop.MixesStores(items),
+					Wishlist:  p.Wishlist,
+					QuickAdd:  product.FoodOrGrocery,
+				})
+			</div>
+		}
+	</main>
+	@navigation.BottomNav(p, "saved")
+}

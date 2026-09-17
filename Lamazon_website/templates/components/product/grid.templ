@@ -1,0 +1,69 @@
+package product
+
+// grid.templ — every product grid in the shop. The column count is computed
+// by CSS container queries in app.css with Flutter's own arithmetic for
+// SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 150,
+// spacing: 14): ceil(width / 164) columns, each tile twice as tall as wide
+// (productTileAspect 0.50).
+
+import "lamazon/website/backend"
+
+type GridOpts struct {
+	ID        string
+	ShowStore bool
+	Wishlist  map[string]bool
+	Spaced    bool                        // 16px spacing (search) instead of 14px (home)
+	QuickAdd  func(backend.Product) bool // nil: the home rule, anything without options
+}
+
+templ Grid(items []backend.Product, opts GridOpts) {
+	<div class="grid-host">
+		<div id={ opts.ID } class={ "product-grid", templ.KV("spaced", opts.Spaced) }>
+			@Cards(items, opts)
+		</div>
+	</div>
+}
+
+// FoodOrGrocery is the quick-add rule search and the picks board use.
+func FoodOrGrocery(p backend.Product) bool {
+	return equalFold(p.Tab, "Food") || equalFold(p.Tab, "Grocery")
+}
+
+func quickAdd(p backend.Product, opts GridOpts) bool {
+	if opts.QuickAdd != nil {
+		return opts.QuickAdd(p)
+	}
+	return !p.HasOptions()
+}
+
+// Cards is the grid's children alone, for fragments that append to a grid.
+templ Cards(items []backend.Product, opts GridOpts) {
+	for _, p := range items {
+		<div>
+			@Card(p, CardOpts{
+				ShowStore:  opts.ShowStore,
+				QuickAdd:   quickAdd(p, opts),
+				Wishlisted: opts.Wishlist[p.ID],
+			})
+		</div>
+	}
+}
+
+func equalFold(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		ca, cb := a[i], b[i]
+		if 'A' <= ca && ca <= 'Z' {
+			ca += 32
+		}
+		if 'A' <= cb && cb <= 'Z' {
+			cb += 32
+		}
+		if ca != cb {
+			return false
+		}
+	}
+	return true
+}

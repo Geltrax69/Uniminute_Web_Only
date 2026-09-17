@@ -1,0 +1,104 @@
+package cart
+
+// summary.templ — CartScreen's right-hand column: _DeliveryAddress, the cash
+// on delivery statement, and _CheckoutPanel with its totals and the button
+// that names the real next step (sign in, or place the order).
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+)
+
+templ DeliveryAddress(a *backend.Address) {
+	<div class="rounded bg-surface p-4 shadow-surface">
+		<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+			@ui.Icon("map-pin", "h-5 w-5 text-text")
+			<span class="w-2"></span>
+			<span class="text-[16px] font-bold text-text">Deliver to</span>
+			<a href={ templ.SafeURL(tplWhen(a == nil, "/addresses/new", "/addresses")) } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">
+				{ tplWhen(a == nil, "Add address", "Change") }
+			</a>
+		</div>
+		if a != nil {
+			<p class="text-body font-semibold text-text">{ a.Name }</p>
+			<p class="mt-1 text-body text-muted">{ a.Line }, { a.City } { a.Pincode }</p>
+			if a.Phone != "" {
+				<p class="text-body text-muted">{ a.Phone }</p>
+			}
+		} else {
+			<p class="text-body text-muted">Choose a delivery address before placing your order.</p>
+		}
+	</div>
+}
+
+templ PayOnDelivery() {
+	<div class="flex items-center rounded bg-surface p-4 shadow-surface">
+		@ui.Icon("banknote", "h-6 w-6 shrink-0 text-muted")
+		<div class="ml-4 min-w-0 py-2">
+			<p class="text-body text-text">Paying by cash on delivery</p>
+			<p class="text-body text-muted">Hand the amount to the rider when the order arrives. It is the only way to pay today.</p>
+		</div>
+	</div>
+}
+
+templ Summary(d Data) {
+	{{ sub := shop.CartSubtotal(d.Entries) }}
+	{{ saved := shop.CartSaved(d.Entries) }}
+	{{ total := sub + shop.DeliveryFee }}
+	<div class="rounded bg-surface px-5 py-[18px] shadow-surface">
+		<h2 class="text-section text-text">Order Summary</h2>
+		<div class="h-3"></div>
+		@summaryRow(subtotalLabel(d.Count()), sub, false)
+		<div class="h-1"></div>
+		@summaryRow("Delivery", shop.DeliveryFee, false)
+		<p class="mt-0.5 flex items-center text-body text-muted">
+			@ui.Icon("clock", "h-[13px] w-[13px] shrink-0")
+			<span class="ml-1.5">Arrives in about { shop.DeliveryETA }</span>
+		</p>
+		<div class="my-2.5 h-px"></div>
+		@summaryRow("Total", total, true)
+		if saved > 0 {
+			<p class="mt-1.5 flex items-center text-[12.5px] font-bold text-strong">
+				@ui.Icon("badge-percent", "h-3.5 w-3.5 shrink-0")
+				<span class="ml-1.5">You saved ₹{ shop.Money(saved) } on this order</span>
+			</p>
+		}
+		<div class="h-3.5"></div>
+		if d.SignedIn {
+			<form
+				hx-post="/checkout"
+				hx-swap="none"
+				x-data="{ busy: false }"
+				x-on:htmx:before-request="busy = true"
+				x-on:htmx:after-request="busy = false">
+				if d.Address != nil {
+					<input type="hidden" name="addressId" value={ d.Address.ID }/>
+				}
+				<button type="submit" class={ ui.ButtonClass(true) + " w-full" } x-bind:disabled="busy" x-bind:aria-busy="busy">
+					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
+					<span class="truncate whitespace-pre" x-show="!busy">Place order  ·  ₹{ shop.Money(total) }</span>
+					<span class="truncate" x-show="busy" x-cloak>Placing your order…</span>
+				</button>
+			</form>
+		} else {
+			<a href="/login?next=/cart" class={ ui.ButtonClass(true) + " w-full" }>
+				<span class="truncate">Sign in to place order</span>
+			</a>
+		}
+	</div>
+}
+
+templ summaryRow(label string, value float64, bold bool) {
+	<div class={ "flex items-center justify-between " + tplWhen(bold, "text-[15px] font-extrabold text-text", "text-[13px] font-medium text-muted") }>
+		<span class="min-w-0 flex-1">{ label }</span>
+		<span class="ml-3 text-right">₹{ shop.Money(value) }</span>
+	</div>
+}
+
+func subtotalLabel(n int) string {
+	if n == 1 {
+		return "Sub Total (1 item)"
+	}
+	return "Sub Total (" + shop.Itoa(n) + " items)"
+}

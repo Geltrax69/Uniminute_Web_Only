@@ -1,0 +1,164 @@
+package searchfrag
+
+// results.templ — everything under the search field on SearchScreen
+// (search_screen.dart): the count and sort row, then either the _SearchHint
+// board (nothing typed), _NoResults, or the result grid. GET /fragments/search
+// answers with this as the shopper types, and the full page embeds it.
+
+import (
+	"net/url"
+	"strconv"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/tpl"
+)
+
+// Face is one category with a photograph of something it sells.
+type Face struct{ Category, Image string }
+
+type Data struct {
+	Q, Tab, Sort string // Tab "" means every department
+	Results      []backend.Product
+	Departments  []backend.Category // top level, for the hint board
+	Faces        []Face
+	Picks        []backend.Product
+	Wishlist     map[string]bool
+}
+
+// Sorts is _Sort: relevance is the server's own order.
+var Sorts = []struct{ Value, Label string }{
+	{"", "Best match"},
+	{"price_low", "Price: low to high"},
+	{"price_high", "Price: high to low"},
+	{"discount", "Biggest discount"},
+}
+
+templ Body(d Data) {
+	<div id="search-body">
+		if d.Q != "" && len(d.Results) > 0 {
+			<div class="flex items-center px-5 py-1">
+				<p class="min-w-0 flex-1 text-body text-muted" aria-live="polite">{ countText(len(d.Results), d.Q) }</p>
+				<span class="relative w-[170px] shrink-0">
+					<select
+						name="sort"
+						aria-label="Sort results"
+						class="h-6 w-full cursor-pointer appearance-none rounded-small bg-transparent pr-6 text-left text-body text-muted focus-visible:outline-strong"
+						hx-get="/fragments/search"
+						hx-trigger="change"
+						hx-target="#search-body"
+						hx-swap="outerHTML"
+						hx-include="[name='q'],[name='tab']">
+						for _, o := range Sorts {
+							<option value={ o.Value } selected?={ d.Sort == o.Value }>{ o.Label }</option>
+						}
+					</select>
+					<svg class="pointer-events-none absolute right-0 top-0 h-6 w-6 text-[#49454F]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"></path></svg>
+				</span>
+			</div>
+		} else {
+			<input type="hidden" name="sort" value={ d.Sort }/>
+		}
+		<div class="px-5 pb-[calc(108px+env(safe-area-inset-bottom))]">
+			if d.Q == "" {
+				@hint(d)
+			} else if len(d.Results) == 0 {
+				<div class={ "-mx-5 flex items-center justify-center", tpl.When(d.Tab != "", "min-h-[calc(100dvh-208px)]", "min-h-[calc(100dvh-160px)]") }>
+					@ui.EmptyState("package-search", "No products found", "Try a different name or browse all departments.", "Browse all products", "/search")
+				</div>
+			} else {
+				<div class="pt-2">
+					@product.Grid(d.Results, product.GridOpts{
+						Spaced:    true,
+						ShowStore: shop.MixesStores(d.Results),
+						Wishlist:  d.Wishlist,
+						QuickAdd:  product.FoodOrGrocery,
+					})
+				</div>
+			}
+		</div>
+	</div>
+}
+
+// _SearchHint: departments, categories with a face, and something worth tapping.
+templ hint(d Data) {
+	<div class="pt-1">
+		if d.Tab == "" && len(d.Departments) > 0 {
+			@heading("Shop by department")
+			<div class="dept-host">
+				<div class="dept-grid">
+					for _, dept := range d.Departments {
+						{{ accent := tpl.When(dept.Colour != "", dept.Colour, "#1D4939") }}
+						<a href={ templ.SafeURL(URL(dept.Name, d.Tab, "")) } class="flex min-w-0 items-center rounded-featured border border-track bg-surface px-3 hover:bg-[#F9F8F2]">
+							<span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full" style={ templ.SafeCSS("background-color:" + tpl.RGBA(accent, .12) + ";color:" + accent) }>
+								@ui.Icon(shop.DepartmentIcon(dept.Name, dept.Icon), "h-[17px] w-[17px]")
+							</span>
+							<span class="ml-2.5 line-clamp-2 min-w-0 text-[13px] font-semibold leading-[1.2] text-text">{ dept.Name }</span>
+						</a>
+					}
+				</div>
+			</div>
+			<div class="h-6"></div>
+		}
+		if len(d.Faces) > 0 {
+			@heading(tpl.When(d.Tab != "", "Browse "+d.Tab, "Shop by category"))
+			<div class="flex h-[118px] gap-3.5 overflow-x-auto no-scrollbar">
+				for _, f := range d.Faces {
+					<a href={ templ.SafeURL(URL(f.Category, d.Tab, "")) } aria-label={ "Browse " + f.Category } class="flex w-[78px] shrink-0 flex-col items-center rounded-tile">
+						<span class="flex h-[74px] w-[74px] shrink-0 rounded-full bg-white p-1">
+							<img src={ templ.URL(shop.CatalogueImage(f.Image, 160)) } alt="" loading="lazy" class="h-full w-full rounded-full object-cover"/>
+						</span>
+						<span class="mt-1.5 line-clamp-2 text-center text-[11.5px] font-semibold leading-[1.25] text-text">{ f.Category }</span>
+					</a>
+				}
+			</div>
+			<div class="h-6"></div>
+		}
+		if len(d.Picks) > 0 {
+			@heading(tpl.When(d.Picks[0].Discounted(), "On offer right now", "Popular right now"))
+			@product.Grid(d.Picks, product.GridOpts{
+				Spaced:    true,
+				ShowStore: shop.MixesStores(d.Picks),
+				Wishlist:  d.Wishlist,
+				QuickAdd:  product.FoodOrGrocery,
+			})
+		}
+		if len(d.Faces) == 0 && len(d.Picks) == 0 {
+			<div class="flex flex-col items-center py-[60px]">
+				@ui.Icon("search", "h-10 w-10 text-muted")
+				<p class="mt-3 text-body text-muted">Search across all shops and products</p>
+			</div>
+		}
+	</div>
+}
+
+templ heading(text string) {
+	<h2 class="mb-3 text-[15px] font-extrabold text-text">{ text }</h2>
+}
+
+// URL is the search page's own address for a query, scope and order.
+func URL(q, tab, sort string) string {
+	v := url.Values{}
+	if q != "" {
+		v.Set("q", q)
+	}
+	if tab != "" {
+		v.Set("tab", tab)
+	}
+	if sort != "" {
+		v.Set("sort", sort)
+	}
+	if len(v) == 0 {
+		return "/search"
+	}
+	return "/search?" + v.Encode()
+}
+
+func countText(n int, q string) string {
+	if n == 1 {
+		return "1 result for \"" + q + "\""
+	}
+	return strconv.Itoa(n) + " results for \"" + q + "\""
+}

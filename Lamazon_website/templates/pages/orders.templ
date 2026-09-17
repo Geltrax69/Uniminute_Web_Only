@@ -1,0 +1,125 @@
+package pages
+
+// orders.templ — OrdersScreen: ScreenHeader "My Orders", then one white card
+// per order with its reference, a status chip in the stage's colour, what and
+// from whom, how long ago, the address, a shop's refusal, the code to read to
+// the rider while it is live, and the total.
+
+import (
+	"strconv"
+	"time"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type OrdersPageData struct {
+	Page   viewdata.Page
+	Orders []backend.Order
+	Error  string
+}
+
+templ OrdersPage(d OrdersPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", ordersBody(d))
+}
+
+templ ordersBody(d OrdersPageData) {
+	<main id="main" class="mx-auto w-full max-w-[700px] pb-[calc(108px+env(safe-area-inset-bottom))]">
+		@navigation.ScreenHeader("My Orders")
+		if len(d.Orders) == 0 {
+			<div class="pt-20 text-center">
+				@ui.Icon("package", "mx-auto h-11 w-11 text-[#9E9E9E]")
+				<p class="mt-3 text-[14px] text-muted">{ tpl.When(d.Error != "", d.Error, "No orders yet") }</p>
+			</div>
+		} else {
+			<div class="px-5 pt-1">
+				for _, o := range d.Orders {
+					<div class="mb-3">
+						@orderCard(o)
+					</div>
+				}
+			</div>
+		}
+	</main>
+	@navigation.BottomNav(d.Page, "")
+}
+
+templ orderCard(o backend.Order) {
+	{{ colour := statusColour(o.Stage) }}
+	<a href={ templ.SafeURL("/orders/" + o.ID) } class="block rounded-[20px] bg-white p-4 hover:bg-[#FCFCFA]">
+		<div class="flex items-center">
+			<p class="min-w-0 flex-1 text-[14.5px] font-extrabold text-text">Order No. { shop.OrderRef(o.ID) }</p>
+			<span class="ml-2 shrink-0 rounded-small px-2.5 py-1 text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ statusLabel(o) }</span>
+		</div>
+		<p class="mt-1.5 text-[14px] font-bold text-text">{ strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+		<p class="text-[12.5px] text-muted">{ o.StoreName } · { ago(o.PlacedAt) }</p>
+		if o.ReceiverAddress != "" {
+			<p class="mt-1 text-[12px] leading-[1.35] text-muted">{ o.ReceiverAddress }</p>
+		}
+		if o.RejectReason != "" {
+			<p class="mt-1.5 text-[12.5px] text-danger">{ tpl.When(o.RejectReason == cancelledByCustomer, o.RejectReason, "The shop said: "+o.RejectReason) }</p>
+		}
+		if o.DeliveryCode != "" {
+			<div class="mt-3 rounded-[14px] bg-canvas py-3 text-center">
+				<p class="text-[11.5px] text-muted">Give this code to the rider</p>
+				<p class="mt-0.5 text-[26px] font-extrabold tracking-[8px] text-text">{ o.DeliveryCode }</p>
+			</div>
+		}
+		<div class="my-2.5 h-px bg-track"></div>
+		<div class="flex items-center justify-between">
+			<span class="text-[13px] text-muted">Total</span>
+			<span class="text-[15px] font-extrabold text-text">₹{ shop.Money(o.Amount) }</span>
+		</div>
+	</a>
+}
+
+const cancelledByCustomer = "Cancelled by customer"
+
+// statusColour is _statusColor: green delivered, red refused, blue on the way,
+// amber for everything still waiting on someone.
+func statusColour(s backend.OrderStage) string {
+	switch s {
+	case backend.StageDelivered:
+		return "#1D4939"
+	case backend.StageRejected:
+		return "#B93643"
+	case backend.StagePicked:
+		return "#2F6FED"
+	}
+	return "#E07B00"
+}
+
+// statusLabel is OrderStatus.title, with a buyer's own cancellation named so.
+func statusLabel(o backend.Order) string {
+	if o.RejectReason == cancelledByCustomer {
+		return "Cancelled"
+	}
+	switch o.Stage {
+	case backend.StageAccepted:
+		return "Accepted — being prepared"
+	case backend.StageRejected:
+		return "Not accepted"
+	case backend.StagePicked:
+		return "On the way"
+	case backend.StageDelivered:
+		return "Delivered"
+	}
+	return "Waiting for the shop"
+}
+
+// ago is _ago.
+func ago(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Hour:
+		return strconv.Itoa(int(d.Minutes())) + " min ago"
+	case d < 24*time.Hour:
+		return strconv.Itoa(int(d.Hours())) + " hr ago"
+	}
+	return strconv.Itoa(int(d.Hours()/24)) + " days ago"
+}

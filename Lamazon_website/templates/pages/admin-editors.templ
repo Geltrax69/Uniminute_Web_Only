@@ -1,0 +1,274 @@
+package pages
+
+// admin-editors.templ — the three screens the admin panel pushes: the banner
+// editor (CampaignEditor, with its live preview), the policy editor
+// (_PolicyEditor, with a preview drawn exactly as shoppers read it), and one
+// store's product photos (AdminPhotosScreen).
+
+import (
+	"strconv"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/account"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type BannerEditorData struct {
+	Page        viewdata.Page
+	Campaign    *backend.Campaign // nil when creating
+	Categories  []string          // "" first: All products
+	Departments []string
+}
+
+templ BannerEditor(d BannerEditorData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", bannerEditorBody(d))
+}
+
+templ bannerEditorBody(d BannerEditorData) {
+	<main id="main" class="mx-auto w-full max-w-[720px] pb-8">
+		@navigation.ScreenHeader(tpl.When(d.Campaign == nil, "Create banner", "Edit banner"))
+		<form class="px-5" x-data={ "bannerEditor(" + jsonArg(bannerConfig(d)) + ")" } x-on:submit.prevent="save()">
+			<h2 class="text-section text-text">Live preview</h2>
+			<div class="mt-3 banner-host">
+				<div class="banner block overflow-hidden rounded-featured shadow-raised" x-bind:style="`background-color:${palette.background}`">
+					<div class="banner-art" aria-hidden="true">
+						<template x-if="!preview">
+							<img src="/static/images/icons/campaign-forest.webp" alt=""/>
+						</template>
+						<template x-if="preview && isVideo(preview)">
+							<video x-bind:src="preview" autoplay muted loop playsinline></video>
+						</template>
+						<template x-if="preview && !isVideo(preview)">
+							<img x-bind:src="preview" alt=""/>
+						</template>
+					</div>
+					<div class="absolute inset-0" x-bind:style="wash"></div>
+					<div class="banner-copy">
+						<span class="max-w-full truncate rounded-full bg-white/[.14] px-[9px] py-[5px] text-[10.5px] font-semibold leading-[13px] tracking-[0.9px]" x-bind:style="`color:${palette.foreground}`" x-text="category ? category.toUpperCase() : 'THE LOCAL EDIT'"></span>
+						<h3 class="banner-title mt-2.5" x-bind:style="`color:${palette.foreground}`" x-text="title"></h3>
+						<p class="banner-sub mt-[7px] text-[13px] leading-[17px] tracking-[0.15px]" x-show="subtitle.trim()" x-bind:style="`color:${palette.foreground};opacity:.86`" x-text="subtitle"></p>
+						<span class="mt-3.5 inline-flex min-h-[42px] max-w-full items-center rounded-[23px] px-3.5 py-2.5 text-[13px] font-semibold shadow-tactile" x-bind:style="`background-image:linear-gradient(to bottom right, ${lighten(palette.action)}, ${palette.action});color:${palette.actionForeground}`">
+							<span class="truncate" x-text="cta"></span>
+							@ui.Icon("arrow-right", "ml-[7px] h-4 w-4")
+						</span>
+					</div>
+				</div>
+			</div>
+			<div class="mt-6 rounded bg-surface p-4 shadow-surface">
+				@editorField("Headline", "title", 65, true)
+				@editorTextarea("Description", "subtitle", 120, 2)
+				@editorField("Button label", "cta", 28, true)
+				@editorSelect("Open this category", "category", d.Categories, "All products", "")
+				@editorSelect("Show banner in", "department", append([]string{""}, d.Departments...), "Home + all departments", "Home + ")
+				<input type="file" accept="image/*,video/*" class="hidden" x-ref="art" x-on:change="upload($event)"/>
+				<button type="button" x-on:click="$refs.art.click()" x-bind:disabled="busy" class={ ui.ButtonClass(false) + " mt-2 w-full" }>
+					<span class="truncate" x-text="busy ? 'Please wait…' : 'Upload banner artwork'">Upload banner artwork</span>
+					@ui.Icon("upload", "h-[18px] w-[18px]")
+				</button>
+				<p class="py-2.5 text-body text-muted">A 16:9 photo, GIF or short clip, with the subject on the right — the template keeps the headline and action legible on the left. Clips play muted and on a loop, so keep them under about ten seconds and let the picture carry the message. You can also paste a link below instead of uploading.</p>
+				@editorField("Artwork URL (optional)", "imageUrl", 0, false)
+				<div class="-mt-2 mb-4 flex items-start">
+					<p class="flex-1 text-[12.5px] leading-[1.35]" x-bind:class="detected.wrong ? 'text-warning' : 'text-muted'" x-text="detected.text"></p>
+					<button type="button" x-on:click="fetchLink()" x-bind:disabled="busy || !imageUrl.trim()" class={ ui.ButtonClass(false) + " ml-3" }>
+						<span class="truncate">Fetch</span>
+						@ui.Icon("link", "h-[18px] w-[18px]")
+					</button>
+				</div>
+				<p class="text-body text-text">Choose a banner theme</p>
+				<div class="mt-2 flex flex-wrap gap-2.5">
+					<template x-for="p in presets" :key="p.hex">
+						<button type="button" x-on:click="colour = p.hex" x-bind:disabled="busy" class="inline-flex h-10 w-10 items-center justify-center rounded-full shadow-tactile" x-bind:style="`background-color:${p.background};color:${p.foreground}`" x-bind:aria-label="`Use ${p.name}`" x-bind:title="`Use ${p.name}`">
+							<span class="flex" x-show="colour.trim().toUpperCase() === p.hex">
+								@ui.Icon("circle-check", "h-5 w-5")
+							</span>
+						</button>
+					</template>
+				</div>
+				<div class="h-3"></div>
+				@editorField("Background colour", "colour", 7, true)
+				@editorField("Display order (lowest first)", "position", 4, true)
+				<label class="flex cursor-pointer items-center py-2">
+					<span class="flex-1">
+						<span class="block text-[16px] text-text">Published</span>
+						<span class="block text-body text-muted" x-text="enabled ? 'Visible to shoppers after saving' : 'Hidden from shoppers'"></span>
+					</span>
+					<input type="checkbox" role="switch" class="m3-switch" x-model="enabled"/>
+				</label>
+				<p class="py-3 text-danger" x-show="error" x-text="error" role="alert"></p>
+				<button type="submit" x-bind:disabled="busy" class={ ui.ButtonClass(true) + " mt-4 w-full" }>
+					<span class="truncate" x-text="busy ? 'Saving…' : 'Save banner'">Save banner</span>
+				</button>
+			</div>
+		</form>
+	</main>
+}
+
+templ editorField(label, model string, maxLen int, required bool) {
+	<label class="mb-4 block">
+		<span class="block text-[12px] text-muted">{ label }</span>
+		<input
+			type="text"
+			x-model={ model }
+			if maxLen > 0 {
+				maxlength={ strconv.Itoa(maxLen) }
+			}
+			required?={ required }
+			x-bind:disabled="busy"
+			class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+		if maxLen > 0 && model != "colour" && model != "position" {
+			<span class="mt-0.5 block text-right text-[12px] text-muted" x-text={ "`${" + model + ".length}/" + strconv.Itoa(maxLen) + "`" }></span>
+		}
+	</label>
+}
+
+templ editorTextarea(label, model string, maxLen, rows int) {
+	<label class="mb-4 block">
+		<span class="block text-[12px] text-muted">{ label }</span>
+		<textarea x-model={ model } maxlength={ strconv.Itoa(maxLen) } rows={ strconv.Itoa(rows) } x-bind:disabled="busy" class="w-full resize-none rounded-featured bg-canvas px-5 py-[15px] text-[14.5px] leading-[18px] text-text outline-none focus:ring-2 focus:ring-inset focus:ring-strong"></textarea>
+		<span class="mt-0.5 block text-right text-[12px] text-muted" x-text={ "`${" + model + ".length}/" + strconv.Itoa(maxLen) + "`" }></span>
+	</label>
+}
+
+templ editorSelect(label, model string, options []string, emptyLabel, prefix string) {
+	<label class="mb-4 block">
+		<span class="block text-[12px] text-muted">{ label }</span>
+		<select x-model={ model } x-bind:disabled="busy" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong">
+			for _, o := range options {
+				<option value={ o }>{ tpl.When(o == "", emptyLabel, prefix+o) }</option>
+			}
+		</select>
+	</label>
+}
+
+func bannerConfig(d BannerEditorData) map[string]any {
+	c := backend.Campaign{CTA: "Shop collection", Colour: "#143E32"}
+	isNew := d.Campaign == nil
+	if !isNew {
+		c = *d.Campaign
+	}
+	return map[string]any{
+		"id": c.ID, "isNew": isNew, "title": c.Title, "subtitle": c.Subtitle, "cta": c.CTA,
+		"category": c.Category, "department": c.Department, "imageUrl": c.ImageURL,
+		"colour": c.Colour, "position": strconv.Itoa(c.Position), "enabled": c.Enabled,
+	}
+}
+
+type PolicyEditorData struct {
+	Page   viewdata.Page
+	Policy backend.Policy
+}
+
+templ PolicyEditor(d PolicyEditorData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", policyEditorBody(d))
+}
+
+templ policyEditorBody(d PolicyEditorData) {
+	<main id="main" class="mx-auto flex min-h-[100dvh] w-full max-w-[760px] flex-col" x-data={ "policyEditor(" + jsonArg(map[string]string{"slug": d.Policy.Slug, "title": d.Policy.Title, "body": d.Policy.Body}) + ")" }>
+		<div class="flex items-center justify-between px-5 pb-3 pt-2">
+			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{"x-on:click": "history.length > 1 ? history.back() : location.assign('/admin?tab=policies')"})
+			<h1 class="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-bold text-text">{ d.Policy.Title }</h1>
+			<button type="button" x-on:click="preview = !preview" class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full text-text hover:bg-strong/[.06]" x-bind:aria-label="preview ? 'Back to editing' : 'Preview'" x-bind:title="preview ? 'Back to editing' : 'Preview'">
+				<span class="flex" x-show="!preview">
+					@ui.Icon("eye", "h-[17px] w-[17px]")
+				</span>
+				<span class="flex" x-show="preview" x-cloak>
+					@ui.Icon("pencil", "h-[17px] w-[17px]")
+				</span>
+			</button>
+		</div>
+		<div class="flex-1 px-5 pb-6 pt-1">
+			<template x-if="preview">
+				<div>
+					<template x-for="(b, i) in blocks" :key="i">
+						<div>
+							<h2 x-show="b.heading" class="pb-1.5 pt-[18px] text-[15px] font-extrabold text-text" x-text="b.text"></h2>
+							<p x-show="!b.heading" class="mb-2.5 whitespace-pre-line text-[13.5px] leading-[1.55] text-[#3A3A3A]" x-text="b.text"></p>
+						</div>
+					</template>
+				</div>
+			</template>
+			<template x-if="!preview">
+				<div>
+					<p class="text-[12.5px] font-bold text-muted">Title</p>
+					<input type="text" x-model="title" aria-label="Title" class="mt-2 w-full rounded-[14px] bg-white p-3.5 text-[15px] font-bold text-text outline-none focus:ring-2 focus:ring-strong"/>
+					<p class="mt-[18px] text-[12.5px] font-bold text-muted">Text</p>
+					<textarea x-model="body" rows="18" aria-label="Text" class="mt-2 w-full rounded-[14px] bg-white p-3.5 font-mono text-[13px] leading-[1.5] text-text outline-none focus:ring-2 focus:ring-strong"></textarea>
+				</div>
+			</template>
+			<p class="mt-3 text-[12.5px] text-danger" x-show="error" x-text="error" role="alert"></p>
+		</div>
+		<div class="sticky bottom-0 bg-canvas px-5 pb-4 pt-1">
+			<button type="button" x-on:click="save()" x-bind:disabled="busy || !body.trim()" class="w-full rounded-[26px] bg-text py-4 text-[14px] font-bold text-white disabled:opacity-40" x-text="busy ? 'Publishing…' : 'Publish'">Publish</button>
+		</div>
+	</main>
+}
+
+type StorePhotosData struct {
+	Page      viewdata.Page
+	StoreName string
+	Items     []backend.InventoryItem
+	Error     string
+}
+
+templ StorePhotos(d StorePhotosData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", storePhotosBody(d))
+}
+
+templ storePhotosBody(d StorePhotosData) {
+	<main id="main" class="mx-auto w-full max-w-[760px] pb-7">
+		@navigation.ScreenHeader(d.StoreName)
+		<div class="px-5 pt-1">
+			if d.Error != "" {
+				<p class="pb-3 text-[12.5px] text-danger">{ d.Error }</p>
+			}
+			if len(d.Items) == 0 {
+				<p class="py-10 text-center text-[13.5px] text-muted">This store has no products yet.</p>
+			} else {
+				for _, it := range d.Items {
+					<details class="group mb-2.5 rounded bg-white" x-data={ "adminItemPhotos(" + jsonArg(it.ID) + ", " + jsonArg(nonNil(it.ImageURLs)) + ")" }>
+						<summary class="flex cursor-pointer list-none items-center p-3 [&::-webkit-details-marker]:hidden">
+							<span class="flex h-[46px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-[11px] bg-img-ground">
+								<template x-if="shots.length && shots[0].url">
+									<img x-bind:src="shots[0].url" alt="" class="h-full w-full object-contain"/>
+								</template>
+								<template x-if="!shots.length || !shots[0].url">
+									<span class="flex">
+										@ui.Icon("image-off", "h-5 w-5 text-muted")
+									</span>
+								</template>
+							</span>
+							<span class="ml-3 min-w-0 flex-1">
+								<span class="block truncate text-[14px] font-bold text-text">{ it.Title }</span>
+								<span class="block text-[12px]" x-bind:class="shots.length ? 'text-muted' : 'text-warning'" x-text={ "shots.length ? `${shots.length} photo${shots.length === 1 ? '' : 's'} · " + jsString(it.Category) + "` : 'No photos'" }></span>
+							</span>
+							@ui.Icon("chevron-down", "h-4 w-4 text-muted transition-transform group-open:rotate-180")
+						</summary>
+						<div class="px-3 pb-3.5">
+							@account.PhotoManager()
+						</div>
+					</details>
+				}
+			}
+		</div>
+	</main>
+}
+
+func nonNil(urls []string) []string {
+	if urls == nil {
+		return []string{}
+	}
+	return urls
+}
+
+// jsString is s escaped for use inside a JS template literal.
+func jsString(s string) string {
+	b := jsonArg(s)
+	return b[1 : len(b)-1]
+}
+
+var _ = shop.Money

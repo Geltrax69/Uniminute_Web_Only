@@ -1,0 +1,70 @@
+package pages
+
+// checkout.templ — OrderConfirmationScreen, where placing an order lands: the
+// lime tick, the amount to hand the rider, where it is going and when, one
+// card per order (a basket spanning shops becomes several), and the way back.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/viewdata"
+)
+
+type PlacedPageData struct {
+	Page   viewdata.Page
+	Orders []backend.Order
+}
+
+templ OrderPlaced(d PlacedPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, placedBody(d)))
+}
+
+templ placedBody(d PlacedPageData) {
+	<main id="main" class="mx-auto w-full max-w-readable p-6">
+		<div class="h-9"></div>
+		<div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-lime text-strong shadow-tactile">
+			@ui.Icon("check", "h-9 w-9")
+		</div>
+		<h1 class="mt-6 text-center text-title text-text">Your order is placed</h1>
+		<p class="mt-3 text-center text-body leading-[1.5] text-muted">We have sent your order to the store. You can follow its progress below.</p>
+		<div class="mt-7 rounded bg-surface p-5 shadow-surface">
+			<p class="text-body text-muted">Pay on delivery</p>
+			<p class="text-title text-text">₹{ shop.Money(ordersTotal(d.Orders)) }</p>
+			<div class="h-3"></div>
+			if len(d.Orders) > 0 {
+				<p class="text-body text-text">{ d.Orders[0].ReceiverAddress }</p>
+			}
+			<p class="mt-2 flex items-center text-body font-semibold text-strong">
+				@ui.Icon("clock", "h-[15px] w-[15px] shrink-0")
+				<span class="ml-1.5">Arriving in about { shop.DeliveryETA }</span>
+			</p>
+		</div>
+		<div class="h-4"></div>
+		for _, o := range d.Orders {
+			<div class="mb-3 rounded bg-surface p-4 shadow-surface">
+				<p class="select-all text-body font-bold text-text">Order { shop.OrderRef(o.ID) }</p>
+				<p class="mt-1 text-body text-text">{ shop.Itoa(o.Units) } × { o.ItemTitle }</p>
+				<p class="text-body text-muted">{ o.StoreName }</p>
+				<div class="my-3 h-px"></div>
+				<a href={ templ.SafeURL("/orders/" + o.ID) } class={ ui.ButtonClass(false) }>
+					<span class="truncate">Track order</span>
+					@ui.Icon("package", "h-[18px] w-[18px]")
+				</a>
+			</div>
+		}
+		<div class="h-6"></div>
+		<a href="/" class={ ui.ButtonClass(true) + " w-full" }>
+			<span class="truncate">Continue shopping</span>
+		</a>
+	</main>
+}
+
+func ordersTotal(orders []backend.Order) float64 {
+	sum := 0.0
+	for _, o := range orders {
+		sum += o.Amount
+	}
+	return sum
+}

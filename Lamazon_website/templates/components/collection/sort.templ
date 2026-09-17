@@ -1,0 +1,81 @@
+package collection
+
+// sort.templ — the sort dropdown. Client-side only (Alpine), triggers an HTMX
+// GET /fragments/products with the updated sort param.
+
+type SortState struct {
+	Sort string
+	Tab  string
+	Cat  string
+	Q    string
+}
+
+templ Sort(ss SortState) {
+	<div class="relative" x-data="{ open: false }" x-on:click.outside="open = false">
+		<button
+			class="flex min-h-touch items-center gap-1.5 rounded-full border border-track bg-surface px-4 py-2 text-label text-text hover:border-muted/40"
+			x-on:click="open = !open"
+			x-bind:aria-expanded="open">
+			{ sortLabel(ss.Sort) }
+			<svg class="h-4 w-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+		</button>
+		<div
+			class="absolute right-0 top-full z-10 mt-1 min-w-[160px] overflow-hidden rounded-featured bg-surface shadow-raised"
+			x-show="open"
+			x-cloak
+			x-transition.origin.top.right>
+			for _, opt := range sortOptions() {
+				<a
+					href={ templ.URL(sortURL(ss, opt.Value)) }
+					class={ "flex min-h-touch items-center px-4 text-body hover:bg-strong/5 " + activeClass(ss.Sort, opt.Value) }
+					x-on:click="open = false">
+					{ opt.Label }
+				</a>
+			}
+		</div>
+	</div>
+}
+
+type sortOpt struct{ Value, Label string }
+
+func sortOptions() []sortOpt {
+	return []sortOpt{
+		{"", "Relevance"},
+		{"price_asc", "Price: low to high"},
+		{"price_desc", "Price: high to low"},
+		{"name_asc", "Name A–Z"},
+	}
+}
+
+func sortLabel(sort string) string {
+	for _, opt := range sortOptions() {
+		if opt.Value == sort {
+			return opt.Label
+		}
+	}
+	return "Sort"
+}
+
+func activeClass(current, val string) string {
+	if current == val {
+		return "font-semibold text-strong"
+	}
+	return ""
+}
+
+func sortURL(ss SortState, sort string) string {
+	base := "/shop?"
+	if ss.Tab != "" {
+		base += "tab=" + ss.Tab + "&"
+	}
+	if ss.Cat != "" {
+		base += "category=" + ss.Cat + "&"
+	}
+	if ss.Q != "" {
+		base += "q=" + ss.Q + "&"
+	}
+	if sort != "" {
+		base += "sort=" + sort
+	}
+	return base
+}

@@ -1,0 +1,123 @@
+package pages
+
+// settings.templ — SettingsScreen: uppercase section labels over white cards.
+// The three notification switches save one change each, straight away.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type SettingsPageData struct {
+	Page        viewdata.Page
+	Preferences backend.Preferences
+	Error       string // set when the preferences could not be read
+}
+
+templ SettingsPage(d SettingsPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, settingsBody(d)))
+}
+
+templ settingsBody(d SettingsPageData) {
+	<main id="main" class="mx-auto w-full max-w-readable pb-6">
+		@navigation.ScreenHeader("Settings")
+		<div class="px-5 pt-1">
+			if d.Error != "" {
+				<div class="flex min-h-14 items-center px-4 text-body text-text">
+					<span class="flex-1">{ d.Error }</span>
+					<a href="/settings" class="ml-3 inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Retry</a>
+				</div>
+			}
+			@settingsLabel("Notifications")
+			@settingsCard() {
+				@settingsToggle("bell", "Push notifications", "push", d.Preferences.Push, d.Error != "")
+				@settingsDivider()
+				@settingsToggle("mail", "Email offers", "emailOffers", d.Preferences.EmailOffers, d.Error != "")
+				@settingsDivider()
+				@settingsToggle("truck", "Order updates", "orderUpdates", d.Preferences.OrderUpdates, d.Error != "")
+				@settingsDivider()
+				@settingsLink("inbox", "View notifications", "", "/notifications")
+			}
+			@settingsLabel("Account")
+			@settingsCard() {
+				@settingsLink("map-pin", "Saved addresses", "", "/addresses")
+				@settingsDivider()
+				@settingsLink("wallet", "Online payments", "Not available", "")
+			}
+			@settingsLabel("Preferences")
+			@settingsCard() {
+				@settingsLink("languages", "Language", "English", "")
+				@settingsDivider()
+				@settingsLink("indian-rupee", "Currency", "INR (₹)", "")
+			}
+			@settingsLabel("About")
+			@settingsCard() {
+				@settingsLink("shield", "Privacy policy", "", "/policy/privacy")
+				@settingsDivider()
+				@settingsLink("file-text", "Terms of service", "", "/policy/terms")
+				@settingsDivider()
+				@settingsLink("info", "App version", tpl.AppVersion, "")
+			}
+		</div>
+	</main>
+}
+
+templ settingsLabel(text string) {
+	<h2 class="px-1 pb-2.5 pt-3.5 text-[11px] font-bold uppercase tracking-[1.1px] text-muted">{ text }</h2>
+}
+
+templ settingsCard() {
+	<div class="overflow-hidden rounded-[20px] bg-white">
+		{ children... }
+	</div>
+}
+
+templ settingsDivider() {
+	<div class="ml-14 h-px bg-canvas"></div>
+}
+
+// settingsToggle is SwitchListTile. Each flip posts only its own field.
+templ settingsToggle(icon, title, field string, on, disabled bool) {
+	<label class={ "flex min-h-14 items-center pl-4 pr-6", templ.KV("cursor-pointer", !disabled) }>
+		@ui.Icon(icon, "h-5 w-5 shrink-0 text-text")
+		<span class={ "ml-5 flex-1 text-[14px] font-semibold", tpl.When(disabled, "text-text/[.45]", "text-text") }>{ title }</span>
+		<input
+			type="checkbox"
+			role="switch"
+			class="m3-switch mr-1"
+			name={ field }
+			checked?={ on }
+			disabled?={ disabled }
+			hx-post="/account/preferences"
+			hx-trigger="change"
+			hx-swap="none"
+			hx-vals={ "js:{" + field + ": event.target.checked}" }/>
+	</label>
+}
+
+templ settingsLink(icon, title, value, href string) {
+	if href != "" {
+		<a href={ templ.SafeURL(href) } class="flex min-h-14 items-center pl-4 pr-6 hover:bg-strong/[.04]">
+			@settingsLinkInner(icon, title, value, true)
+		</a>
+	} else {
+		<div class="flex min-h-14 items-center pl-4 pr-6">
+			@settingsLinkInner(icon, title, value, false)
+		</div>
+	}
+}
+
+templ settingsLinkInner(icon, title, value string, chevron bool) {
+	@ui.Icon(icon, "h-5 w-5 shrink-0 text-text")
+	<span class="ml-5 min-w-0 flex-1 truncate text-[14px] font-semibold text-text">{ title }</span>
+	if value != "" {
+		<span class="ml-4 text-[13px] text-muted">{ value }</span>
+	}
+	if chevron {
+		@ui.Icon("chevron-right", tpl.When(value != "", "ml-1.5", "ml-[22px]")+" h-4 w-4 shrink-0 text-muted")
+	}
+}

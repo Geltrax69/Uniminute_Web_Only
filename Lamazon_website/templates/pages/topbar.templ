@@ -1,0 +1,13 @@
+package pages
+
+import (
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/viewdata"
+)
+
+// withTopBar gives a screen that has no bottom bar the desktop top bar; on a
+// phone it adds nothing.
+templ withTopBar(p viewdata.Page, body templ.Component) {
+	@navigation.TopBar(p, "")
+	@body
+}

@@ -1,0 +1,40 @@
+package layouts
+
+// shop.templ — the standard shop chrome: header + department strip + campaigns
+// + page content + bottom nav. The shop pages not yet ported screen by screen
+// still use this.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/footer"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/viewdata"
+)
+
+type ShopData struct {
+	Page        viewdata.Page
+	Campaigns   []backend.Campaign
+	Categories  []backend.Category
+	Departments []navigation.Dept
+	Cities      []string
+	ETA         string
+	Content     templ.Component
+}
+
+templ Shop(d ShopData) {
+	@Base(d.Page.Title, d.Page.Description, d.Page.Canonical, shopBody(d))
+}
+
+templ shopBody(d ShopData) {
+	<div class="page-body">
+		@navigation.Header(d.Page)
+		@navigation.Announcement(d.Campaigns)
+		@navigation.DepartmentStrip(d.Departments, d.Page.ActiveTab)
+		@navigation.MobileMenu(d.Categories, d.Page.ActiveTab)
+		<main id="main" class="px-gutter pt-6">
+			@d.Content
+		</main>
+		@footer.Footer(d.ETA, d.Cities)
+	</div>
+	@navigation.BottomNav(d.Page, "")
+}

@@ -1,0 +1,46 @@
+package pages
+
+// shop.templ — the main catalogue page. Supports tab, category, sort, page,
+// and q query params, matching ShopScreen's own filtering.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/collection"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/components/ui"
+)
+
+type ShopPageData struct {
+	Products   []backend.Product
+	Categories []backend.Category
+	Wishlist   map[string]bool
+	Filter     collection.FilterState
+	Sort       collection.SortState
+	PageLinks  collection.PageLinks
+	TotalCount int
+}
+
+templ ShopContent(d ShopPageData) {
+	// Top toolbar: Sort (always visible) + mobile Filter button (inside Filters component).
+	// On desktop the Filters component also renders the sidebar column.
+	<div class="flex items-start gap-4">
+		// Desktop sidebar + mobile sheet — Filters component handles both.
+		@collection.Filters(d.Categories, d.Filter)
+		// Right column: sort bar + count + grid.
+		<div class="min-w-0 flex-1">
+			<div class="mb-3 flex flex-wrap items-center gap-2">
+				@collection.Sort(d.Sort)
+				if d.TotalCount > 0 {
+					<span class="ml-auto text-small text-muted">{ shop.Itoa(d.TotalCount) } products</span>
+				}
+			</div>
+			if len(d.Products) == 0 {
+				@ui.EmptyState("package", "Nothing here yet", "No products match your filters. Try a different category or search.", "Browse all", "/shop")
+			} else {
+				@product.Grid(d.Products, product.GridOpts{ShowStore: true, Wishlist: d.Wishlist})
+				@collection.Pagination(d.PageLinks)
+			}
+		</div>
+	</div>
+}

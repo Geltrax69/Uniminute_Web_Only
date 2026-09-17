@@ -1,0 +1,88 @@
+package pages
+
+// help.templ — HelpScreen and NotificationsScreen. Help: the published contact
+// details, the frequently asked questions (each opens in place), and every
+// policy. Notifications: the API keeps no history yet, so the empty state is
+// the honest screen, exactly as the app shows it.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/tpl"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/viewdata"
+)
+
+var faqs = [][2]string{
+	{"Where is my order?", "Open My Orders and tap an order for its current status, delivery address and cancellation options. Pull down to refresh."},
+	{"How do I cancel an order?", "Open the order in My Orders and choose Cancel order before the shop accepts it. Accepted orders cannot be cancelled in the app."},
+	{"When do I get my refund?", "The app does not process online payments or automatic refunds. Read the published Refunds policy for the applicable terms."},
+	{"Can I change my delivery address?", "Yes — pick a different saved address before checkout, or add a new one from Saved Addresses."},
+	{"Why do prices differ between shops?", "Each shop sets its own price. Use Compare Prices on any product to see every nearby shop selling it."},
+}
+
+templ HelpPage(p viewdata.Page, policies []backend.Policy) {
+	@layouts.Base(p.Title, p.Description, "", withTopBar(p, helpBody(policies)))
+}
+
+templ helpBody(policies []backend.Policy) {
+	<main id="main" class="mx-auto w-full max-w-readable pb-6">
+		@navigation.ScreenHeader("Help & Support")
+		<div class="px-5 pt-1">
+			<div class="overflow-hidden rounded-[20px] bg-white">
+				<a href="/policy/contact" class="flex min-h-[72px] items-center pl-4 pr-6 hover:bg-strong/[.04]">
+					@ui.Icon("mail", "h-5 w-5 shrink-0 text-text")
+					<span class="ml-5 min-w-0 flex-1">
+						<span class="block text-[14px] font-semibold leading-[22px] text-text">Support information</span>
+						<span class="block text-[12px] leading-[18px] text-muted">View published contact details</span>
+					</span>
+					@ui.Icon("chevron-right", "ml-4 h-4 w-4 shrink-0 text-muted")
+				</a>
+			</div>
+			<h2 class="mt-[22px] pb-2.5 pl-1 text-[16px] font-bold text-text">Frequently asked</h2>
+			<div class="overflow-hidden rounded-[20px] bg-white">
+				for i, faq := range faqs {
+					if i > 0 {
+						<div class="ml-5 h-px bg-canvas"></div>
+					}
+					<details class="group">
+						<summary class="flex min-h-[58px] cursor-pointer list-none items-center pl-4 pr-6 [&::-webkit-details-marker]:hidden">
+							<span class="flex-1 text-[14px] font-semibold text-text">{ faq[0] }</span>
+							@ui.Icon("chevron-down", "ml-4 h-6 w-6 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-text motion-reduce:transition-none")
+						</summary>
+						<p class="px-5 pb-3.5 text-[13px] leading-[1.45] text-muted">{ faq[1] }</p>
+					</details>
+				}
+			</div>
+			<h2 class="mt-[22px] pb-2.5 pl-1 text-[16px] font-bold text-text">Policies</h2>
+			<div class="overflow-hidden rounded-[20px] bg-white">
+				for i, pol := range policies {
+					if i > 0 {
+						<div class="ml-14 h-px bg-track"></div>
+					}
+					<a href={ templ.SafeURL("/policy/" + pol.Slug) } class="flex min-h-14 items-center pl-4 pr-6 hover:bg-strong/[.04]">
+						@ui.Icon(policyIcon(pol.Slug), "h-[19px] w-[19px] shrink-0 text-text")
+						<span class="ml-[21px] min-w-0 flex-1 truncate text-[14px] font-semibold text-text">{ pol.Title }</span>
+						@ui.Icon("chevron-right", "ml-4 h-4 w-4 shrink-0 text-muted")
+					</a>
+				}
+			</div>
+			<p class="mt-[22px] text-center text-[12px] text-muted">Lamazon · { tpl.AppVersion }</p>
+		</div>
+	</main>
+}
+
+templ NotificationsPage(p viewdata.Page) {
+	@layouts.Base(p.Title, p.Description, "", withTopBar(p, notificationsBody()))
+}
+
+templ notificationsBody() {
+	<main id="main" class="mx-auto flex min-h-[100dvh] w-full max-w-readable flex-col">
+		@navigation.ScreenHeader("Notifications")
+		<div class="flex flex-1 flex-col items-center justify-center">
+			@ui.Icon("bell-off", "h-11 w-11 text-[#9E9E9E]")
+			<p class="mt-3 text-[15px] text-muted">No notifications yet</p>
+		</div>
+	</main>
+}

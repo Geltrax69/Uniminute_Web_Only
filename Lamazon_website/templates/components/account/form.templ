@@ -1,0 +1,68 @@
+package account
+
+// form.templ — the form vocabulary from widgets/seller_form.dart, shared by
+// "Your details" and the seller forms: a section heading with an optional
+// hint, a white rounded field with a leading icon and floating label, a
+// single-choice pill, and the sticky submit bar that names what is missing.
+// Every piece reads and writes the Alpine state of the form around it.
+
+import "lamazon/website/templates/components/ui"
+
+// Section is SellerSection.
+templ Section(title, hint string) {
+	<div class="pb-2.5 pl-0.5">
+		<p class="text-[14.5px] font-extrabold text-text">{ title }</p>
+		if hint != "" {
+			<p class="mt-0.5 text-[12.5px] text-muted">{ hint }</p>
+		}
+	</div>
+}
+
+// Field is SellerField, bound to the Alpine property called name.
+templ Field(name, hint, icon, kind, autocomplete string) {
+	<div class="flex rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong">
+		<span class="flex pt-[15px]">
+			@ui.Icon(icon, "h-[18px] w-[18px] shrink-0 text-muted")
+		</span>
+		<div class="relative ml-2.5 min-w-0 flex-1">
+			<input
+				id={ "field-" + name }
+				name={ name }
+				type={ kind }
+				autocomplete={ autocomplete }
+				x-model={ name }
+				placeholder={ hint }
+				class="peer h-[52px] w-full bg-transparent pt-4 text-[14.5px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-transparent focus:placeholder:text-[#9A9A9A]"/>
+			<label for={ "field-" + name } class="pointer-events-none absolute left-0 top-[16px] max-w-full truncate text-body text-muted transition-all duration-150 peer-focus:top-1.5 peer-focus:text-[12px] peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[12px]">{ hint }</label>
+		</div>
+	</div>
+}
+
+// Choice is SellerChoice: ink when chosen, white otherwise.
+templ Choice(label, value, model string) {
+	<button
+		type="button"
+		role="radio"
+		x-bind:aria-checked={ model + " === '" + value + "'" }
+		x-on:click={ model + " = '" + value + "'" }
+		class="rounded-[22px] px-[15px] py-2.5 text-[13px] font-semibold transition-colors duration-150 motion-reduce:transition-none"
+		x-bind:class={ model + " === '" + value + "' ? 'bg-text text-white' : 'bg-white text-text'" }>
+		{ label }
+	</button>
+}
+
+// SubmitBar is SellerSubmitBar. It expects the form's Alpine state to carry
+// `blocker` (null when ready) and `saving`.
+templ SubmitBar(label, busyLabel string) {
+	<div class="sticky bottom-0 border-t border-black/[.06] bg-canvas px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5">
+		<p class="mb-2 text-center text-[12.5px] text-muted" x-show="blocker" x-text="blocker" x-cloak aria-live="polite"></p>
+		<button
+			type="submit"
+			class="w-full rounded-[28px] bg-strong py-4 text-[15px] font-bold text-white disabled:bg-[#DDDDD9] disabled:text-[#8E8E88]"
+			x-bind:disabled="blocker !== null || saving"
+			x-text={ "saving ? '" + busyLabel + "' : '" + label + "'" }
+			disabled>
+			{ label }
+		</button>
+	</div>
+}

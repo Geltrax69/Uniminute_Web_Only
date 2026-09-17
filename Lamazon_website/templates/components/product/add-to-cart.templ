@@ -1,0 +1,69 @@
+package product
+
+// add-to-cart.templ — the details screen's buying controls: _QtyStepper, and
+// the bottom bar with Add to Cart (secondary) and Buy Now (primary), both
+// posting the chosen quantity. Buy Now goes on to the cart once it is in.
+
+import (
+	"encoding/json"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+)
+
+// Stepper is _QtyStepper: minus on surface, the count, plus on lime; each
+// greys out at its limit (one, or all the shop has).
+// Its Row is not min-sized, so in the Wrap beside "Quantity" it takes a line
+// of its own at full width.
+templ Stepper() {
+	<div class="flex w-full items-center rounded-[24px] bg-surface p-1 shadow-surface">
+		@ui.TactileButton("minus", "Decrease quantity", 44, "", templ.Attributes{"x-on:click": "dec()", "x-bind:disabled": "qty <= 1", "disabled": true})
+		<span class="px-2.5 text-[14px] font-bold text-text" x-text="qty" aria-live="polite">1</span>
+		@ui.TactileButton("plus", "Increase quantity", 44, "#C6EE63", templ.Attributes{
+			"x-on:click":      "inc()",
+			"x-bind:disabled": "atCap",
+			"x-bind:title":    "atCap ? 'That is all the shop has' : 'Increase quantity'",
+		})
+	</div>
+}
+
+templ BuyBar(p backend.Product) {
+	{{ out := p.AvailableStock != nil && *p.AvailableStock == 0 }}
+	<div class="fixed inset-x-0 bottom-0 z-40 border-t border-transparent bg-surface shadow-raised">
+		<div class="mx-auto flex max-w-[1100px] items-center px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5">
+			<p class="hidden flex-1 text-title text-text min-[900px]:block" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</p>
+			<input type="hidden" id="buy-id" name="id" value={ p.ID }/>
+			<input type="hidden" id="buy-qty" name="qty" value="1" x-bind:value="qty"/>
+			<div class="min-w-0 flex-1">
+				<button type="button" class={ ui.ButtonClass(false) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty" hx-swap="none" disabled?={ out }>
+					<span class="truncate">Add to Cart</span>
+				</button>
+			</div>
+			<div class="ml-2.5 min-w-0 flex-1">
+				<button type="button" class={ ui.ButtonClass(true) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty" hx-vals={ `{"buy": "1"}` } hx-swap="none" disabled?={ out }>
+					<span class="truncate">Buy Now</span>
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+// BuyData declares the page's Alpine buy state: the stock cap, and the
+// money text for every quantity the stepper can reach.
+func BuyData(p backend.Product) string {
+	limit, capJS := 99, "null"
+	if p.AvailableStock != nil {
+		capJS = itoa(*p.AvailableStock)
+		limit = min(limit, max(*p.AvailableStock, 1))
+	}
+	totals := map[string][]string{}
+	for q := 1; q <= limit; q++ {
+		n := float64(q)
+		totals["price"] = append(totals["price"], shop.Money(p.Price*n))
+		totals["mrp"] = append(totals["mrp"], shop.Money(p.MRP*n))
+		totals["save"] = append(totals["save"], shop.Money((p.MRP-p.Price)*n))
+	}
+	b, _ := json.Marshal(totals)
+	return "buy(" + capJS + "," + string(b) + "," + jsLit(shop.Money(p.Price)) + ")"
+}

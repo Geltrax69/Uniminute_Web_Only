@@ -1,0 +1,39 @@
+package pages
+
+// product.templ — DetailsScreen from details_screen.dart. Below 900px the
+// hero sits full width above the info; from 900px they share a row, 6:5, with
+// 32px around. The Add to Cart / Buy Now bar is fixed to the bottom and
+// replaces the shop's navigation bar here, as it does in the app.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/viewdata"
+)
+
+type ProductPageData struct {
+	Page       viewdata.Page
+	Product    backend.Product
+	Wishlisted bool
+}
+
+templ ProductPage(d ProductPageData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, productBody(d)))
+}
+
+templ productBody(d ProductPageData) {
+	<div x-data={ product.BuyData(d.Product) }>
+		<main id="main" class="pb-[calc(84px+env(safe-area-inset-bottom))] min-[900px]:p-8 min-[900px]:pb-[calc(116px+env(safe-area-inset-bottom))]">
+			<div class="min-[900px]:flex min-[900px]:items-start min-[900px]:gap-6">
+				<div class="min-[900px]:min-w-0 min-[900px]:flex-[6]">
+					@product.Gallery(d.Product, d.Wishlisted)
+				</div>
+				<div class="min-[900px]:min-w-0 min-[900px]:flex-[5]">
+					@product.Info(d.Product)
+				</div>
+			</div>
+		</main>
+		@product.BuyBar(d.Product)
+	</div>
+}

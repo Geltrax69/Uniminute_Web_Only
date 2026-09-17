@@ -1,0 +1,64 @@
+package cart
+
+// body.templ — everything under CartScreen's header: the empty state, or the
+// lines beside (from 900px) or above the delivery, payment and summary panels.
+// Every quantity change swaps this whole block, so totals never go stale.
+
+import (
+	"strconv"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+)
+
+type Data struct {
+	Entries  []shop.CartEntry
+	Address  *backend.Address // the selected or default address, if any
+	SignedIn bool
+}
+
+// Count is Cart.count: units, not lines.
+func (d Data) Count() int {
+	n := 0
+	for _, e := range d.Entries {
+		n += e.Qty
+	}
+	return n
+}
+
+templ Body(d Data) {
+	<div id="cart-body">
+		if len(d.Entries) == 0 {
+			<div class="flex min-h-[calc(100dvh-144px)] items-center justify-center">
+				@ui.EmptyState("shopping-basket", "Your cart is empty", "Find something you love from stores near you.", "Start shopping", "/")
+			</div>
+		} else {
+			<div class="px-5 pb-6 pt-1 min-[900px]:flex min-[900px]:items-start min-[900px]:gap-8 min-[900px]:p-8">
+				<div class="min-[900px]:min-w-0 min-[900px]:flex-[6]">
+					<h2 class="text-section text-text">{ itemsText(d.Count()) }</h2>
+					<div class="h-4"></div>
+					for _, e := range d.Entries {
+						<div class="mb-3">
+							@Item(e)
+						</div>
+					}
+				</div>
+				<div class="pt-3 min-[900px]:min-w-0 min-[900px]:flex-[4] min-[900px]:pt-0">
+					@DeliveryAddress(d.Address)
+					<div class="h-4"></div>
+					@PayOnDelivery()
+					<div class="h-4"></div>
+					@Summary(d)
+				</div>
+			</div>
+		}
+	</div>
+}
+
+func itemsText(n int) string {
+	if n == 1 {
+		return "1 item"
+	}
+	return strconv.Itoa(n) + " items"
+}

@@ -1,0 +1,169 @@
+package product
+
+// card.templ — ProductCard from widgets/product_card.dart. The picture takes
+// whatever height the tile leaves above a fixed 114px meta block, so every
+// price in a row lines up; the whole card is the link. The heart is a quiet
+// 27px disc inside a 44px target, and the quick-add is a flat lime disc on any
+// product that needs no choosing (no option groups), exactly the app's rule.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+)
+
+type CardOpts struct {
+	ShowStore  bool
+	QuickAdd   bool // the app's showAddToCart: products without options
+	Wishlisted bool
+}
+
+// scarceAt matches the app's scarcity threshold (LowStockAt in the backend).
+const scarceAt = 5
+
+templ Card(p backend.Product, opts CardOpts) {
+	<article class="relative flex h-full flex-col">
+		<a href={ templ.SafeURL("/p/" + p.ID) } class="absolute inset-0 z-0 rounded-small" aria-label={ cardLabel(p, opts.ShowStore) }></a>
+		<div class="pointer-events-none relative min-h-0 flex-1 overflow-hidden rounded-small bg-surface">
+			if p.ImageURL != "" {
+				<img src={ templ.URL(shop.Thumb(p.ImageURL)) } alt="" loading="lazy" class="h-full w-full object-cover"/>
+			} else {
+				<span class="flex h-full w-full items-center justify-center bg-img-ground">
+					@ui.Icon("image-off", "h-6 w-6 text-muted")
+				</span>
+			}
+		</div>
+		@Heart(p.ID, opts.Wishlisted, "absolute right-1 top-1 z-10")
+		if opts.QuickAdd {
+			<div class="absolute bottom-[118px] right-1 z-10">
+				@QuickAdd(p)
+			</div>
+		}
+		<div class="pointer-events-none relative h-[114px] shrink-0 overflow-hidden pt-2" aria-hidden="true">
+			<p class="flex items-baseline whitespace-nowrap">
+				<span class="text-[17px] font-bold leading-[21px] tracking-[-0.2px] text-text">₹{ shop.Money(p.Price) }</span>
+				if p.Discounted() {
+					<span class="ml-[5px] text-[12.5px] text-muted line-through">₹{ shop.Money(p.MRP) }</span>
+				}
+			</p>
+			if p.Discounted() {
+				<p class="text-[11.5px] font-bold leading-[15px] text-strong">{ p.DiscountPercent() }% off</p>
+			}
+			<h3 class="mt-0.5 line-clamp-2 text-[13px] font-medium leading-[16.5px] tracking-[0.05px] text-text">{ p.Name }</h3>
+			if opts.ShowStore {
+				<p class="mt-0.5 truncate text-[11px] leading-[14px] tracking-[0.2px] text-muted">{ p.Store }</p>
+			}
+			if n := stockNote(p); n.Text != "" {
+				<p class={ "mt-0.5 truncate text-[11.5px] font-bold leading-[15px] " + n.Class }>{ n.Text }</p>
+			}
+		</div>
+	</article>
+}
+
+// Heart is WishlistHeart: it posts to /wishlist/toggle and swaps itself back.
+templ Heart(id string, filled bool, class string) {
+	<button
+		type="button"
+		class={ "flex h-11 w-11 items-center justify-center rounded-full " + class }
+		hx-post="/wishlist/toggle"
+		hx-vals={ templ.JSONString(map[string]string{"id": id}) }
+		hx-target="this"
+		hx-swap="outerHTML"
+		aria-pressed={ tplWhen(filled, "true", "false") }
+		aria-label={ tplWhen(filled, "Remove from saved", "Save product") }
+		title={ tplWhen(filled, "Remove from saved", "Save product") }>
+		<span class="flex rounded-full bg-surface/[.78] p-[5px]">
+			if filled {
+				@ui.Icon("heart", "h-[17px] w-[17px] fill-danger text-danger")
+			} else {
+				@ui.Icon("heart", "h-[17px] w-[17px] text-strong")
+			}
+		</span>
+	</button>
+}
+
+// QuickAdd is CartButton: a flat 34px lime disc in a 44px target. After a
+// successful add it shows a tick for 1.4s, greyed like the app's disabled
+// state; sold out, it is grey from the start.
+templ QuickAdd(p backend.Product) {
+	{{ out := p.AvailableStock != nil && *p.AvailableStock == 0 }}
+	<button
+		type="button"
+		class="flex h-11 w-11 items-center justify-center rounded-full disabled:cursor-not-allowed"
+		hx-post="/cart/add"
+		hx-vals={ templ.JSONString(map[string]any{"id": p.ID, "qty": 1}) }
+		hx-swap="none"
+		x-data="{ added: false }"
+		x-on:htmx:before-request="added = true"
+		x-on:htmx:after-request="$event.detail.successful ? setTimeout(() => added = false, 1400) : added = false"
+		x-bind:disabled={ tplWhen(out, "true", "added") }
+		disabled?={ out }
+		aria-label={ tplWhen(out, "Out of stock", "Add "+p.Name+" to cart") }
+		title={ tplWhen(out, "Out of stock", "Add "+p.Name+" to cart") }>
+		<span class={ "qa-disc " + tplWhen(out, "is-out", "") } x-bind:class="added && 'is-added'">
+			<span class="flex" x-show="!added">
+				@ui.Icon("plus", "h-[17px] w-[17px]")
+			</span>
+			<span class="flex" x-show="added" x-cloak>
+				@ui.Icon("check", "h-[17px] w-[17px]")
+			</span>
+		</span>
+	</button>
+}
+
+type note struct{ Text, Class string }
+
+// stockNote is the app's _note: only exceptions get a line.
+func stockNote(p backend.Product) note {
+	if p.AvailableStock == nil {
+		return note{}
+	}
+	if *p.AvailableStock == 0 {
+		return note{"Out of stock", "text-danger"}
+	}
+	if *p.AvailableStock <= scarceAt {
+		return note{"Only " + itoa(*p.AvailableStock) + " left", "text-warning"}
+	}
+	return note{}
+}
+
+// cardLabel is the card's one spoken sentence.
+func cardLabel(p backend.Product, showStore bool) string {
+	s := shop.SpokenTitle(p.Name) + ", ₹" + shop.Money(p.Price)
+	if p.Discounted() {
+		s += ", " + itoa(p.DiscountPercent()) + " percent off"
+	}
+	if showStore {
+		s += ", from " + p.Store
+	}
+	if n := stockNote(p); n.Text != "" {
+		s += ", " + n.Text
+	}
+	return s
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	digits := ""
+	for n > 0 {
+		digits = string(rune('0'+n%10)) + digits
+		n /= 10
+	}
+	if neg {
+		return "-" + digits
+	}
+	return digits
+}
+
+func tplWhen(cond bool, a, b string) string {
+	if cond {
+		return a
+	}
+	return b
+}

@@ -1,0 +1,12 @@
+{
+  "name": "lamazon-website",
+  "private": true,
+  "description": "Tailwind build for the Lamazon storefront. Tokens come straight from frontend/lib/widgets/design_system.dart.",
+  "scripts": {
+    "build": "tailwindcss -i ./static/css/app.css -o ./static/css/tailwind.css --minify",
+    "watch": "tailwindcss -i ./static/css/app.css -o ./static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

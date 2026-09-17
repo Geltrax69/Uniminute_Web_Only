@@ -1,0 +1,38 @@
+package layouts
+
+// account.templ — the account/orders chrome: simpler than shop, just a back
+// nav header + content + bottom nav. Matches the Flutter AccountScreen shell.
+
+import (
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/viewdata"
+)
+
+type AccountData struct {
+	Page    viewdata.Page
+	Section string // "account" | "orders" | "checkout"
+	Content templ.Component
+}
+
+templ Account(d AccountData) {
+	@Base(d.Page.Title, d.Page.Description, d.Page.Canonical, accountBody(d))
+}
+
+templ accountBody(d AccountData) {
+	<div class="page-body">
+		@accountHeader(d)
+		<main id="main" class="px-gutter pt-4">
+			@d.Content
+		</main>
+	</div>
+	@navigation.BottomNav(d.Page, d.Section)
+}
+
+templ accountHeader(d AccountData) {
+	<header class="sticky top-0 z-40 flex items-center gap-2 border-b border-track bg-surface px-4 py-3">
+		<a href="/" class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/6" aria-label="Back to shop">
+			<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"></path></svg>
+		</a>
+		<h1 class="flex-1 text-section">{ d.Page.Title }</h1>
+	</header>
+}

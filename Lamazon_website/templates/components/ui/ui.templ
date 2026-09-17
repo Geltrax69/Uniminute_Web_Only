@@ -1,0 +1,294 @@
+package ui
+
+// The shared control vocabulary, ported widget-for-widget from
+// frontend/lib/widgets/design_system.dart: ActionButton, TactileIconButton,
+// Skeleton, EmptyState, toasts, drawers, dropdowns, modals.
+
+import (
+	"strconv"
+
+	"lamazon/website/tpl"
+)
+
+// TactileButton is TactileIconButton: a circular control with a small
+// upper-left highlight over its ground (surface unless bg is given) and the
+// tactile shadow. An "href" attr makes it a link.
+templ TactileButton(icon, label string, size int, bg string, attrs templ.Attributes) {
+	{{ href, _ := attrs["href"].(string) }}
+	if href != "" {
+		<a { attrs... } class="tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile" style={ templ.SafeCSS(TactileStyle(size, bg)) } aria-label={ label } title={ label }>
+			@Icon(icon, "h-5 w-5")
+		</a>
+	} else {
+		<button type="button" { attrs... } class="tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile" style={ templ.SafeCSS(TactileStyle(size, bg)) } aria-label={ label } title={ label }>
+			@Icon(icon, "h-5 w-5")
+		</button>
+	}
+}
+
+// IconSVG is Icon as a string, for markup that client script places.
+func IconSVG(name, class string) string {
+	body, ok := icons[name]
+	if !ok {
+		return ""
+	}
+	return `<svg class="inline-block shrink-0 ` + class + `" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` + body + `</svg>`
+}
+
+// ButtonClass is ActionButton's look, for buttons that need their own markup.
+func ButtonClass(primary bool) string { return buttonClass(primary) }
+
+// TactileStyle is the size and highlight of a TactileIconButton.
+func TactileStyle(size int, bg string) string {
+	if bg == "" {
+		bg = "#FFFDF8"
+	}
+	s := strconv.Itoa(size) + "px"
+	return "width:" + s + ";height:" + s + ";background-image:linear-gradient(to bottom right," + tpl.Blend("#FFFFFF", .52, bg) + "," + bg + ")"
+}
+
+// ActionButtonIcon is ActionButton with its trailing icon.
+templ ActionButtonIcon(label, icon string, primary bool, attrs templ.Attributes) {
+	<button type="button" { attrs... } class={ buttonClass(primary) }>
+		<span class="truncate">{ label }</span>
+		@Icon(icon, "h-[18px] w-[18px]")
+	</button>
+}
+
+templ Icon(name string, class string) {
+	if body, ok := icons[name]; ok {
+		<svg
+			class={ "inline-block shrink-0 " + class }
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			aria-hidden="true">
+			@templ.Raw(body)
+		</svg>
+	}
+}
+
+// ActionButton is the app's ActionButton: a 46px-minimum pill with a
+// top-left highlight over a forest (primary) or surface (secondary) ground,
+// the tactile shadow, and HTMX's own busy treatment standing in for the
+// Flutter spinner slot. Passing an href attr turns it into navigation.
+templ ActionButton(label string, primary bool, attrs templ.Attributes) {
+	{{ href, _ := attrs["href"].(string) }}
+	if href != "" {
+		<a { attrs... } class={ buttonClass(primary) }>
+			<span class="truncate">{ label }</span>
+		</a>
+	} else {
+		<button { attrs... } class={ buttonClass(primary) }>
+			<span class="truncate">{ label }</span>
+		</button>
+	}
+}
+
+func buttonClass(primary bool) string {
+	base := "inline-flex min-h-button min-w-[46px] items-center justify-center gap-2 rounded-full px-[18px] py-3 text-label transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong disabled:pointer-events-none disabled:opacity-50 shadow-tactile "
+	if primary {
+		return base + "text-white [background-image:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,0)_55%),linear-gradient(#143E32,#143E32)]"
+	}
+	return base + "text-strong [background-image:linear-gradient(135deg,rgba(255,255,255,.6),rgba(255,255,255,0)_55%),linear-gradient(#FFFDF8,#FFFDF8)]"
+}
+
+// ActionLink is ActionButton as navigation: same pill, same gradient, an href.
+templ ActionLink(label string, href string, primary bool) {
+	@ActionButton(label, primary, templ.Attributes{"href": href})
+}
+
+// Spinner shows while an HTMX request is in flight. Paired with
+// htmx-indicator classes in the markup that requests it.
+templ Spinner(class string) {
+	<span class={ "htmx-indicator inline-block animate-spin rounded-full border-2 border-current border-t-transparent " + class } role="status" aria-label="Loading"></span>
+}
+
+// Skeleton is the app's Skeleton gradient tile.
+templ Skeleton(class string, label string) {
+	<div class={ "animate-pulse rounded-small bg-gradient-to-br from-[#F0F0E9] to-[#E5E8DF] " + class } aria-label={ label } aria-hidden="true"></div>
+}
+
+// CatalogSkeleton mirrors CatalogSkeleton: a title, a search bar, a banner,
+// then six product-card ghosts.
+templ CatalogSkeleton() {
+	<div aria-live="polite" aria-label="Loading products">
+		@Skeleton("h-7 w-[132px] rounded-[14px]", "")
+		<div class="h-4"></div>
+		@Skeleton("h-[58px] rounded-featured", "")
+		<div class="h-[18px]"></div>
+		@Skeleton("h-[220px] rounded-featured", "")
+		<div class="h-[30px]"></div>
+		<div class="product-grid">
+			for i := 0; i < 6; i++ {
+				<div class="flex flex-col">
+					@Skeleton("aspect-square w-full rounded", "")
+					<div class="h-2.5"></div>
+					@Skeleton("h-4", "")
+					<div class="h-[7px]"></div>
+					@Skeleton("h-4 w-20", "")
+				</div>
+			}
+		</div>
+	</div>
+}
+
+// EmptyState mirrors the app's EmptyState: a lime disc with the icon, a
+// title, a muted message, and one action.
+templ EmptyState(iconName string, title string, message string, actionLabel string, href string) {
+	<div class="mx-auto w-fit max-w-full rounded-featured bg-surface p-7 text-center shadow-surface">
+		<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-lime text-strong">
+			@Icon(iconName, "h-7 w-7")
+		</div>
+		<div class="h-5"></div>
+		<h3 class="text-title">{ title }</h3>
+		<div class="h-2"></div>
+		<p class="text-body text-muted">{ message }</p>
+		<div class="pt-[22px]"></div>
+		if href != "" {
+			@ActionButton(actionLabel, true, templ.Attributes{"href": href})
+		}
+	</div>
+}
+
+// ToastRegion is the one shape for every transient message — the app's
+// showAppSnack, floating above the bottom bar. HTMX responses ask for a toast
+// with the lw:toast event (see static/js/app.js).
+templ ToastRegion() {
+	<div id="toasts" x-data="toasts()" class="pointer-events-none fixed inset-x-4 bottom-6 z-[70] flex flex-col items-center [body:has(nav[aria-label=Main])_&]:bottom-[108px]" aria-live="polite">
+		<template x-for="t in toasts" :key="t.id">
+			<div x-show="t.visible" x-transition.opacity.duration.200ms class="pointer-events-auto w-full max-w-md" role="status">
+				// showAddedToast: a white card with a basket (green) or cart (ink) disc.
+				<template x-if="t.added">
+					<div class="mx-[15px] flex items-center rounded-[20px] bg-white p-3 shadow-[0_6px_21.8px_rgba(0,0,0,0.15)]">
+						<span class="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-white" x-bind:class="t.basket ? 'bg-[#43A047]' : 'bg-text'">
+							<span class="flex" x-show="t.basket">
+								@Icon("shopping-basket", "h-5 w-5")
+							</span>
+							<span class="flex" x-show="!t.basket">
+								@Icon("shopping-cart", "h-5 w-5")
+							</span>
+						</span>
+						<span class="ml-3 flex min-w-0 flex-1 flex-col">
+							<span class="text-[14px] font-bold text-text" x-text="t.title"></span>
+							<span class="truncate text-[12px] text-muted" x-text="t.message"></span>
+						</span>
+						@Icon("check", "ml-3 h-[18px] w-[18px] text-[#43A047]")
+					</div>
+				</template>
+				// showAppSnack: Material's floating snackbar on the inverse surface.
+				<template x-if="!t.added">
+					<div class="flex items-center gap-3 rounded-[4px] bg-[#2E312E] px-4 py-3.5 text-[14px] text-[#EFF1EC] shadow-raised">
+						<span class="flex-1" x-text="t.message"></span>
+						<template x-if="t.undo">
+							<button type="button" class="text-label text-lime" x-on:click="undo(t)" x-text="t.undoLabel"></button>
+						</template>
+					</div>
+				</template>
+			</div>
+		</template>
+	</div>
+}
+
+// Drawer is the generic Alpine side drawer. Content is handed in; open/close
+// is managed by the drawers Alpine store (static/js/alpine/menu.js).
+templ Drawer(id string, side string, title string, content templ.Component) {
+	<div
+		id={ id }
+		class="drawer pointer-events-none fixed inset-0 z-[60]"
+		x-data={ "{ open: $store.drawers.isOpen('" + id + "') }" }
+		x-on:keydown.escape.window={ "$store.drawers.close('" + id + "')" }
+		x-bind:class="open ? 'pointer-events-auto' : ''">
+		<div
+			class="absolute inset-0 bg-wash-strong/40 opacity-0 transition-opacity duration-200"
+			x-show="open"
+			x-transition.opacity
+			x-on:click={ "$store.drawers.close('" + id + "')" }
+			aria-hidden="true"></div>
+		<aside
+			class={ "absolute inset-y-0 w-[min(420px,92vw)] overflow-y-auto bg-canvas shadow-raised transition-transform duration-200 ease-out " + sideClass(side) }
+			x-bind:class="open ? 'translate-x-0' : 'translate-x-full'"
+			x-show="open"
+			role="dialog"
+			aria-modal="true"
+			aria-label={ title }>
+			<header class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-track bg-surface px-4 py-3">
+				<h2 class="text-section">{ title }</h2>
+				<button
+					class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/6"
+					x-on:click={ "$store.drawers.close('" + id + "')" }
+					aria-label={ "Close " + title }>
+					@Icon("x", "h-5 w-5")
+				</button>
+			</header>
+			@content
+		</aside>
+	</div>
+}
+
+func sideClass(side string) string {
+	if side == "left" {
+		return "left-0"
+	}
+	return "right-0"
+}
+
+// Dropdown is the generic Alpine dropdown, used for sort order on the shop.
+templ Dropdown(label string, content templ.Component) {
+	<div class="relative" x-data="{ open: false }" x-on:click.outside="open = false" x-on:keydown.escape.window="open = false">
+		<button
+			class="flex min-h-touch items-center gap-1.5 rounded-full border border-track bg-surface px-4 py-2 text-label text-text hover:border-muted/40"
+			x-on:click="open = !open"
+			x-bind:aria-expanded="open">
+			{ label }
+			@Icon("chevron-down", "h-4 w-4 text-muted")
+		</button>
+		<div
+			class="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-featured bg-surface py-1.5 shadow-raised"
+			x-show="open"
+			x-transition.opacity.duration.150ms
+			x-cloak>
+			@content
+		</div>
+	</div>
+}
+
+// Modal is a centred Alpine dialog. Opened with $store.drawers.open(id) so
+// HTMX responses can pop one with an event, closed the same way.
+templ Modal(id string, title string, content templ.Component) {
+	<div
+		id={ id }
+		class="pointer-events-none fixed inset-0 z-[65] flex items-end justify-center p-0 md:items-center md:p-6"
+		x-data={ "{ open: $store.drawers.isOpen('" + id + "') }" }
+		x-on:keydown.escape.window={ "$store.drawers.close('" + id + "')" }
+		x-bind:class="open ? 'pointer-events-auto' : ''">
+		<div
+			class="absolute inset-0 bg-wash-strong/40"
+			x-show="open"
+			x-transition.opacity
+			x-on:click={ "$store.drawers.close('" + id + "')" }
+			aria-hidden="true"></div>
+		<div
+			class="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-featured bg-surface p-5 shadow-raised md:rounded-featured"
+			x-show="open"
+			x-transition.opacity.duration.200ms
+			x-cloak
+			role="dialog"
+			aria-modal="true"
+			aria-label={ title }>
+			<header class="mb-4 flex items-center justify-between gap-3">
+				<h2 class="text-section">{ title }</h2>
+				<button
+					class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/6"
+					x-on:click={ "$store.drawers.close('" + id + "')" }
+					aria-label={ "Close " + title }>
+					@Icon("x", "h-5 w-5")
+				</button>
+			</header>
+			@content
+		</div>
+	</div>
+}

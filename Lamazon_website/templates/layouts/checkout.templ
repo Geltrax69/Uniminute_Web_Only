@@ -1,0 +1,43 @@
+package layouts
+
+// checkout.templ — minimal chrome for the checkout flow: logo + title, no
+// bottom nav, no cart drawer. Focus is on completing the order.
+
+import "lamazon/website/viewdata"
+
+type CheckoutData struct {
+	Page    viewdata.Page
+	Step    string // "cart" | "checkout" | "confirm"
+	Content templ.Component
+}
+
+templ Checkout(d CheckoutData) {
+	@Base(d.Page.Title, d.Page.Description, d.Page.Canonical, checkoutBody(d))
+}
+
+templ checkoutBody(d CheckoutData) {
+	<div class="min-h-screen bg-canvas">
+		<header class="flex items-center gap-3 border-b border-track bg-surface px-gutter py-3">
+			<a href="/" aria-label="Lamazon home" class="flex items-center gap-2">
+				<span class="text-section text-forest">Lamazon</span>
+			</a>
+			<div class="ml-auto flex items-center gap-2 text-body text-muted">
+				<span class={ stepClass(d.Step, "cart") }>Cart</span>
+				<svg class="h-3 w-3 text-track" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+				<span class={ stepClass(d.Step, "checkout") }>Checkout</span>
+				<svg class="h-3 w-3 text-track" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+				<span class={ stepClass(d.Step, "confirm") }>Confirm</span>
+			</div>
+		</header>
+		<main id="main" class="mx-auto max-w-readable px-gutter py-8">
+			@d.Content
+		</main>
+	</div>
+}
+
+func stepClass(current, step string) string {
+	if current == step {
+		return "font-semibold text-strong"
+	}
+	return ""
+}

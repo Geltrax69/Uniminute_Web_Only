@@ -1,0 +1,1290 @@
+package pages
+
+// admin.templ — AdminScreen at /admin: the staff sign-in, then the panel. Six
+// counts that open their lists, the sections as chips (a dropdown on a phone),
+// search / status / dates / CSV above the lists that have them, and the twelve
+// sections. Lists render on the server from the admin API; every decision is
+// made through a dialog that calls the same /api/admin routes the app calls,
+// then reloads to show what the server now holds.
+
+import (
+	"encoding/json"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+const adminPageSize = 25
+
+type AdminLoginData struct {
+	Page     viewdata.Page
+	Username string
+	Error    string
+}
+
+templ AdminLogin(d AdminLoginData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", adminLoginBody(d))
+}
+
+templ adminLoginBody(d AdminLoginData) {
+	<main id="main" class="mx-auto flex min-h-[100dvh] w-full max-w-[460px] items-center p-6">
+		<form method="post" action="/admin/login" class="w-full rounded-featured bg-surface p-6 shadow-raised" x-data="{ busy: false, shown: false }" x-on:submit="busy = true">
+			<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-lime text-strong">
+				@ui.Icon("shield-check", "h-[30px] w-[30px]")
+			</div>
+			<h1 class="mt-4 text-center text-title text-text">Lamazon admin</h1>
+			<p class="mt-1.5 text-center text-body text-muted">Staff only. Sellers and riders sign in elsewhere.</p>
+			<div class="h-6"></div>
+			@adminField("username", "Username", "text", "username", d.Username, false)
+			<div class="h-3"></div>
+			@adminField("password", "Password", "password", "current-password", "", true)
+			if d.Error != "" {
+				<p class="mt-3 text-center text-[13px] leading-[17px] text-danger" role="alert">{ d.Error }</p>
+			}
+			<button type="submit" class={ ui.ButtonClass(true) + " mt-5 w-full" } x-bind:disabled="busy">
+				<span class="truncate" x-text="busy ? 'Signing in…' : 'Sign in'">Sign in</span>
+			</button>
+		</form>
+	</main>
+}
+
+templ adminField(name, label, kind, autocomplete, value string, secret bool) {
+	// The theme's TextField: 48px (15 + 18 + 15), filled, no border until
+	// focus draws a 2px forest one, and a label that floats onto the top edge.
+	<div class="relative h-12 rounded-featured bg-canvas focus-within:ring-2 focus-within:ring-inset focus-within:ring-strong">
+		<input
+			id={ "admin-" + name }
+			name={ name }
+			type={ kind }
+			if secret {
+				x-bind:type="shown ? 'text' : 'password'"
+			}
+			autocomplete={ autocomplete }
+			value={ value }
+			required
+			placeholder=" "
+			class={ "peer h-full w-full rounded-featured bg-transparent pl-5 text-[14.5px] text-text outline-none " + tpl.When(secret, "pr-12", "pr-5") }/>
+		<label for={ "admin-" + name } class="pointer-events-none absolute left-5 top-1/2 max-w-[calc(100%-40px)] -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[11px] motion-reduce:transition-none">{ label }</label>
+		if secret {
+			<button type="button" x-on:click="shown = !shown" x-bind:aria-label="shown ? 'Hide password' : 'Show password'" x-bind:title="shown ? 'Hide password' : 'Show password'" class="absolute right-0.5 top-0.5 flex h-11 w-11 items-center justify-center rounded-full text-muted">
+				<span class="flex" x-show="!shown">
+					@ui.Icon("eye", "h-[18px] w-[18px]")
+				</span>
+				<span class="flex" x-show="shown" x-cloak>
+					@ui.Icon("eye-off", "h-[18px] w-[18px]")
+				</span>
+			</button>
+		}
+	</div>
+}
+
+// AdminData is everything the panel reads, and the filters in the address.
+type AdminData struct {
+	Page        viewdata.Page
+	Staff       shop.Staff
+	Tab         string
+	Q           string
+	Stage       string
+	From, To    string // yyyy-mm-dd, inclusive
+	PageNum     int
+	OpenDept    string
+	Error       string
+	Overview    map[string]any
+	Insights    map[string]any
+	Stores      []map[string]any
+	Orders      []map[string]any
+	Riders      []map[string]any
+	Items       []backend.InventoryItem
+	Groups      []backend.CompareGroup
+	Policies    []backend.Policy
+	Campaigns   []backend.Campaign
+	Departments []backend.Category
+}
+
+type adminTab struct {
+	Key, Label string
+	Store      bool
+}
+
+var adminTabs = []adminTab{
+	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
+	{"orders", "Orders", false}, {"products", "Products", false}, {"insights", "Insights", false},
+	{"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
+	{"policies", "Policies", false}, {"delivery", "Delivery", false}, {"people", "People", false},
+}
+
+templ Admin(d AdminData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", adminBody(d))
+}
+
+templ adminBody(d AdminData) {
+	{{ counts := d.Counts() }}
+	<main id="main" class="mx-auto w-full max-w-[1280px] px-5 pb-10 pt-4" x-data={ "adminPanel(" + jsonArg(d.clientConfig()) + ")" }>
+		<div class="flex items-center">
+			<div class="min-w-0 flex-1">
+				<h1 class="text-title text-text">Admin</h1>
+				if d.Staff.Subject != "" {
+					<p class="text-body text-muted">Signed in as { d.Staff.Subject }</p>
+				}
+			</div>
+			@ui.TactileButton("refresh-cw", "Refresh", 40, "", templ.Attributes{"href": d.link(d.Tab, 0)})
+			<form method="post" action="/admin/logout" class="ml-2">
+				<button type="submit" class={ ui.ButtonClass(false) }><span class="truncate">Sign out</span></button>
+			</form>
+		</div>
+		if d.Error != "" {
+			<p class="mt-3 text-[13px] text-danger">{ d.Error }</p>
+		}
+		<div class="mt-3 grid grid-cols-3 gap-2.5 md:grid-cols-6">
+			@kpiTile("People", sv(d.Overview, "users"), "", "/admin?tab=people")
+			@kpiTile("Sellers", sv(d.Overview, "sellers"), "", "/admin?tab=approved")
+			@kpiTile("To review", strconv.Itoa(counts["review"]), tpl.When(counts["review"] > 0, "#9A5B12", ""), "/admin?tab=review")
+			@kpiTile("Riders", sv(d.Overview, "riders"), "", "/admin?tab=delivery")
+			@kpiTile("Orders", sv(d.Overview, "orders"), "", "/admin?tab=orders")
+			@kpiTile("Rejected", strconv.Itoa(counts["rejected"]), "", "/admin?tab=rejected")
+		</div>
+		<div class="h-[22px]"></div>
+		<label class="block md:hidden">
+			<span class="mb-1 block text-[12px] text-muted">Admin section</span>
+			<select class="h-14 w-full rounded-featured bg-surface px-4 text-body text-text" x-on:change="location.assign('/admin?tab=' + $event.target.value)">
+				for _, t := range adminTabs {
+					<option value={ t.Key } selected?={ t.Key == d.Tab }>{ t.Label } ({ strconv.Itoa(counts[t.Key]) })</option>
+				}
+			</select>
+		</label>
+		<div class="hidden md:block">
+			@chipGroup("Stores", d, counts, true)
+			<div class="h-2.5"></div>
+			@chipGroup("Manage", d, counts, false)
+		</div>
+		<div class="h-5"></div>
+		if d.hasTable() && d.activeCount() > 0 {
+			@adminControls(d)
+		}
+		@adminSection(d)
+		if d.hasTable() {
+			@adminPagination(d)
+		}
+		@adminDialog()
+	</main>
+}
+
+templ kpiTile(label, value, colour, href string) {
+	<a href={ templ.SafeURL(href) } class="flex flex-col items-center rounded-featured bg-surface px-3 py-4 shadow-surface hover:bg-[#FBFAF5]" aria-label={ label + ": " + value }>
+		<span class="text-[22px] font-extrabold" style={ templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)) }>{ tpl.When(value == "", "0", value) }</span>
+		<span class="mt-0.5 text-center text-[12px] text-muted">{ label }</span>
+	</a>
+}
+
+templ chipGroup(label string, d AdminData, counts map[string]int, store bool) {
+	<div class="flex items-start">
+		<span class="mr-3 w-[62px] shrink-0 pt-2.5 text-[11px] font-bold uppercase tracking-[0.8px] text-muted">{ label }</span>
+		<div class="flex flex-1 flex-wrap gap-2" role="tablist">
+			for _, t := range adminTabs {
+				if t.Store == store {
+					<a href={ templ.SafeURL("/admin?tab=" + t.Key) } role="tab" aria-selected={ tpl.When(t.Key == d.Tab, "true", "false") } class={ "inline-flex h-8 items-center rounded-[20px] border border-track px-3 text-[13px] font-semibold text-text", templ.KV("bg-lime", t.Key == d.Tab), templ.KV("bg-surface", t.Key != d.Tab) }>{ t.Label } ({ strconv.Itoa(counts[t.Key]) })</a>
+				}
+			}
+		</div>
+	</div>
+}
+
+// adminControls: search, and for orders a status and a date range, and CSV.
+templ adminControls(d AdminData) {
+	<form method="get" action="/admin" class="mb-4">
+		<input type="hidden" name="tab" value={ d.Tab }/>
+		<div class="flex h-14 items-center rounded-small bg-surface px-4 shadow-surface focus-within:ring-2 focus-within:ring-strong">
+			@ui.Icon("search", "h-5 w-5 shrink-0 text-muted")
+			<input type="search" name="q" value={ d.Q } placeholder={ "Search " + strings.ToLower(tabLabel(d.Tab)) } aria-label={ "Search " + strings.ToLower(tabLabel(d.Tab)) } class="ml-3 h-full min-w-0 flex-1 bg-transparent text-body text-text outline-none placeholder:text-muted"/>
+		</div>
+		<div class="mt-3 flex flex-wrap items-center gap-3">
+			if d.Tab == "orders" {
+				<select name="stage" x-on:change="$el.form.submit()" aria-label="Order status" class="h-11 w-[190px] rounded-small bg-surface px-3 text-body text-text">
+					for _, st := range []string{"All", "received", "accepted", "picked", "delivered", "rejected"} {
+						<option value={ st } selected?={ st == d.Stage || (st == "All" && d.Stage == "") }>{ tpl.When(st == "All", "All statuses", st) }</option>
+					}
+				</select>
+				<label class="flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-body text-strong shadow-tactile focus-within:ring-2 focus-within:ring-strong">
+					@ui.Icon("calendar", "h-[18px] w-[18px]")
+					<input type="date" name="from" value={ d.From } x-on:change="$el.form.submit()" aria-label="From" class="bg-transparent text-[13px] outline-none"/>
+					<span>–</span>
+					<input type="date" name="to" value={ d.To } x-on:change="$el.form.submit()" aria-label="To" class="bg-transparent text-[13px] outline-none"/>
+				</label>
+				if d.From != "" || d.To != "" {
+					<a href={ templ.SafeURL("/admin?tab=orders&q=" + url.QueryEscape(d.Q) + "&stage=" + url.QueryEscape(d.Stage)) } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Clear dates</a>
+				}
+			}
+			if len(d.Filtered()) > 0 {
+				<a href={ templ.SafeURL(d.exportLink()) } class={ ui.ButtonClass(false) }>
+					<span class="truncate">Export CSV</span>
+					@ui.Icon("download", "h-[18px] w-[18px]")
+				</a>
+			}
+		</div>
+		if len(d.Filtered()) == 0 {
+			<p class="p-5 text-body text-text">No matching records. Try another search or filter.</p>
+		}
+	</form>
+}
+
+templ adminSection(d AdminData) {
+	switch d.Tab {
+		case "review", "approved", "rejected":
+			@adminNote(storeNote(d.Tab))
+			if d.activeCount() == 0 {
+				@adminEmpty(storeEmpty(d.Tab))
+			} else {
+				for _, s := range d.PageRows() {
+					@storeCard(s, d.Tab)
+				}
+			}
+		case "orders":
+			@adminNote("Accepted orders go to a rider automatically — whoever is carrying the least, picked at random between equals. Reassign only when someone does not turn up.")
+			if len(d.Orders) == 0 {
+				@adminEmpty("No orders yet.")
+			} else {
+				for _, o := range d.PageRows() {
+					@adminOrderRow(o, d.Riders)
+				}
+			}
+		case "insights":
+			@insightsSection(d.Insights)
+		case "products":
+			@adminNote("Every product in the shop, whichever store lists it. Stock is what is on the shelf; \"in orders\" is what is already spoken for, so a shopper sees the difference. A product with orders against it cannot be deleted — the orders are the record of those sales — so hide it from the shop instead.")
+			if len(d.Items) == 0 {
+				@adminEmpty("No products listed yet, by any store.")
+			} else if len(d.Filtered()) == 0 {
+				@adminEmpty("No product matches \"" + d.Q + "\".")
+			} else {
+				for _, it := range d.PageItems() {
+					@adminProductRow(it)
+				}
+			}
+		case "categories":
+			@categoriesSection(d)
+		case "banners":
+			@bannersSection(d)
+		case "compare":
+			<div class="flex items-start">
+				<div class="flex-1">
+					@adminNote("Categories say where to browse. These say what can be put side by side — and the fields every product in the group is asked for.")
+				</div>
+				@adminTextAction("plus", "Group", "openGroup(null)")
+			</div>
+			if len(d.Groups) == 0 {
+				@adminEmpty("No comparison groups yet. Without one, Compare can only show the same product at different shops.")
+			} else {
+				for _, g := range d.Groups {
+					@groupCard(g)
+				}
+			}
+		case "policies":
+			@adminNote("The written pages, as shoppers read them. Saving publishes straight away — there is no draft. A line starting with \"## \" is a heading; everything else is a paragraph.")
+			if len(d.Policies) == 0 {
+				@adminEmpty("No policies yet.")
+			} else {
+				for _, pol := range d.Policies {
+					@policyRow(pol)
+				}
+			}
+		case "delivery":
+			<div class="flex items-start">
+				<div class="flex-1">
+					@adminNote("Riders sign in at /delivery with their number and the PIN issued when you add them.")
+				</div>
+				@adminTextAction("plus", "Add number", "openRiderAdd()")
+			</div>
+			if len(d.Riders) == 0 {
+				@adminEmpty("No delivery numbers yet.")
+			} else {
+				for _, r := range d.PageRows() {
+					@riderRow(r)
+				}
+			}
+		case "people":
+			@adminNote("Everyone who has signed in. Selling is not a setting — it follows from owning a store.")
+			if len(d.people()) == 0 {
+				@adminEmpty("Nobody has signed in yet.")
+			} else {
+				for _, p := range d.PageRows() {
+					@personRow(p)
+				}
+			}
+	}
+}
+
+templ adminNote(text string) {
+	<p class="pb-2.5 text-[12px] leading-[1.4] text-muted">{ text }</p>
+}
+
+templ adminEmpty(text string) {
+	<div class="mb-3 flex items-center justify-center rounded-featured bg-surface px-5 py-7 shadow-surface">
+		<span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-small bg-track text-muted">
+			@ui.Icon("inbox", "h-[17px] w-[17px]")
+		</span>
+		<p class="ml-3 text-[13.5px] text-muted">{ text }</p>
+	</div>
+}
+
+templ adminTextAction(icon, label, action string) {
+	<button type="button" x-on:click={ action } class="ml-2 inline-flex min-h-touch shrink-0 items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">
+		@ui.Icon(icon, "h-4 w-4")
+		<span class="ml-2">{ label }</span>
+	</button>
+}
+
+templ pill(text, colour string) {
+	<span class="shrink-0 rounded-[10px] px-2 py-[3px] text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ text }</span>
+}
+
+// storeCard is _StoreCard: the decision first, the upkeep tools below.
+templ storeCard(s map[string]any, tab string) {
+	{{ status := sv(s, "status") }}
+	{{ colour := tpl.When(status == "approved", "#1D4939", tpl.When(status == "rejected", "#B93643", "#9A5B12")) }}
+	{{ owner, name := sv(s, "owner"), sv(s, "name") }}
+	<div class="mb-2.5 rounded-featured bg-white p-3.5">
+		<div class="flex items-center">
+			<p class="min-w-0 flex-1 text-[15px] font-extrabold text-text">{ name }</p>
+			@pill(tpl.When(status == "approved", "Live in the shop", tpl.When(status == "rejected", "Rejected", "Waiting for review")), colour)
+		</div>
+		<p class="mt-1 text-[12px] text-muted">{ joinNonEmpty(" · ", owner, sv(s, "phone")) }</p>
+		<p class="text-[12px] text-muted">{ sv(s, "location") }, { sv(s, "city") } · { strings.Join(strs(s["categories"]), ", ") } · { sv(s, "items") } { tpl.When(sv(s, "items") == "1", "product", "products") }</p>
+		if sv(s, "rejectReason") != "" {
+			<p class="mt-1 text-[12px] text-danger">Reason: { sv(s, "rejectReason") }</p>
+		}
+		<div class="mt-3 flex flex-wrap gap-2.5">
+			if tab != "approved" {
+				<button type="button" x-on:click={ "approve(" + jsonArg(owner) + ", " + jsonArg(name) + ")" } class="h-10 rounded-full bg-strong px-6 text-[14px] font-medium text-white hover:brightness-110">Approve</button>
+			}
+			if tab != "rejected" {
+				<button type="button" x-on:click={ "openReject(" + jsonArg(owner) + ")" } class="h-10 rounded-full border border-track px-6 text-[14px] font-medium text-danger hover:bg-danger/[.04]">Reject</button>
+			}
+		</div>
+		<div class="mt-1 flex flex-wrap items-center gap-1">
+			<a href={ templ.SafeURL("/admin/stores/" + url.PathEscape(owner) + "/photos?name=" + url.QueryEscape(name)) } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-text hover:bg-strong/[.06]">
+				@ui.Icon("images", "h-[15px] w-[15px]")
+				<span class="ml-2">Photos</span>
+			</a>
+			<button type="button" x-on:click={ "openDepts(" + jsonArg(owner) + ", " + jsonArg(name) + ", " + jsonArg(strs(s["categories"])) + ")" } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">
+				@ui.Icon("pencil", "h-[15px] w-[15px]")
+				<span class="ml-2">Departments</span>
+			</button>
+		</div>
+	</div>
+}
+
+templ adminOrderRow(o map[string]any, riders []map[string]any) {
+	{{ stage := sv(o, "stage") }}
+	{{ carrier, assigned := sv(o, "riderPhone"), sv(o, "assignedTo") }}
+	<div class="mb-2 rounded bg-white p-3">
+		<div class="flex items-center">
+			<p class="min-w-0 flex-1 truncate text-[13.5px] font-bold text-text">#{ strings.ToUpper(sv(o, "id")) } · { sv(o, "units") } × { sv(o, "itemTitle") }</p>
+			@pill(stage, orderStageColour(stage))
+		</div>
+		<p class="mt-[3px] text-[12px] text-muted">₹{ shop.Money(nv(o, "amount")) } · { sv(o, "storeName") } → { sv(o, "receiverName") } · { sv(o, "receiverPhone") }</p>
+		<p class="text-[11.5px] text-muted">{ sv(o, "receiverAddress") }</p>
+		<div class="mt-1.5 flex items-center">
+			<p class={ "min-w-0 flex-1 text-[12px] font-semibold " + tpl.When(carrier == "" && assigned == "", "text-muted", "text-text") }>
+				if carrier != "" {
+					Carried by { riderLabel(riders, carrier) }
+				} else if assigned != "" {
+					Assigned to { riderLabel(riders, assigned) }
+				} else {
+					Open to any rider
+				}
+			</p>
+			if stage == "received" || stage == "accepted" {
+				<button type="button" x-on:click={ "openAssign(" + jsonArg(sv(o, "id")) + ")" } class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">{ tpl.When(assigned == "", "Assign rider", "Reassign") }</button>
+			}
+		</div>
+	</div>
+}
+
+templ insightsSection(in map[string]any) {
+	{{ totals := mv(in, "totals") }}
+	{{ stores := maps(lv(in, "topStores")) }}
+	{{ items := maps(lv(in, "topItems")) }}
+	@adminNote("Rejected orders are left out: a shop turning work away is not a shop selling. Revenue counts delivered orders only.")
+	<div class="flex gap-2.5">
+		@insightStat("Orders placed", tpl.When(sv(totals, "placed") == "", "0", sv(totals, "placed")), "")
+		@insightStat("Delivered", tpl.When(sv(totals, "delivered") == "", "0", sv(totals, "delivered")), "#1D4939")
+		@insightStat("Revenue", "₹"+shop.Money(nv(totals, "revenue")), "")
+	</div>
+	<h2 class="mt-[22px] pb-2.5 text-[15px] font-extrabold text-text">Stores by orders</h2>
+	if len(stores) == 0 {
+		@adminEmpty("No orders yet, so nothing to rank.")
+	} else {
+		for i, s := range stores {
+			@rankRow(i+1, sv(s, "name"), sv(s, "units")+" units · "+sv(s, "delivered")+" delivered", sv(s, "orders")+" orders", "₹"+shop.Money(nv(s, "revenue")), share(nv(s, "orders"), nv(stores[0], "orders")))
+		}
+	}
+	<h2 class="mt-[22px] pb-2.5 text-[15px] font-extrabold text-text">Most ordered items</h2>
+	if len(items) == 0 {
+		@adminEmpty("No orders yet, so nothing to rank.")
+	} else {
+		for i, it := range items {
+			@rankRow(i+1, sv(it, "title"), sv(it, "store")+" · "+sv(it, "orders")+" orders", sv(it, "units")+" units", "₹"+shop.Money(nv(it, "revenue")), share(nv(it, "units"), nv(items[0], "units")))
+		}
+	}
+}
+
+templ insightStat(label, value, colour string) {
+	<div class="flex min-w-0 flex-1 flex-col items-center rounded bg-white px-3 py-3.5">
+		<span class="truncate text-[20px] font-extrabold" style={ templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)) }>{ value }</span>
+		<span class="mt-0.5 text-center text-[11.5px] text-muted">{ label }</span>
+	</div>
+}
+
+templ rankRow(rank int, title, subtitle, trailing, note string, fraction float64) {
+	<div class="mb-2 rounded-[14px] bg-white px-3.5 py-3">
+		<div class="flex items-start">
+			<span class={ "mr-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11.5px] font-extrabold " + tpl.When(rank <= 3, "bg-text text-white", "bg-[#E8E8E4] text-muted") }>{ strconv.Itoa(rank) }</span>
+			<div class="min-w-0 flex-1">
+				<p class="truncate text-[14px] font-bold text-text">{ title }</p>
+				<p class="mt-px truncate text-[12px] text-muted">{ subtitle }</p>
+			</div>
+			<div class="ml-2 text-right">
+				<p class="text-[13.5px] font-extrabold text-text">{ trailing }</p>
+				<p class="text-[11.5px] text-muted">{ note }</p>
+			</div>
+		</div>
+		<div class="mt-2.5 h-[5px] overflow-hidden rounded-full bg-[#EDEDE9]" role="presentation">
+			<div class={ "h-full rounded-full " + tpl.When(rank == 1, "bg-strong", "bg-text/55") } style={ templ.SafeCSS("width:" + strconv.FormatFloat(fraction*100, 'f', 1, 64) + "%") }></div>
+		</div>
+	</div>
+}
+
+// adminProductRow is _ProductRow: the three numbers that decide what its
+// buttons are allowed to do.
+templ adminProductRow(it backend.InventoryItem) {
+	{{ label, colour := stockStatus(it) }}
+	{{ discounted := it.MRP > it.Price }}
+	<div class="mb-2.5 flex flex-col gap-3 rounded-featured bg-surface p-3.5 shadow-surface md:flex-row md:items-center md:gap-4">
+		<div class="flex min-w-0 items-start md:flex-1">
+			<span class="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-small bg-track">
+				if len(it.ImageURLs) > 0 {
+					<img src={ templ.URL(shop.CatalogueImage(it.ImageURLs[0], 160)) } alt="" loading="lazy" class="h-full w-full object-contain"/>
+				} else {
+					@ui.Icon("image-off", "h-[18px] w-[18px] text-muted")
+				}
+			</span>
+			<div class="ml-3 min-w-0 flex-1">
+				<p class="line-clamp-2 text-[14.5px] font-bold text-text">{ it.Title }</p>
+				<p class="mt-0.5 truncate text-[12px] text-muted">{ it.StoreName } · { tpl.When(it.Category == "", "Uncategorised", it.Category) }</p>
+				<div class="mt-1.5 flex flex-wrap gap-1.5">
+					@pill(label, colour)
+					if it.Delisted {
+						@pill("Hidden", "#66716A")
+					}
+					if it.Orders > 0 {
+						@pill(tpl.When(it.Orders == 1, "1 order", strconv.Itoa(it.Orders)+" orders"), "#66716A")
+					}
+					if discounted {
+						@pill(strconv.Itoa(int((it.MRP-it.Price)/it.MRP*100+.5))+"% off", "#1D4939")
+					}
+				</div>
+			</div>
+		</div>
+		<div class="flex flex-wrap gap-x-[18px] gap-y-2 md:flex-1">
+			@figure("Price", "₹"+shop.Money(it.Price), "")
+			if discounted {
+				@figure("MRP", "₹"+shop.Money(it.MRP), "")
+			}
+			@figure("On shelf", strconv.Itoa(it.Stock), "")
+			if it.Reserved > 0 {
+				@figure("In orders", strconv.Itoa(it.Reserved), "")
+			}
+			@figure("Can be sold", strconv.Itoa(it.Available()), colour)
+			@figure("Shelf value", "₹"+shop.Money(it.Price*float64(it.Stock)), "")
+		</div>
+		<div class="flex items-center">
+			<button type="button" x-on:click={ "openStock(" + jsonArg(itemRef(it)) + ")" } class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/[.06]" title="Correct the stock count" aria-label="Correct the stock count">
+				@ui.Icon("pencil", "h-4 w-4")
+			</button>
+			<button type="button" x-on:click={ "toggleListing(" + jsonArg(itemRef(it)) + ")" } class="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-strong/[.06]" title={ tpl.When(it.Delisted, "Put "+it.Title+" back on sale", "Hide "+it.Title+" from the shop") } aria-label={ tpl.When(it.Delisted, "Put "+it.Title+" back on sale", "Hide "+it.Title+" from the shop") }>
+				@ui.Icon(tpl.When(it.Delisted, "eye", "eye-off"), "h-4 w-4")
+			</button>
+			@quietDelete("Delete "+it.Title, "openItemDelete("+jsonArg(itemRef(it))+")")
+		</div>
+	</div>
+}
+
+templ figure(label, value, colour string) {
+	<div aria-label={ label + ": " + value }>
+		<p class="text-[10.5px] text-muted" aria-hidden="true">{ label }</p>
+		<p class="mt-px text-[14px] font-bold" style={ templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)) } aria-hidden="true">{ value }</p>
+	</div>
+}
+
+// quietDelete is _QuietDelete: muted until pointed at or focused, then red.
+templ quietDelete(label, action string) {
+	<button type="button" x-on:click={ action } class="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-danger/[.06] hover:text-danger focus-visible:text-danger" title={ label } aria-label={ label }>
+		@ui.Icon("trash-2", "h-[15px] w-[15px]")
+	</button>
+}
+
+templ categoriesSection(d AdminData) {
+	if dept := d.openDepartment(); dept != nil {
+		<div class="flex items-center">
+			<a href="/admin?tab=categories" class="flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-strong/[.06]" aria-label="Back to departments">
+				@ui.Icon("arrow-left", "h-[18px] w-[18px]")
+			</a>
+			<h2 class="min-w-0 flex-1 text-[17px] font-extrabold text-text">{ dept.Name }</h2>
+			@adminTextAction("plus", "Section", "openCategory("+jsonArg(dept.Name)+")")
+		</div>
+		<div class="h-1"></div>
+		if len(dept.Children) == 0 {
+			@adminEmpty("Nothing in here yet. Sellers list under the department itself until you add a section.")
+		} else {
+			for _, c := range dept.Children {
+				@sectionCard(c, tpl.When(dept.Colour == "", "#17221D", dept.Colour))
+			}
+		}
+	} else {
+		<div class="flex items-start">
+			<div class="flex-1">
+				@adminNote("The tabs across the top of the shop. Open one to see what sits under it — sellers pick from these, so adding one is what makes it possible to sell in.")
+			</div>
+			@adminTextAction("plus", "Department", "openCategory('')")
+		</div>
+		if len(d.Departments) == 0 {
+			@adminEmpty("No departments. The shop has nothing but the All tab until you add one.")
+		} else {
+			<div class="grid gap-2.5 min-[600px]:grid-cols-2">
+				for _, dept := range d.Departments {
+					@departmentCard(dept)
+				}
+			</div>
+		}
+	}
+	<input type="file" accept="image/*" class="hidden" x-ref="categoryPhoto" x-on:change="uploadCategoryPhoto($event)"/>
+}
+
+templ departmentCard(dept backend.Category) {
+	{{ accent := tpl.When(dept.Colour == "", "#17221D", dept.Colour) }}
+	<div class="relative rounded bg-white pb-3.5 pl-3.5 pr-2 pt-3.5 hover:bg-[#FCFCFA]">
+		<a href={ templ.SafeURL("/admin?tab=categories&dept=" + url.QueryEscape(dept.Name)) } class="absolute inset-0 rounded" aria-label={ "Open " + dept.Name }></a>
+		<div class="flex items-center">
+			@categoryBadge(dept.ImageURL, shop.DepartmentIcon(dept.Name, dept.Icon), accent, 36, dept.Name)
+			<div class="pointer-events-none relative ml-3 min-w-0 flex-1">
+				<p class="truncate text-[15px] font-extrabold text-text">{ dept.Name }</p>
+				<p class="truncate text-[12px] text-muted">{ tpl.When(len(dept.Children) == 0, "Empty — sellers list under it directly", strconv.Itoa(len(dept.Children))+" sections · "+strconv.Itoa(countAll(dept.Children))+" in total") }</p>
+			</div>
+			<span class="relative">
+				@quietDelete("Remove "+dept.Name, "openCategoryDelete("+jsonArg(dept.Name)+")")
+			</span>
+			@ui.Icon("chevron-right", "pointer-events-none relative h-4 w-4 text-muted")
+		</div>
+		if len(dept.Children) > 0 {
+			<p class="pointer-events-none relative mt-2.5 line-clamp-2 text-[12px] leading-[1.4] text-muted">{ previewNames(dept.Children) }</p>
+		}
+	</div>
+}
+
+templ categoryBadge(imageURL, icon, accent string, size int, name string) {
+	<button
+		type="button"
+		x-on:click={ "pickCategoryPhoto(" + jsonArg(name) + ")" }
+		class="relative shrink-0"
+		title={ tpl.When(imageURL == "", "Add a picture", "Replace the picture") }
+		aria-label={ tpl.When(imageURL == "", "Add a picture for "+name, "Replace the picture for "+name) }>
+		<span class="flex items-center justify-center overflow-hidden rounded-small" style={ templ.SafeCSS("width:" + strconv.Itoa(size) + "px;height:" + strconv.Itoa(size) + "px;background-color:" + tpl.RGBA(accent, .14) + ";color:" + accent) }>
+			if imageURL != "" {
+				<img src={ templ.URL(shop.ThumbWidth(imageURL, 120)) } alt="" class="h-full w-full object-contain"/>
+			} else {
+				@ui.Icon(icon, "h-1/2 w-1/2")
+			}
+		</span>
+		<span class="absolute bottom-0 right-0 flex rounded-full bg-text p-0.5 text-white">
+			@ui.Icon("camera", "h-2 w-2")
+		</span>
+	</button>
+}
+
+templ sectionCard(c backend.Category, accent string) {
+	<details class="group mb-2 rounded-[14px] bg-white">
+		<summary class={ "flex list-none items-center py-[11px] pl-3.5 pr-1.5 [&::-webkit-details-marker]:hidden", templ.KV("cursor-pointer", len(c.Children) > 0) }>
+			<span class="mr-2.5">
+				@categoryBadge(c.ImageURL, "image", accent, 30, c.Name)
+			</span>
+			<span class="min-w-0 flex-1 text-[14px] font-bold text-text">{ c.Name }</span>
+			if len(c.Children) > 0 {
+				<span class="text-[12px] text-muted">{ strconv.Itoa(len(c.Children)) }</span>
+			}
+			<button type="button" x-on:click.prevent={ "openCategory(" + jsonArg(c.Name) + ")" } class="flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-strong/[.06]" title={ "Add inside " + c.Name } aria-label={ "Add inside " + c.Name }>
+				@ui.Icon("plus", "h-[15px] w-[15px]")
+			</button>
+			<button type="button" x-on:click.prevent={ "openCategoryDelete(" + jsonArg(c.Name) + ")" } class="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-strong/[.06]" title={ "Remove " + c.Name } aria-label={ "Remove " + c.Name }>
+				@ui.Icon("x", "h-3.5 w-3.5")
+			</button>
+			if len(c.Children) > 0 {
+				@ui.Icon("chevron-down", "h-[15px] w-[15px] text-muted transition-transform group-open:rotate-180")
+			}
+		</summary>
+		if len(c.Children) > 0 {
+			<div class="flex flex-wrap gap-2 pb-3 pl-7 pr-2.5">
+				for _, child := range c.Children {
+					<span class="flex items-center rounded-[18px] bg-canvas p-1.5">
+						@categoryBadge(child.ImageURL, "image", accent, 22, child.Name)
+						<span class="ml-2 text-[12.5px] text-text">{ child.Name }</span>
+						<button type="button" x-on:click={ "openCategoryDelete(" + jsonArg(child.Name) + ")" } class="flex p-1 text-muted" aria-label={ "Remove " + child.Name }>
+							@ui.Icon("x", "h-3 w-3")
+						</button>
+					</span>
+				}
+			</div>
+		}
+	</details>
+}
+
+// bannersSection is CampaignManager: every banner as shoppers see it, with
+// its standing and the way to change it.
+templ bannersSection(d AdminData) {
+	<h2 class="text-section text-text">Storefront banners</h2>
+	<div class="mt-3">
+		<a href="/admin/banners/new" class={ ui.ButtonClass(true) }>
+			<span class="truncate">Create banner</span>
+			@ui.Icon("plus", "h-[18px] w-[18px]")
+		</a>
+	</div>
+	<p class="mt-2 text-body text-muted">Set the mood for your store. Edit the image, message, category and display order. Published changes appear when shoppers refresh Home.</p>
+	<div class="h-5"></div>
+	if len(d.Campaigns) == 0 {
+		@ui.EmptyState("image", "Start with a story", "Create a banner for a category or your whole store.", "Create banner", "/admin/banners/new")
+	} else {
+		for _, c := range d.Campaigns {
+			<div class="mb-6">
+				@campaignBanner(c, "", "/admin/banners/"+url.PathEscape(c.ID))
+				<div class="mt-2 rounded-small bg-surface pb-2.5 pl-3 pr-2.5 pt-2.5 shadow-surface">
+					<p class="text-body text-muted">{ tpl.When(c.Enabled, "Published", "Hidden") } · Order { strconv.Itoa(c.Position) } · { tpl.When(c.Department == "", "All departments", c.Department) }</p>
+					<div class="mt-2 flex flex-wrap items-center gap-2">
+						<a href={ templ.SafeURL("/admin/banners/" + url.PathEscape(c.ID)) } class={ ui.ButtonClass(false) }>
+							<span class="truncate">Edit banner</span>
+							@ui.Icon("pencil", "h-[18px] w-[18px]")
+						</a>
+						<button type="button" x-on:click={ "openBannerDelete(" + jsonArg(c.ID) + ", " + jsonArg(c.Title) + ")" } class="tactile inline-flex shrink-0 items-center justify-center rounded-full text-danger shadow-tactile" style={ templ.SafeCSS(ui.TactileStyle(40, "")) } aria-label={ "Delete " + c.Title } title={ "Delete " + c.Title }>
+							@ui.Icon("trash-2", "h-5 w-5")
+						</button>
+					</div>
+				</div>
+			</div>
+		}
+	}
+}
+
+templ groupCard(g backend.CompareGroup) {
+	<div class="mb-2.5 rounded bg-white pb-3.5 pl-3.5 pr-2 pt-3">
+		<div class="flex items-center">
+			<div class="min-w-0 flex-1">
+				<p class="text-[15px] font-extrabold text-text">{ g.Name }</p>
+				<p class="text-[12px] text-muted">{ strconv.Itoa(g.Items) } products · { tpl.When(len(g.Attributes) == 0, "no fields yet, so there is nothing to compare on", strconv.Itoa(len(g.Attributes))+" fields") }</p>
+			</div>
+			<button type="button" x-on:click={ "openGroup(" + jsonArg(g) + ")" } class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/[.06]" title="Edit fields" aria-label="Edit fields">
+				@ui.Icon("pencil", "h-[15px] w-[15px]")
+			</button>
+			@quietDelete("Remove "+g.Name, "deleteGroup("+jsonArg(g.Name)+")")
+		</div>
+		if len(g.Attributes) > 0 {
+			<div class="mt-2 flex flex-wrap gap-2">
+				for _, a := range g.Attributes {
+					<span class="rounded-[18px] bg-canvas px-[11px] py-1.5 text-[12.5px] text-text">{ tpl.When(a.Unit == "", a.Name, a.Name+" ("+a.Unit+")") }</span>
+				}
+			</div>
+		}
+	</div>
+}
+
+templ policyRow(pol backend.Policy) {
+	{{ blanks := strings.Contains(pol.Body, "[") }}
+	<div class="mb-2 flex items-center rounded-[14px] bg-white py-3 pl-3.5 pr-2">
+		@ui.Icon(policyIcon(pol.Slug), "h-[18px] w-[18px] shrink-0 text-text")
+		<div class="ml-3 min-w-0 flex-1">
+			<p class="text-[14px] font-bold text-text">{ pol.Title }</p>
+			<p class={ "text-[12px] " + tpl.When(blanks, "text-warning", "text-muted") }>{ strconv.Itoa(len(strings.Fields(pol.Body))) } words{ tpl.When(blanks, " · has blanks to fill in", "") }</p>
+		</div>
+		<a href={ templ.SafeURL("/admin/policies/" + url.PathEscape(pol.Slug)) } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-text hover:bg-strong/[.06]">
+			@ui.Icon("pencil", "h-[15px] w-[15px]")
+			<span class="ml-2">Edit</span>
+		</a>
+	</div>
+}
+
+templ riderRow(r map[string]any) {
+	{{ active := r["active"] == true }}
+	{{ phone := sv(r, "phone") }}
+	<div class="mb-2 flex items-center rounded bg-white p-3">
+		<div class="min-w-0 flex-1">
+			<p class="text-[13.5px] font-bold text-text">{ tpl.When(sv(r, "name") == "", "Rider", sv(r, "name")) } · { phone }</p>
+			<p class="text-[12px] text-muted">{ sv(r, "delivered") } delivered · { sv(r, "carrying") } carrying</p>
+			if !active {
+				<p class="text-[11.5px] text-warning">Switched off — not signed in, and not being handed orders</p>
+			}
+		</div>
+		<div class="relative" x-data="{ open: false }" x-on:click.outside="open = false" x-on:keydown.escape="open = false">
+			<button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-strong/[.06]" aria-label={ "Options for " + phone }>
+				@ui.Icon("ellipsis-vertical", "h-[18px] w-[18px]")
+			</button>
+			<div x-show="open" x-cloak x-transition.opacity.duration.120ms class="absolute right-0 z-30 mt-1 w-48 overflow-hidden rounded bg-surface py-2 shadow-raised" role="menu">
+				<button type="button" role="menuitem" x-on:click={ "open = false; issuePin(" + jsonArg(phone) + ")" } class="block min-h-12 w-full px-4 text-left text-body text-text hover:bg-strong/[.06]">New PIN</button>
+				<button type="button" role="menuitem" x-on:click={ "open = false; openNumber(" + jsonArg(phone) + ")" } class="block min-h-12 w-full px-4 text-left text-body text-text hover:bg-strong/[.06]">Change number</button>
+				<button type="button" role="menuitem" x-on:click={ "open = false; switchRider(" + jsonArg(phone) + ", " + tpl.When(active, "true", "false") + ")" } class="block min-h-12 w-full px-4 text-left text-body text-text hover:bg-strong/[.06]">{ tpl.When(active, "Switch off", "Switch back on") }</button>
+				<button type="button" role="menuitem" x-on:click={ "open = false; deleteRider(" + jsonArg(phone) + ")" } class="block min-h-12 w-full px-4 text-left text-body text-danger hover:bg-strong/[.06]">Remove for good</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ personRow(p map[string]any) {
+	{{ seller := sv(p, "storeName") != "" }}
+	<div class="mb-2 rounded bg-white p-3">
+		<div class="flex items-start">
+			<p class="min-w-0 flex-1 text-[13px] font-semibold text-text">{ sv(p, "email") }</p>
+			<span class="ml-2">
+				@pill(tpl.When(seller, "Buyer + Seller", "Buyer"), tpl.When(seller, "#1D4939", "#66716A"))
+			</span>
+		</div>
+		<p class="mt-[3px] text-[11.5px] text-muted">{ joinNonEmpty(" · ", sv(p, "id"), sv(p, "name"), sv(p, "phone"), tpl.When(seller, sv(p, "storeName")+" ("+sv(p, "storeStatus")+")", "")) }</p>
+	</div>
+}
+
+templ adminPagination(d AdminData) {
+	{{ total := len(d.Filtered()) }}
+	if total > 0 {
+		{{ page := d.currentPage() }}
+		<div class="flex flex-wrap items-center gap-3 py-5">
+			<p class="text-body text-text">{ strconv.Itoa(page*adminPageSize + 1) }–{ strconv.Itoa(min((page+1)*adminPageSize, total)) } of { strconv.Itoa(total) }</p>
+			if total > adminPageSize {
+				if page == 0 {
+					<span class={ ui.ButtonClass(false) + " pointer-events-none opacity-50" }>Previous</span>
+				} else {
+					<a href={ templ.SafeURL(d.link(d.Tab, page-1)) } class={ ui.ButtonClass(false) }>Previous</a>
+				}
+				if (page+1)*adminPageSize >= total {
+					<span class={ ui.ButtonClass(false) + " pointer-events-none opacity-50" }>Next</span>
+				} else {
+					<a href={ templ.SafeURL(d.link(d.Tab, page+1)) } class={ ui.ButtonClass(false) }>Next</a>
+				}
+			}
+		</div>
+	}
+}
+
+// adminDialog is the panel's one AlertDialog; `dlg.kind` decides its body.
+templ adminDialog() {
+	<dialog x-ref="dlg" class="max-h-[90vh] w-[min(460px,92vw)] overflow-y-auto rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40" x-on:close="dlg.kind = ''">
+		<p class="text-[22px] leading-7 text-text" x-text="dlg.title"></p>
+		<template x-if="dlg.kind === 'confirm'">
+			<p class="mt-4 whitespace-pre-line text-[13.5px] leading-[1.4] text-muted" x-text="dlg.body"></p>
+		</template>
+		<template x-if="dlg.kind === 'reason'">
+			<input type="text" x-model="dlg.value" x-bind:placeholder="dlg.hint" class="mt-4 h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+		</template>
+		<template x-if="dlg.kind === 'stock'">
+			<div>
+				<p class="mt-4 text-body text-muted" x-text="dlg.body"></p>
+				<label class="mt-3.5 block text-[12px] text-muted">Units on the shelf</label>
+				<input type="number" min="0" x-model="dlg.value" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'depts'">
+			<div>
+				<p class="mt-4 text-[12.5px] text-muted" x-text="dlg.picked.length ? `Shown under ${dlg.picked[0]}. Tap to reorder — the first one is the tab it appears on.` : 'Pick at least one.'"></p>
+				<div class="mt-3.5 flex flex-wrap gap-2">
+					<template x-for="name in departments" :key="name">
+						<button type="button" x-on:click="pickDept(name)" class="flex items-center rounded-[20px] border px-3.5 py-[9px] text-[12.5px] font-bold" x-bind:class="dlg.picked.includes(name) ? 'border-text bg-text text-white' : 'border-[#DDDDD8] text-text'">
+							<span x-show="dlg.picked.includes(name)" class="mr-[7px] flex h-[17px] w-[17px] items-center justify-center rounded-full bg-white/25 text-[10px] font-extrabold" x-text="dlg.picked.indexOf(name) + 1"></span>
+							<span x-text="name"></span>
+						</button>
+					</template>
+				</div>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'assign'">
+			<div class="-mx-6 mt-3">
+				<template x-for="r in activeRiders" :key="r.phone">
+					<button type="button" x-on:click="assign(r.phone)" class="block w-full px-6 py-3 text-left text-body text-text hover:bg-strong/[.06]" x-text="`${r.name || 'Rider'} · ${r.phone}  (${r.carrying} carrying)`"></button>
+				</template>
+				<div class="my-1 h-px bg-track"></div>
+				<button type="button" x-on:click="assign('')" class="block w-full px-6 py-3 text-left text-body text-text hover:bg-strong/[.06]">Leave it open to any rider</button>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'category'">
+			<div>
+				<label class="mt-4 block text-[12px] text-muted">Name</label>
+				<input type="text" x-model="dlg.value" x-bind:placeholder="dlg.parent ? 'e.g. Pens' : 'e.g. Stationery'" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+				<p class="mt-[18px] text-[12.5px] text-muted">Picture</p>
+				<input type="file" accept="image/*" class="hidden" x-ref="newCategoryPhoto" x-on:change="dlg.file = $event.target.files[0] || null; dlg.preview = dlg.file ? URL.createObjectURL(dlg.file) : ''"/>
+				<button type="button" x-on:click="$refs.newCategoryPhoto.click()" class="mt-2 flex h-[120px] w-full items-center justify-center overflow-hidden rounded border-[1.4px] border-[#D9D9D4] bg-white">
+					<template x-if="dlg.preview"><img x-bind:src="dlg.preview" alt="" class="h-full w-full object-contain"/></template>
+					<template x-if="!dlg.preview">
+						<span class="flex flex-col items-center">
+							@ui.Icon("image-plus", "h-[26px] w-[26px] text-muted")
+							<span class="mt-2 text-[14px] font-bold text-text">Add a picture</span>
+							<span class="mt-0.5 text-[12px] text-muted">Shown on the shop’s category grid</span>
+						</span>
+					</template>
+				</button>
+				<template x-if="!dlg.parent">
+					<div>
+						<p class="mt-[18px] text-[12.5px] text-muted">Icon</p>
+						<div class="mt-2 flex flex-wrap gap-2">
+							<template x-for="ic in departmentIcons" :key="ic.key">
+								<button type="button" x-on:click="dlg.icon = ic.key" x-bind:aria-label="ic.key" class="flex h-10 w-10 items-center justify-center rounded-small" x-bind:class="dlg.icon === ic.key ? 'bg-text text-white' : 'bg-[#EDEDE9] text-text'" x-html="ic.svg"></button>
+							</template>
+						</div>
+						<p class="mt-[18px] text-[12.5px] text-muted">Colour</p>
+						<div class="mt-2 flex flex-wrap gap-2">
+							<template x-for="hex in palette" :key="hex">
+								<button type="button" x-on:click="dlg.colour = hex" x-bind:aria-label="hex" class="h-[34px] w-[34px] rounded-full" x-bind:style="`background-color:${hex};border:${dlg.colour === hex ? '2.5px solid #17221D' : '1px solid rgba(0,0,0,.12)'}`"></button>
+							</template>
+						</div>
+					</div>
+				</template>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'group'">
+			<div>
+				<template x-if="dlg.isNew">
+					<div>
+						<label class="mt-4 block text-[12px] text-muted">Group</label>
+						<input type="text" x-model="dlg.value" placeholder="e.g. Chargers, Thali, Shampoo" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+					</div>
+				</template>
+				<p class="mt-4 text-[12.5px] text-muted">Compared on</p>
+				<template x-for="(f, i) in dlg.fields" :key="i">
+					<div class="mt-2 pb-2">
+						<div class="flex items-center gap-2.5">
+							<input type="text" x-model="f.name" placeholder="Field" aria-label="Field" class="h-12 min-w-0 flex-[3] rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+							<input type="text" x-model="f.unit" placeholder="Unit" aria-label="Unit" class="h-12 min-w-0 flex-1 rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+							<button type="button" x-on:click="dlg.fields.splice(i, 1)" aria-label="Remove field" class="flex h-9 w-9 items-center justify-center text-muted">
+								@ui.Icon("x", "h-[15px] w-[15px]")
+							</button>
+						</div>
+						<div class="mt-1.5 flex items-center gap-2">
+							<select x-model="f.mode" aria-label="Which way is better" class="min-w-0 flex-1 bg-transparent py-1 text-[12.5px] text-text">
+								<template x-for="m in compareModes" :key="m.value">
+									<option x-bind:value="m.value" x-text="m.label" x-bind:selected="f.mode === m.value"></option>
+								</template>
+							</select>
+							<button type="button" x-on:click="dlg.fields.forEach((g, j) => g.perUnit = !f.perUnit && i === j)" class="rounded-lg border px-2 py-1 text-[11.5px]" x-bind:class="f.perUnit ? 'border-strong bg-lime' : 'border-track'">₹ per unit</button>
+						</div>
+					</div>
+				</template>
+				<button type="button" x-on:click="dlg.fields.push({ name: '', unit: '', mode: '', perUnit: false })" class="mt-1 inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">
+					@ui.Icon("plus", "h-[15px] w-[15px]")
+					<span class="ml-2">Add a field</span>
+				</button>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'rider'">
+			<div>
+				<label class="mt-4 block text-[12px] text-muted">Mobile number</label>
+				<input type="tel" x-model="dlg.value" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+				<label class="mt-3 block text-[12px] text-muted">Name</label>
+				<input type="text" x-model="dlg.name" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'number'">
+			<div>
+				<p class="mt-4 text-[13px] text-muted">Their deliveries, their count and anything in their hand right now come with them. They get a new PIN.</p>
+				<label class="mt-3 block text-[12px] text-muted">New mobile number</label>
+				<input type="tel" x-model="dlg.value" class="h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong"/>
+			</div>
+		</template>
+		<template x-if="dlg.kind === 'pin'">
+			<p class="mt-4 whitespace-pre-line text-[15px] leading-[1.5] text-text" x-text="dlg.body"></p>
+		</template>
+		<div class="mt-6 flex flex-wrap justify-end gap-2">
+			<button type="button" x-show="dlg.cancel" x-on:click="$refs.dlg.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-text="dlg.cancel"></button>
+			<button type="button" x-show="dlg.action" x-on:click="dlg.run()" x-bind:disabled="dlg.busy || (dlg.ready && !dlg.ready())" class="min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40" x-bind:class="dlg.danger ? 'bg-danger' : 'bg-forest'" x-text="dlg.action"></button>
+		</div>
+	</dialog>
+}
+
+// ---- data ----
+
+func (d AdminData) Counts() map[string]int {
+	return map[string]int{
+		"review": len(d.storesWith("pending")), "approved": len(d.storesWith("approved")),
+		"rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
+		"insights": len(lv(d.Insights, "topStores")), "banners": len(d.Campaigns),
+		"categories": len(d.Departments), "policies": len(d.Policies), "compare": len(d.Groups),
+		"delivery": len(d.Riders), "people": len(d.people()),
+	}
+}
+
+func (d AdminData) storesWith(status string) []map[string]any {
+	var out []map[string]any
+	for _, s := range d.Stores {
+		if sv(s, "status") == status {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func (d AdminData) people() []map[string]any { return maps(lv(d.Overview, "people")) }
+
+func (d AdminData) hasTable() bool {
+	switch d.Tab {
+	case "products", "review", "approved", "rejected", "orders", "delivery", "people":
+		return true
+	}
+	return false
+}
+
+// activeRows is _activeRows for the map-shaped lists.
+func (d AdminData) activeRows() []map[string]any {
+	switch d.Tab {
+	case "review":
+		return d.storesWith("pending")
+	case "approved":
+		return d.storesWith("approved")
+	case "rejected":
+		return d.storesWith("rejected")
+	case "orders":
+		return d.Orders
+	case "delivery":
+		return d.Riders
+	case "people":
+		return d.people()
+	case "products":
+		return itemRows(d.Items)
+	}
+	return nil
+}
+
+func (d AdminData) activeCount() int {
+	if d.Tab == "products" {
+		return len(d.Items)
+	}
+	return len(d.activeRows())
+}
+
+// Filtered is _filtered: every value searched, and orders by stage and date.
+func (d AdminData) Filtered() []map[string]any {
+	q := strings.ToLower(d.Q)
+	var from, to time.Time
+	if t, err := time.ParseInLocation("2006-01-02", d.From, time.Local); err == nil {
+		from = t
+	}
+	if t, err := time.ParseInLocation("2006-01-02", d.To, time.Local); err == nil {
+		to = t.AddDate(0, 0, 1)
+	}
+	var out []map[string]any
+	for _, row := range d.activeRows() {
+		if q != "" && !strings.Contains(strings.ToLower(rowText(row)), q) {
+			continue
+		}
+		if d.Tab == "orders" {
+			if d.Stage != "" && d.Stage != "All" && sv(row, "stage") != d.Stage {
+				continue
+			}
+			if !from.IsZero() || !to.IsZero() {
+				placed, err := time.Parse(time.RFC3339, sv(row, "placedAt"))
+				if err != nil || (!from.IsZero() && placed.Before(from)) || (!to.IsZero() && !placed.Before(to)) {
+					continue
+				}
+			}
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+func (d AdminData) currentPage() int {
+	total := len(d.Filtered())
+	if total == 0 {
+		return 0
+	}
+	return min(max(d.PageNum, 0), (total-1)/adminPageSize)
+}
+
+func (d AdminData) PageRows() []map[string]any {
+	rows := d.Filtered()
+	start := d.currentPage() * adminPageSize
+	return rows[start:min(start+adminPageSize, len(rows))]
+}
+
+func (d AdminData) PageItems() []backend.InventoryItem {
+	byID := map[string]backend.InventoryItem{}
+	for _, it := range d.Items {
+		byID[it.ID] = it
+	}
+	var out []backend.InventoryItem
+	for _, row := range d.PageRows() {
+		out = append(out, byID[sv(row, "id")])
+	}
+	return out
+}
+
+func (d AdminData) openDepartment() *backend.Category {
+	for i := range d.Departments {
+		if d.Departments[i].Name == d.OpenDept {
+			return &d.Departments[i]
+		}
+	}
+	return nil
+}
+
+func (d AdminData) link(tab string, page int) string {
+	v := url.Values{"tab": {tab}}
+	for k, val := range map[string]string{"q": d.Q, "stage": d.Stage, "from": d.From, "to": d.To, "dept": d.OpenDept} {
+		if val != "" {
+			v.Set(k, val)
+		}
+	}
+	if page > 0 {
+		v.Set("page", strconv.Itoa(page))
+	}
+	return "/admin?" + v.Encode()
+}
+
+func (d AdminData) exportLink() string {
+	return strings.Replace(d.link(d.Tab, 0), "/admin?", "/admin/export?", 1)
+}
+
+// clientConfig is what the dialogs need that the rows do not carry.
+func (d AdminData) clientConfig() map[string]any {
+	var names []string
+	for _, dept := range d.Departments {
+		names = append(names, dept.Name)
+	}
+	var riders []map[string]any
+	for _, r := range d.Riders {
+		if r["active"] == true {
+			riders = append(riders, map[string]any{"phone": sv(r, "phone"), "name": sv(r, "name"), "carrying": sv(r, "carrying")})
+		}
+	}
+	icons := []map[string]string{}
+	for _, key := range []string{"headphones", "carrot", "utensils", "gift", "brush", "shirt", "house", "book", "dumbbell", "baby", "pill", "wrench", "cookie", "sprayCan", "cable", "tag"} {
+		icons = append(icons, map[string]string{"key": key, "svg": ui.IconSVG(shop.DepartmentIcon("", key), "h-[18px] w-[18px]")})
+	}
+	return map[string]any{
+		"departments": names, "activeRiders": riders, "departmentIcons": icons,
+		"palette": []string{"#2F6FED", "#43A047", "#FF8A3D", "#9C6ADE", "#F06292", "#00897B", "#5D4037", "#546E7A"},
+		"compareModes": []map[string]string{
+			{"value": "", "label": "Not ranked"}, {"value": "higher_better", "label": "Higher is better"},
+			{"value": "lower_better", "label": "Lower is better"}, {"value": "feature", "label": "Has it or not"},
+			{"value": "info", "label": "Just show it"},
+		},
+	}
+}
+
+// ExportCSV is rowsToCsv for the rows the panel is showing.
+func (d AdminData) ExportCSV() string {
+	rows := d.Filtered()
+	seen := map[string]bool{}
+	var keys []string
+	for _, row := range rows {
+		for k := range row {
+			if !seen[k] {
+				seen[k] = true
+				keys = append(keys, k)
+			}
+		}
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	write := func(cells []string) {
+		for i, c := range cells {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			if strings.ContainsAny(c, ",\"\n\r") {
+				c = "\"" + strings.ReplaceAll(c, "\"", "\"\"") + "\""
+			}
+			b.WriteString(c)
+		}
+		b.WriteString("\r\n")
+	}
+	write(keys)
+	for _, row := range rows {
+		cells := make([]string, len(keys))
+		for i, k := range keys {
+			cells[i] = sv(row, k)
+		}
+		write(cells)
+	}
+	return b.String()
+}
+
+// ---- helpers ----
+
+func tabLabel(key string) string {
+	for _, t := range adminTabs {
+		if t.Key == key {
+			return t.Label
+		}
+	}
+	return ""
+}
+
+func storeNote(tab string) string {
+	switch tab {
+	case "approved":
+		return "Live on the shop page and taking orders."
+	case "rejected":
+		return "The seller sees the reason and can edit their store to send it back for another look."
+	}
+	return "A store stays invisible to shoppers, and its owner cannot add stock, until it is approved here."
+}
+
+func storeEmpty(tab string) string {
+	switch tab {
+	case "approved":
+		return "No approved stores yet."
+	case "rejected":
+		return "Nothing rejected."
+	}
+	return "Nothing waiting. Every store has been looked at."
+}
+
+func orderStageColour(stage string) string {
+	switch stage {
+	case "delivered":
+		return "#1D4939"
+	case "rejected":
+		return "#B93643"
+	case "picked":
+		return "#6A1B9A"
+	case "accepted":
+		return "#2F6FED"
+	}
+	return "#9A5B12"
+}
+
+func riderLabel(riders []map[string]any, phone string) string {
+	for _, r := range riders {
+		if sv(r, "phone") == phone && sv(r, "name") != "" {
+			return sv(r, "name") + " · " + phone
+		}
+	}
+	return phone
+}
+
+// itemRef is what an item's dialogs need to know about it.
+func itemRef(it backend.InventoryItem) map[string]any {
+	return map[string]any{"id": it.ID, "title": it.Title, "storeName": it.StoreName, "stock": it.Stock,
+		"reserved": it.Reserved, "available": it.Available(), "orders": it.Orders, "delisted": it.Delisted}
+}
+
+func itemRows(items []backend.InventoryItem) []map[string]any {
+	out := make([]map[string]any, 0, len(items))
+	for _, it := range items {
+		var m map[string]any
+		b, _ := json.Marshal(it)
+		_ = json.Unmarshal(b, &m)
+		out = append(out, m)
+	}
+	return out
+}
+
+func rowText(row map[string]any) string {
+	parts := make([]string, 0, len(row))
+	for k := range row {
+		parts = append(parts, sv(row, k))
+	}
+	return strings.Join(parts, " ")
+}
+
+func share(value, top float64) float64 {
+	if top <= 0 {
+		return 0
+	}
+	return min(max(value/top, 0), 1)
+}
+
+func countAll(nodes []backend.Category) int {
+	n := 0
+	for _, c := range nodes {
+		n += 1 + countAll(c.Children)
+	}
+	return n
+}
+
+func previewNames(nodes []backend.Category) string {
+	var names []string
+	for i, c := range nodes {
+		if i == 4 {
+			break
+		}
+		names = append(names, c.Name)
+	}
+	s := strings.Join(names, " · ")
+	if len(nodes) > 4 {
+		s += " · +" + strconv.Itoa(len(nodes)-4) + " more"
+	}
+	return s
+}
+
+func joinNonEmpty(sep string, parts ...string) string {
+	var out []string
+	for _, p := range parts {
+		if strings.TrimSpace(p) != "" {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, sep)
+}
+
+func sv(m map[string]any, k string) string {
+	switch t := m[k].(type) {
+	case nil:
+		return ""
+	case string:
+		return t
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(t)
+	default:
+		b, _ := json.Marshal(t)
+		return string(b)
+	}
+}
+
+func nv(m map[string]any, k string) float64 {
+	f, _ := m[k].(float64)
+	return f
+}
+
+func lv(m map[string]any, k string) []any {
+	l, _ := m[k].([]any)
+	return l
+}
+
+func mv(m map[string]any, k string) map[string]any {
+	o, _ := m[k].(map[string]any)
+	return o
+}
+
+func maps(l []any) []map[string]any {
+	out := make([]map[string]any, 0, len(l))
+	for _, v := range l {
+		if m, ok := v.(map[string]any); ok {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+func strs(v any) []string {
+	l, _ := v.([]any)
+	out := []string{}
+	for _, s := range l {
+		if str, ok := s.(string); ok {
+			out = append(out, str)
+		}
+	}
+	return out
+}

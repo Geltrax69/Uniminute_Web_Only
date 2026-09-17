@@ -1,0 +1,179 @@
+package pages
+
+// login.templ — LoginScreen: product photographs drifting behind (pausable,
+// still under reduced motion), "Browse the shop" top right, the Lamazon mark
+// and tagline, and one card that asks for email, then a code or a password.
+// Each step posts and the server answers with the next card.
+
+import (
+	"strconv"
+
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type LoginPageData struct {
+	Next              string // where to go afterwards; always a local path
+	Email             string
+	Step              string // "email" | "code" | "password"
+	Error             string
+	Backdrop          []string
+	PoliciesPublished bool
+}
+
+templ Login(p viewdata.Page, d LoginPageData) {
+	@layouts.Base(p.Title, p.Description, "", loginPage(d))
+}
+
+templ loginPage(d LoginPageData) {
+	<main id="main" class="relative min-h-[100dvh] overflow-hidden">
+		if len(d.Backdrop) > 0 {
+			@marquee(d.Backdrop)
+		}
+		<div class="pointer-events-none relative z-10 flex min-h-[100dvh] flex-col">
+			<div class="pointer-events-auto flex justify-end pr-4 pt-2">
+				@ui.ActionButton("Browse the shop", false, templ.Attributes{"href": d.Next})
+			</div>
+			<div class="flex-1"></div>
+			<img src="/static/images/logo.png" alt="Lamazon" class="mx-auto h-24 w-24 rounded-featured object-cover"/>
+			<p class="mt-[18px] text-center text-[26px] font-semibold leading-[31px] tracking-[-0.9px] text-text">Local choice. Global experience.</p>
+			<div class="pointer-events-auto mt-[22px] px-5">
+				<div class="mx-auto max-w-[440px]">
+					@LoginCard(d)
+				</div>
+			</div>
+			<p class="mt-2.5 text-center text-[12.5px] tracking-[0.2px] text-muted">{ tpl.When(d.PoliciesPublished, "By continuing, you agree to our", "Read our") }</p>
+			<div class="pointer-events-auto flex items-center justify-center">
+				<a href="/policy/terms" class="inline-flex min-h-touch items-center rounded-full px-2.5 text-[12.5px] font-semibold tracking-[0.2px] text-strong underline">Terms and Conditions</a>
+				<span class="text-muted">·</span>
+				<a href="/policy/privacy" class="inline-flex min-h-touch items-center rounded-full px-2.5 text-[12.5px] font-semibold tracking-[0.2px] text-strong underline">Privacy Policy</a>
+			</div>
+			<div class="h-2"></div>
+		</div>
+	</main>
+}
+
+// LoginCard is the sign-in card, and the answer to every step's post.
+templ LoginCard(d LoginPageData) {
+	<div
+		id="login-card"
+		class="rounded-featured bg-surface px-[18px] py-5 shadow-raised"
+		x-data={ "login(" + jsonArg(d.Step) + "," + jsonArg(d.Email) + "," + jsonArg(d.Error) + ")" }>
+		<h1 class="text-center text-section text-text">Log in or sign up</h1>
+		<form
+			class="mt-3.5"
+			hx-post={ loginAction(d.Step) }
+			hx-target="#login-card"
+			hx-swap="outerHTML"
+			x-on:htmx:before-request="busy = true"
+			x-on:htmx:after-request="busy = false">
+			<input type="hidden" name="next" value={ d.Next }/>
+			if d.Step != "email" {
+				<input type="hidden" name="email" value={ d.Email }/>
+			}
+			<div class="relative flex h-[50px] items-center rounded-featured bg-canvas pr-4 focus-within:ring-2 focus-within:ring-inset focus-within:ring-strong">
+				<span class="flex h-12 w-12 shrink-0 items-center justify-center">
+					@ui.Icon(loginIcon(d.Step), "h-[18px] w-[18px] text-muted")
+				</span>
+				<div class="relative ml-1 h-full min-w-0 flex-1">
+					<input
+						id="login-field"
+						name={ loginField(d.Step) }
+						type={ loginType(d.Step) }
+						inputmode={ tpl.When(d.Step == "code", "numeric", "") }
+						autocomplete={ loginAutocomplete(d.Step) }
+						value={ tpl.When(d.Step == "email", d.Email, "") }
+						x-model="value"
+						autocorrect="off"
+						autocapitalize="off"
+						spellcheck="false"
+						placeholder={ loginHint(d.Step) }
+						class="peer h-full w-full bg-transparent text-[16px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-transparent focus:placeholder:text-muted"/>
+					<label for="login-field" class="pointer-events-none absolute left-0 top-1/2 max-w-full -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[11px] motion-reduce:transition-none">{ loginLabel(d.Step) }</label>
+				</div>
+			</div>
+			<button type="submit" class={ ui.ButtonClass(true) + " mt-3.5 w-full" } x-bind:disabled="!valid || busy" x-bind:aria-busy="busy" disabled>
+				<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
+				<span class="truncate" x-text={ "busy ? 'Please wait…' : " + jsonArg(loginButton(d.Step)) }>{ loginButton(d.Step) }</span>
+			</button>
+			<p class="mt-3 text-center text-[13px] leading-[17px] tracking-[0.2px]" x-bind:class="error ? 'text-danger' : 'text-muted'" aria-live="polite" x-text="helper"></p>
+		</form>
+	</div>
+}
+
+// marquee is ImageMarquee: three rows of 104px tiles drifting in alternating
+// directions (40s, 32s, 24s a pass), fading out towards the card.
+templ marquee(urls []string) {
+	<div
+		class="absolute inset-x-0 top-0 z-0 pt-2"
+		x-data="{ paused: false }"
+		style="-webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent);mask-image:linear-gradient(to bottom,#000 55%,transparent)">
+		for r := 0; r < 3; r++ {
+			if r > 0 {
+				<div class="h-3"></div>
+			}
+			<div class="h-[104px] overflow-hidden" aria-hidden="true">
+				<div
+					class={ "marquee-row flex w-max", templ.KV("reverse", r%2 == 1) }
+					x-bind:class="paused && 'is-paused'"
+					style={ templ.SafeCSS("animation-duration:" + strconv.Itoa(40-r*8) + "s") }>
+					for pass := 0; pass < 2; pass++ {
+						for i := range urls {
+							<div class="mr-3 h-[104px] w-[104px] shrink-0 overflow-hidden rounded-featured bg-track">
+								<img src={ templ.URL(urls[(i+r*5)%len(urls)]) } alt="" class="h-full w-full object-contain"/>
+							</div>
+						}
+					}
+				</div>
+			</div>
+		}
+		<div class="absolute bottom-2 right-2 z-20 motion-reduce:hidden">
+			<span class="flex" x-show="!paused">
+				@ui.TactileButton("pause", "Pause the moving backdrop", 36, "", templ.Attributes{"x-on:click": "paused = true"})
+			</span>
+			<span class="flex" x-show="paused" x-cloak>
+				@ui.TactileButton("play", "Resume the moving backdrop", 36, "", templ.Attributes{"x-on:click": "paused = false"})
+			</span>
+		</div>
+	</div>
+}
+
+func loginAction(step string) string {
+	switch step {
+	case "code":
+		return "/login/verify"
+	case "password":
+		return "/login/password"
+	}
+	return "/login/start"
+}
+
+func loginField(step string) string {
+	return tpl.When(step == "email", "email", tpl.When(step == "code", "code", "password"))
+}
+
+func loginType(step string) string {
+	return tpl.When(step == "email", "email", tpl.When(step == "code", "text", "password"))
+}
+
+func loginAutocomplete(step string) string {
+	return tpl.When(step == "email", "email", tpl.When(step == "code", "one-time-code", "current-password"))
+}
+
+func loginIcon(step string) string {
+	return tpl.When(step == "email", "mail", tpl.When(step == "code", "key-round", "lock"))
+}
+
+func loginLabel(step string) string {
+	return tpl.When(step == "email", "Email address", tpl.When(step == "code", "Verification code", "Password"))
+}
+
+func loginHint(step string) string {
+	return tpl.When(step == "email", "Enter email address", tpl.When(step == "code", "Enter the 6-digit code", "Enter password"))
+}
+
+func loginButton(step string) string {
+	return tpl.When(step == "email", "Continue", tpl.When(step == "code", "Verify code", "Sign in"))
+}

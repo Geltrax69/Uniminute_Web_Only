@@ -1,0 +1,28 @@
+package product
+
+// price.templ — the details price row: the total for the chosen quantity at
+// 28px, the struck MRP and the peach DiscountBadge beside it, and "You save"
+// under it. Server text is the quantity-one render; Alpine takes over.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+)
+
+templ Price(p backend.Product) {
+	<div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+		<span class="text-[28px] font-extrabold leading-[34px] text-text" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</span>
+		if p.Discounted() {
+			<span class="text-[16px] text-muted line-through" x-text="'MRP ₹' + t('mrp')">MRP ₹{ shop.Money(p.MRP) }</span>
+			@DiscountBadge(p.DiscountPercent())
+		}
+	</div>
+	if p.Discounted() {
+		<p class="mt-2 text-body font-semibold text-strong" x-text="'You save ₹' + t('save')">You save ₹{ shop.Money(p.MRP - p.Price) }</p>
+	}
+}
+
+// DiscountBadge is the app's DiscountBadge: peach, 9px radius, "N% OFF".
+templ DiscountBadge(percent int) {
+	<span class="rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-extrabold tracking-[0.3px] text-text shadow-badge">{ itoa(percent) }% OFF</span>
+}

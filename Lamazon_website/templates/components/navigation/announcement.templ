@@ -1,0 +1,87 @@
+package navigation
+
+// announcement.templ — CampaignDeck/CampaignBanner from storefront.dart: the
+// merchandising banner under the header. The palette comes from the campaign's
+// colour through the same eight measured presets the app resolves with
+// (CampaignPalette.resolve), so contrast on a banner is never an accident.
+
+import "lamazon/website/backend"
+
+import "lamazon/website/templates/components/ui"
+
+templ Announcement(campaigns []backend.Campaign) {
+	if len(campaigns) > 0 {
+		<section class="mt-[22px] px-gutter" aria-label="Offers">
+			<div class="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 no-scrollbar">
+				for _, c := range campaigns {
+					@banner(c)
+				}
+			</div>
+		</section>
+	}
+}
+
+templ banner(c backend.Campaign) {
+	{{ pal := ResolvePalette(c.Colour) }}
+	<a
+		href={ templ.URL(bannerTarget(c)) }
+		class="relative flex h-[210px] w-full shrink-0 snap-start snap-always flex-col justify-end overflow-hidden rounded-featured p-5 text-white shadow-raised md:h-[300px] md:p-7"
+		style={ "background-color:" + pal.Background }>
+		if c.ImageURL != "" {
+			<img
+				src={ templ.URL(c.ImageURL) }
+				alt=""
+				class="absolute inset-0 h-full w-full object-cover object-right"
+				loading="lazy"/>
+			<div class="absolute inset-0" style={ "background:linear-gradient(to right, " + pal.Background + " 0%, transparent 75%)" }></div>
+		}
+		<div class="relative max-w-[70%]">
+			<h2 class="text-title">{ c.Title }</h2>
+			if c.Subtitle != "" {
+				<p class="mt-1 text-body" style="color:rgba(255,255,255,.82)">{ c.Subtitle }</p>
+			}
+			if c.CTA != "" {
+				<span class="mt-4 inline-flex min-h-button items-center justify-center rounded-full px-[18px] py-3 text-label" style={ "background-color:" + pal.Action + ";color:" + pal.ActionForeground }>
+					{ c.CTA }
+				</span>
+			}
+		</div>
+	</a>
+}
+
+func bannerTarget(c backend.Campaign) string {
+	if c.Category != "" {
+		return "/c/" + c.Category
+	}
+	if c.Department != "" {
+		return "/shop?tab=" + c.Department
+	}
+	return "/shop"
+}
+
+// Palette mirrors the app's CampaignPalette presets — eight grounds, every
+// one measured: headline clears 4.5:1 on the ground, label on the action.
+type Palette struct{ Background, Action, ActionForeground string }
+
+var palettes = map[string]Palette{
+	"#143E32": {"#143E32", "#C6EE63", "#143E32"}, // Forest / Lime
+	"#0E3B45": {"#0E3B45", "#7FE3D4", "#0E3B45"}, // Teal / Reef
+	"#263244": {"#263244", "#C8DBEE", "#263244"}, // Ink / Mist
+	"#2A2160": {"#2A2160", "#C3B6FF", "#2A2160"}, // Indigo / Iris
+	"#5B1D3D": {"#5B1D3D", "#F7B7D2", "#5B1D3D"}, // Berry / Blush
+	"#7A1F12": {"#7A1F12", "#F2B441", "#7A1F12"}, // Marigold / Maroon
+	"#7A2E12": {"#7A2E12", "#FFC46B", "#4A1B08"}, // Saffron / Amber
+	"#4A3029": {"#4A3029", "#F7A38E", "#4A3029"}, // Cacao / Peach
+}
+
+// ResolvePalette maps a campaign's colour onto the preset set; anything the
+// admin typed that is not one of the eight falls back to the shop's own
+// forest, exactly as an unmeasured combination must.
+func ResolvePalette(hex string) Palette {
+	if p, ok := palettes[hex]; ok {
+		return p
+	}
+	return palettes["#143E32"]
+}
+
+var _ = ui.Icon

@@ -1,0 +1,125 @@
+package navigation
+
+// departments.templ — the _DepartmentStrip: a horizontal rail of tiles, All
+// first, each an artwork square that turns the season accent when selected,
+// with the name on two lines under it. Plus the mobile-menu drawer that lists
+// the same departments with their categories nested (Alpine only — no server).
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/tpl"
+)
+
+// Dept is one strip tile: the department and the artwork it is shown under
+// (its own photo, or the first photo of something the shelf sells).
+type Dept struct {
+	Name string
+	Art  string
+}
+
+templ DepartmentStrip(departments []Dept, active string) {
+	<nav class="mt-4 px-gutter" aria-label="Departments">
+		<ul class="flex snap-x gap-[11px] overflow-x-auto pb-2 no-scrollbar">
+			for _, d := range departments {
+				<li class="w-[74px] shrink-0 snap-start">
+					<a
+						href={ templ.URL(deptTarget(d.Name)) }
+						aria-current={ tpl.When(d.Name == active, "true", "") }
+						class="flex flex-col items-center gap-1.5 rounded-tile p-1 text-center hover:bg-strong/5">
+						<span
+							class={ "flex h-[54px] w-[54px] items-center justify-center overflow-hidden rounded " + tpl.When(d.Name == active, "shadow-tactile", "shadow-surface") }
+							style={ tpl.When(d.Name == active, "background-color:var(--season-accent)", "background-color:#FFFDF8") }>
+							if d.Name == "All" {
+								@ui.Icon("layout-grid", "h-5 w-5 text-strong")
+							} else if d.Art != "" {
+								<img src={ templ.URL(d.Art) } alt="" class="h-full w-full object-cover" loading="lazy"/>
+							} else {
+								@ui.Icon("store", "h-5 w-5 text-strong")
+							}
+						</span>
+						<span class={ "text-[11px] leading-[1.15] tracking-[0.1px] " + tpl.When(d.Name == active, "font-semibold text-strong", "text-text") }>
+							{ d.Name }
+						</span>
+					</a>
+				</li>
+			}
+		</ul>
+	</nav>
+}
+
+func deptTarget(name string) string {
+	if name == "All" || name == "" {
+		return "/shop"
+	}
+	return "/shop?tab=" + name
+}
+
+// MobileMenu is the drawer the phone's menu button opens: every department
+// with its categories beneath it, then the housekeeping links. Pure Alpine —
+// opening it never touches the server.
+templ MobileMenu(categories []backend.Category, active string) {
+	<div
+		id="mobile-menu"
+		class="pointer-events-none fixed inset-0 z-[60] md:hidden"
+		x-data="{ open: $store.drawers.isOpen('mobile-menu') }"
+		x-on:keydown.escape.window="$store.drawers.close('mobile-menu')"
+		x-bind:class="open ? 'pointer-events-auto' : ''">
+		<div
+			class="absolute inset-0 bg-wash-strong/40"
+			x-show="open"
+			x-transition.opacity
+			x-on:click="$store.drawers.close('mobile-menu')"
+			aria-hidden="true"></div>
+		<aside
+			class="absolute inset-y-0 left-0 w-[min(360px,88vw)] overflow-y-auto bg-canvas shadow-raised transition-transform duration-200 ease-out"
+			x-bind:class="open ? 'translate-x-0' : '-translate-x-full'"
+			x-show="open"
+			x-cloak
+			role="dialog"
+			aria-modal="true"
+			aria-label="Menu">
+			<header class="sticky top-0 z-10 flex items-center justify-between border-b border-track bg-surface px-4 py-3">
+				<h2 class="text-section">Departments</h2>
+				<button
+					class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/6"
+					x-on:click="$store.drawers.close('mobile-menu')"
+					aria-label="Close menu">
+					@ui.Icon("x", "h-5 w-5")
+				</button>
+			</header>
+			<nav class="p-3">
+				<a
+					href="/shop"
+					class={ "flex min-h-touch items-center justify-between rounded-small px-3 " + tpl.When(active == "" || active == "All", "bg-lime/70 font-semibold", "") }>
+					<span>All</span>
+					@ui.Icon("chevron-right", "h-4 w-4 text-muted")
+				</a>
+				for _, dept := range categories {
+					if dept.Parent == "" {
+						<a
+							href={ templ.URL(deptTarget(dept.Name)) }
+							class={ "mt-1 flex min-h-touch items-center justify-between rounded-small px-3 " + tpl.When(dept.Name == active, "bg-lime/70 font-semibold", "") }>
+							<span>{ dept.Name }</span>
+							@ui.Icon("chevron-right", "h-4 w-4 text-muted")
+						</a>
+						for _, child := range dept.Children {
+							<a href={ templ.URL("/c/" + child.Name) } class="flex min-h-touch items-center rounded-small pl-7 pr-3 text-muted hover:bg-strong/5">
+								{ child.Name }
+							</a>
+						}
+					}
+				}
+				<div class="my-3 h-px bg-track"></div>
+				<a href="/orders" class="flex min-h-touch items-center gap-3 rounded-small px-3 hover:bg-strong/5">
+					@ui.Icon("package", "h-4 w-4 text-strong")
+					<span>Your orders</span>
+				</a>
+				<a href="/policies" class="flex min-h-touch items-center gap-3 rounded-small px-3 hover:bg-strong/5">
+					@ui.Icon("shield-check", "h-4 w-4 text-strong")
+					<span>Policies</span>
+				</a>
+			</nav>
+		</aside>
+	</div>
+}

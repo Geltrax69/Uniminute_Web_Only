@@ -1,0 +1,10 @@
+package cartfrag
+
+// updated.templ — response for POST /cart/set: the refreshed cart body, lines
+// and totals together. The nav badges follow the lw:cart:count trigger.
+
+import "lamazon/website/templates/components/cart"
+
+templ Updated(d cart.Data) {
+	@cart.Body(d)
+}

@@ -1,0 +1,162 @@
+package pages
+
+// order-detail.templ — OrderDetailScreen: where one order has got to (a
+// four-step track, or a notice when it left the happy path), the code to read
+// out at the door, what was ordered and where it is going, a refresh, and a
+// cancel while the shop has not accepted it. The status re-reads itself every
+// 20 seconds, as the app's timer does.
+
+import (
+	"strings"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type OrderDetailData struct {
+	Page  viewdata.Page
+	Order backend.Order
+}
+
+templ OrderDetail(d OrderDetailData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, orderDetailBody(d)))
+}
+
+templ orderDetailBody(d OrderDetailData) {
+	{{ o := d.Order }}
+	{{ cancelled := o.RejectReason == cancelledByCustomer }}
+	<main id="main" class="mx-auto w-full max-w-[700px] pb-8">
+		@navigation.ScreenHeader("Order " + shop.OrderRef(o.ID))
+		<div
+			id="order-detail"
+			class="px-5 pt-1"
+			hx-get={ "/orders/" + o.ID }
+			hx-trigger="every 20s [document.visibilityState === 'visible']"
+			hx-select="#order-detail"
+			hx-target="this"
+			hx-swap="outerHTML">
+			if cancelled || o.Stage == backend.StageRejected {
+				@orderNotice("circle-x", "#B93643", rejectedText(o, cancelled))
+			} else {
+				@statusPanel(o)
+			}
+			if o.DeliveryCode != "" {
+				<div class="mt-4 rounded bg-surface p-4 shadow-surface">
+					<div class="flex items-center">
+						@ui.Icon("shield-check", "h-[18px] w-[18px] text-strong")
+						<p class="ml-2 flex-1 text-[14px] font-bold text-text">Your delivery code</p>
+					</div>
+					<p class="mt-2.5 select-all text-[30px] font-extrabold tracking-[2px] text-strong" aria-label={ "Delivery code " + strings.Join(strings.Split(o.DeliveryCode, ""), " ") }>{ strings.Join(strings.Split(o.DeliveryCode, ""), "  ") }</p>
+					<p class="mt-1.5 text-body text-muted">Read it out only when your order is actually handed to you. It is how the rider proves the delivery happened.</p>
+				</div>
+			}
+			<div class="mt-4 rounded bg-surface p-4 shadow-surface">
+				<h2 class="text-section text-text">What you ordered</h2>
+				<div class="mt-3 flex items-start">
+					<div class="min-w-0 flex-1">
+						<p class="text-[15px] font-semibold text-text">{ o.ItemTitle }</p>
+						<p class="mt-0.5 text-body text-muted">{ o.StoreName }</p>
+					</div>
+					<p class="ml-3 text-body text-muted">{ tpl.When(o.Units == 1, "1 item", shop.Itoa(o.Units)+" items") }</p>
+				</div>
+				<div class="my-3 h-px"></div>
+				<div class="flex items-center">
+					<p class="flex-1 text-[14px] font-semibold text-text">Total paid on delivery</p>
+					<p class="text-[16px] font-bold text-text">₹{ shop.Money(o.Amount) }</p>
+				</div>
+			</div>
+			<div class="mt-4 rounded bg-surface p-4 shadow-surface">
+				<h2 class="text-section text-text">Delivering to</h2>
+				<p class="mt-2 text-body leading-[1.5] text-text">{ tpl.When(o.ReceiverAddress == "", "No address recorded for this order.", o.ReceiverAddress) }</p>
+			</div>
+			<div class="mt-5">
+				<a href={ templ.SafeURL("/orders/" + o.ID) } class={ ui.ButtonClass(false) + " w-full" }>
+					<span class="truncate">Refresh status</span>
+					@ui.Icon("refresh-cw", "h-[18px] w-[18px]")
+				</a>
+			</div>
+			if o.Stage == backend.StageReceived && !cancelled {
+				<div class="mt-2.5" x-data>
+					<button type="button" class={ ui.ButtonClass(false) + " w-full" } x-on:click="$refs.cancel.showModal()">
+						<span class="truncate">Cancel order</span>
+					</button>
+					<p class="mt-1.5 text-center text-body text-muted">You can cancel until the shop accepts it.</p>
+					<dialog x-ref="cancel" class="w-[min(400px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
+						<p class="text-[24px] leading-8 text-text">Cancel this order?</p>
+						<p class="mt-4 whitespace-pre-line text-body text-muted">{ shop.Itoa(o.Units) } × { o.ItemTitle } from { o.StoreName }, ₹{ shop.Money(o.Amount) }.{ "\n\n" }The shop has not accepted it yet, so nothing has been prepared. This cannot be undone.</p>
+						<div class="mt-6 flex justify-end gap-2">
+							<button type="button" x-on:click="$refs.cancel.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Keep order</button>
+							<button type="button" hx-post={ "/orders/" + o.ID + "/cancel" } hx-swap="none" class="min-h-touch rounded-full px-3 text-label text-danger hover:bg-danger/[.06]">Cancel order</button>
+						</div>
+					</dialog>
+				</div>
+			}
+		</div>
+	</main>
+}
+
+// statusPanel is _StatusPanel: the status as a heading, the arrival time while
+// it is live, and Placed → Accepted → On the way → Delivered.
+templ statusPanel(o backend.Order) {
+	{{ reached := stageIndex(o.Stage) }}
+	<div class="rounded bg-surface p-4 shadow-surface">
+		<h2 class="text-section text-text" aria-live="polite">{ statusLabel(o) }</h2>
+		if o.Stage != backend.StageDelivered {
+			<p class="mt-0.5 text-body text-muted">Arriving in about { shop.DeliveryETA }</p>
+		}
+		<div class="mt-4 flex items-start">
+			for i, step := range orderSteps {
+				if i > 0 {
+					<div class={ "mx-1 mt-[15px] h-0.5 flex-1 " + tpl.When(i <= reached, "bg-strong", "bg-track") }></div>
+				}
+				<div class="flex w-[62px] shrink-0 flex-col items-center" aria-label={ step[0] + tpl.When(i <= reached, ", done", ", not yet") }>
+					<span class={ "flex h-8 w-8 items-center justify-center rounded-full " + tpl.When(i <= reached, "bg-strong text-white", "bg-track text-muted") }>
+						@ui.Icon(step[1], "h-4 w-4")
+					</span>
+					<span class={ "mt-1.5 text-center text-[11px] leading-[1.2] " + tpl.When(i <= reached, "font-semibold text-text", "text-muted") } aria-hidden="true">{ step[0] }</span>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+templ orderNotice(icon, colour, text string) {
+	<div class="flex items-start rounded-featured p-3.5" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .10) + ";color:" + colour) }>
+		@ui.Icon(icon, "h-[18px] w-[18px] shrink-0")
+		<p class="ml-2.5 text-[13px] leading-[1.45]">{ text }</p>
+	</div>
+}
+
+var orderSteps = [][2]string{
+	{"Placed", "receipt"},
+	{"Accepted", "chef-hat"},
+	{"On the way", "bike"},
+	{"Delivered", "circle-check"},
+}
+
+func stageIndex(s backend.OrderStage) int {
+	switch s {
+	case backend.StageAccepted:
+		return 1
+	case backend.StagePicked:
+		return 2
+	case backend.StageDelivered:
+		return 3
+	}
+	return 0
+}
+
+func rejectedText(o backend.Order, cancelled bool) string {
+	switch {
+	case cancelled:
+		return "You cancelled this order. Nothing was charged."
+	case o.RejectReason == "":
+		return "The shop could not take this order."
+	}
+	return "The shop could not take this order: " + o.RejectReason
+}

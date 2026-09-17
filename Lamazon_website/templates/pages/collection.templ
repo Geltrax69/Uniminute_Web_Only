@@ -1,0 +1,42 @@
+package pages
+
+// collection.templ — a single category collection page (/c/{name}).
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/collection"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/components/ui"
+)
+
+type CollectionPageData struct {
+	Name       string
+	Products   []backend.Product
+	Categories []backend.Category
+	Wishlist   map[string]bool
+	Filter     collection.FilterState
+	Sort       collection.SortState
+	PageLinks  collection.PageLinks
+}
+
+templ CollectionContent(d CollectionPageData) {
+	@navigation.Breadcrumbs([]navigation.Crumb{
+		{Label: "Shop", Href: "/shop"},
+		{Label: d.Name, Href: ""},
+	})
+	<div class="mt-4 flex items-start gap-4">
+		@collection.Filters(d.Categories, d.Filter)
+		<div class="min-w-0 flex-1">
+			<div class="mb-3 flex flex-wrap items-center gap-2">
+				@collection.Sort(d.Sort)
+			</div>
+			if len(d.Products) == 0 {
+				@ui.EmptyState("package", "Nothing in "+d.Name+" yet", "Check back soon — new items are added regularly.", "Browse all", "/shop")
+			} else {
+				@product.Grid(d.Products, product.GridOpts{ShowStore: true, Wishlist: d.Wishlist})
+				@collection.Pagination(d.PageLinks)
+			}
+		</div>
+	</div>
+}

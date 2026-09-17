@@ -1,0 +1,10 @@
+package wishlistfrag
+
+// toggle.templ — response for POST /wishlist/toggle.
+// Returns the updated Heart button, which swaps outerHTML of the original.
+
+import "lamazon/website/templates/components/product"
+
+templ Toggle(id string, nowFilled bool) {
+	@product.Heart(id, nowFilled, "absolute right-1 top-1")
+}

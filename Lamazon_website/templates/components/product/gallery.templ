@@ -1,0 +1,103 @@
+package product
+
+// gallery.templ — _Hero from details_screen.dart: every photo at full width,
+// paged by swiping (CSS scroll snap), on the page background with a 28px
+// rounded bottom. Back, save and cart float over the top; with more than one
+// photo, previous / "n / N" / next sit along the bottom.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+)
+
+templ Gallery(p backend.Product, wishlisted bool) {
+	{{ photos := Photos(p) }}
+	<div class="relative h-[clamp(240px,45vh,420px)] min-[900px]:h-[540px]" x-data={ "hero(" + itoa(len(photos)) + ")" }>
+		<div x-ref="track" x-on:scroll.debounce.60ms="onScroll()" class="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden rounded-b-[28px] no-scrollbar">
+			for i, src := range photos {
+				<div class="h-full w-full shrink-0 snap-center">
+					if src == "" {
+						<span class="flex h-full w-full items-center justify-center bg-img-ground">
+							@ui.Icon("image-off", "h-6 w-6 text-muted")
+						</span>
+					} else {
+						<img
+							src={ templ.URL(shop.Hero(src)) }
+							alt={ p.Name + ", image " + itoa(i+1) + " of " + itoa(len(photos)) }
+							loading={ loadingAttr(i) }
+							class="h-full w-full object-contain"/>
+					}
+				</div>
+			}
+		</div>
+		<div class="absolute inset-x-0 top-0 flex justify-between px-3.5 pt-2">
+			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
+				"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
+			})
+			<div class="flex gap-2">
+				@heroHeart(p.ID, wishlisted)
+				@ui.TactileButton("shopping-cart", "Open cart", 44, "", templ.Attributes{"href": "/cart"})
+			</div>
+		</div>
+		if len(photos) > 1 {
+			<div class="absolute inset-x-4 bottom-4 flex items-center justify-between">
+				@ui.TactileButton("chevron-left", "Previous image", 44, "", templ.Attributes{"x-on:click": "go(-1)", "x-bind:disabled": "page === 0", "disabled": true})
+				<span class="rounded-[14px] bg-surface px-3.5 py-2 text-[14px] font-bold text-text shadow-surface" x-text="(page + 1) + ' / ' + count">1 / { itoa(len(photos)) }</span>
+				@ui.TactileButton("chevron-right", "Next image", 44, "", templ.Attributes{"x-on:click": "go(1)", "x-bind:disabled": "page === count - 1"})
+			</div>
+		}
+	</div>
+}
+
+// heroHeart is the save control over the photo. The app swaps heart for
+// heart-handshake once saved; the state flips when the toggle succeeds.
+templ heroHeart(id string, saved bool) {
+	<button
+		type="button"
+		class="tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile"
+		style={ templ.SafeCSS(ui.TactileStyle(44, "")) }
+		hx-post="/wishlist/toggle"
+		hx-vals={ templ.JSONString(map[string]string{"id": id}) }
+		hx-swap="none"
+		x-data={ "{ on: " + tplWhen(saved, "true", "false") + " }" }
+		x-on:htmx:after-request="if ($event.detail.successful) on = !on"
+		x-bind:aria-pressed="on"
+		aria-label="Save product"
+		title="Save product">
+		if saved {
+			<span class="flex" x-show="on">
+				@ui.Icon("heart-handshake", "h-5 w-5")
+			</span>
+			<span class="flex" x-show="!on" x-cloak>
+				@ui.Icon("heart", "h-5 w-5")
+			</span>
+		} else {
+			<span class="flex" x-show="on" x-cloak>
+				@ui.Icon("heart-handshake", "h-5 w-5")
+			</span>
+			<span class="flex" x-show="!on">
+				@ui.Icon("heart", "h-5 w-5")
+			</span>
+		}
+	</button>
+}
+
+// Photos is [imageUrl, ...extraImages]: the main picture first, then every
+// other one once.
+func Photos(p backend.Product) []string {
+	out := []string{p.ImageURL}
+	for _, u := range p.ImageURLs {
+		if u != "" && u != p.ImageURL {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
+func loadingAttr(i int) string {
+	if i == 0 {
+		return "eager"
+	}
+	return "lazy"
+}

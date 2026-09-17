@@ -1,0 +1,11 @@
+package cartfrag
+
+// removed.templ — response for POST /cart/remove. Removing is setting the
+// quantity to zero, so the answer is the same refreshed body; the "Removed …"
+// toast with Undo travels in the HX-Trigger header.
+
+import "lamazon/website/templates/components/cart"
+
+templ Removed(d cart.Data) {
+	@Updated(d)
+}

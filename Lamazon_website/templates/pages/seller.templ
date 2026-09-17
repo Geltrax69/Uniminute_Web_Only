@@ -1,0 +1,431 @@
+package pages
+
+// seller.templ — SellerDashboardScreen and SellerOnboardingScreen. The pages
+// render from the seller's own API reads; every change is made from the
+// browser straight to the same /api/seller endpoints the app calls (through
+// the site's token-adding proxy), and the page reloads to show what the
+// server now holds.
+
+import (
+	"strconv"
+	"strings"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/account"
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+// sellerPageSize is _pageSize: rows shown before "Show N more".
+const sellerPageSize = 8
+
+type SellerDashboardData struct {
+	Page   viewdata.Page
+	Store  backend.SellerStore
+	Items  []backend.InventoryItem
+	Orders []backend.Order
+	Pane   string // "orders" | "inventory"; "" follows the shop's state
+}
+
+templ SellerDashboard(d SellerDashboardData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", sellerDashboardBody(d))
+}
+
+templ sellerDashboardBody(d SellerDashboardData) {
+	{{ pane := dashboardPane(d) }}
+	<main id="main" class="mx-auto w-full max-w-[760px] pb-[calc(100px+env(safe-area-inset-bottom))]" x-data={ "sellerDashboard(" + jsonArg(pane) + ")" }>
+		<div class="flex items-center justify-between px-5 pb-3 pt-2">
+			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
+				"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
+			})
+			<h1 class="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-bold text-text">Your store</h1>
+			<a href="/seller/store" class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full text-text hover:bg-strong/[.06]" aria-label="Edit store" title="Edit store">
+				@ui.Icon("pencil", "h-[17px] w-[17px]")
+			</a>
+		</div>
+		<div class="px-5 pt-1">
+			if !d.Store.Approved() {
+				@reviewBanner(d.Store)
+			}
+			<div class="flex h-[140px] items-center justify-center overflow-hidden rounded-[20px] bg-[#E8E8E4]">
+				if d.Store.PhotoURL != "" {
+					<img src={ templ.URL(d.Store.PhotoURL) } alt="" class="h-full w-full object-contain"/>
+				} else {
+					@ui.Icon("store", "h-9 w-9 text-[#9E9E9E]")
+				}
+			</div>
+			<h2 class="mt-3.5 text-title text-text">{ d.Store.Name }</h2>
+			<p class="mt-1 flex items-center text-[13px] text-muted">
+				@ui.Icon("map-pin", "h-[13px] w-[13px] shrink-0")
+				<span class="ml-1 truncate">{ d.Store.Location }, { d.Store.City }</span>
+			</p>
+			<div class="mt-2.5 flex flex-wrap gap-1.5">
+				for _, c := range d.Store.Categories {
+					<span class="rounded bg-white px-3 py-1.5 text-[12px] font-semibold text-text">{ c }</span>
+				}
+			</div>
+			{{ restock := needsRestock(d.Items) }}
+			<div class="mt-[18px] flex gap-2.5">
+				@statTile("Products", strconv.Itoa(len(d.Items)), "")
+				@statTile("Units", strconv.Itoa(unitsInStock(d.Items)), "")
+				@statTile("Needs restock", strconv.Itoa(restock), tpl.When(restock > 0, "#9A5B12", ""))
+			</div>
+			<div class="mt-2.5 flex items-center justify-between rounded-featured bg-white p-4">
+				<span class="text-[14px] font-semibold text-text">Inventory value</span>
+				<span class="text-[18px] font-extrabold text-text">₹{ shop.Money(inventoryValue(d.Items)) }</span>
+			</div>
+			<div class="mt-[22px] flex rounded-[26px] bg-white p-1" role="tablist">
+				<button type="button" role="tab" x-on:click="pane = 'orders'" x-bind:aria-selected="pane === 'orders'" x-bind:class="pane === 'orders' ? 'bg-strong text-white' : 'text-muted'" class={ "flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold " + tpl.When(pane == "orders", "bg-strong text-white", "text-muted") }>Orders ({ strconv.Itoa(len(d.Orders)) })</button>
+				<button type="button" role="tab" x-on:click="pane = 'inventory'" x-bind:aria-selected="pane === 'inventory'" x-bind:class="pane === 'inventory' ? 'bg-strong text-white' : 'text-muted'" class={ "flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold " + tpl.When(pane == "inventory", "bg-strong text-white", "text-muted") }>Inventory ({ strconv.Itoa(len(d.Items)) })</button>
+			</div>
+			<div class="h-3.5"></div>
+			<div x-show="pane === 'orders'" { cloakUnless(pane == "orders")... }>
+				{{ received := countStage(d.Orders, backend.StageReceived) }}
+				<div class="flex gap-2.5">
+					@statTile("Received", strconv.Itoa(received), tpl.When(received > 0, "#9A5B12", ""))
+					@statTile("Accepted", strconv.Itoa(countStage(d.Orders, backend.StageAccepted)), "")
+					@statTile("Delivered", strconv.Itoa(countStage(d.Orders, backend.StageDelivered)), "")
+				</div>
+				<div class="h-3"></div>
+				if len(d.Orders) == 0 {
+					<p class="py-[18px] text-center text-[13.5px] text-muted">No orders yet</p>
+				} else {
+					for i, o := range d.Orders {
+						<div class="mb-2.5" x-show={ "shownOrders > " + strconv.Itoa(i) } { cloakUnless(i < sellerPageSize)... }>
+							@sellerOrderRow(o)
+						</div>
+					}
+					if len(d.Orders) > sellerPageSize {
+						<button type="button" x-show={ "shownOrders < " + strconv.Itoa(len(d.Orders)) } x-on:click="shownOrders += 8" class="w-full rounded-[24px] bg-white py-[13px] text-[13.5px] font-bold text-text" x-text={ "`Show ${" + strconv.Itoa(len(d.Orders)) + " - shownOrders} more orders`" }></button>
+					}
+				}
+			</div>
+			<div x-show="pane === 'inventory'" { cloakUnless(pane == "inventory")... }>
+				if len(d.Items) == 0 {
+					<div class="flex flex-col items-center py-[30px]">
+						@ui.Icon("package-open", "h-11 w-11 text-[#9E9E9E]")
+						<p class="mt-3 text-[15px] text-muted">No products yet</p>
+						<p class="mt-1 text-[12.5px] text-muted">Add your first one to start selling</p>
+					</div>
+				} else {
+					for i, it := range d.Items {
+						<div class="mb-2.5" x-show={ "shownItems > " + strconv.Itoa(i) } { cloakUnless(i < sellerPageSize)... }>
+							@sellerItemRow(it)
+						</div>
+					}
+					if len(d.Items) > sellerPageSize {
+						<button type="button" x-show={ "shownItems < " + strconv.Itoa(len(d.Items)) } x-on:click="shownItems += 8" class="w-full rounded-[24px] bg-white py-[13px] text-[13.5px] font-bold text-text" x-text={ "`Show ${" + strconv.Itoa(len(d.Items)) + " - shownItems} more products`" }></button>
+					}
+				}
+			</div>
+		</div>
+		// Adding stock is exactly what approval gates, so the button goes with it.
+		if d.Store.Approved() {
+			<a href="/seller/products/new" class="fixed bottom-[calc(100px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 items-center rounded-2xl bg-strong px-4 text-white shadow-raised hover:brightness-110">
+				@ui.Icon("plus", "h-[18px] w-[18px]")
+				<span class="ml-3 text-[14px] font-bold">Add product</span>
+			</a>
+		}
+		<dialog x-ref="reject" class="w-[min(400px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
+			<p class="text-[22px] leading-7">Why can you not take this order?</p>
+			<input type="text" x-model="reason" x-on:keydown.enter.prevent="reject()" placeholder="e.g. Kitchen is closed, item just ran out" class="mt-4 w-full border-b-2 border-track bg-transparent py-2 text-body outline-none focus:border-strong"/>
+			<div class="mt-6 flex justify-end gap-2">
+				<button type="button" x-on:click="$refs.reject.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Keep it</button>
+				<button type="button" x-on:click="reject()" x-bind:disabled="!reason.trim()" class="min-h-touch rounded-full bg-danger px-5 text-label text-white disabled:opacity-50">Reject order</button>
+			</div>
+		</dialog>
+		<dialog x-ref="remove" class="w-[min(400px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
+			<p class="text-[22px] leading-7">Delete this product?</p>
+			<p class="mt-4 text-body text-muted" x-text="removing ? `&quot;${removing.title}&quot; and its photos are removed for good. If anyone has ordered it, the delete is refused — hide it from the shop instead.` : ''"></p>
+			<div class="mt-6 flex justify-end gap-2">
+				<button type="button" x-on:click="$refs.remove.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Keep it</button>
+				<button type="button" x-on:click="remove()" class="min-h-touch rounded-full px-3 text-label text-danger hover:bg-danger/[.06]">Delete</button>
+			</div>
+		</dialog>
+	</main>
+	@navigation.BottomNav(d.Page, "store")
+}
+
+// reviewBanner is _ReviewBanner: pending in amber, rejected in red with why.
+templ reviewBanner(s backend.SellerStore) {
+	{{ rejected := s.Status == "rejected" }}
+	{{ colour := tpl.When(rejected, "#B93643", "#9A5B12") }}
+	<div class="mb-3 flex items-start rounded p-3.5" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .10)) }>
+		<span class="flex" style={ templ.SafeCSS("color:" + colour) }>
+			@ui.Icon(tpl.When(rejected, "circle-alert", "clock"), "h-[18px] w-[18px] shrink-0")
+		</span>
+		<div class="ml-2.5 min-w-0">
+			<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + colour) }>{ tpl.When(rejected, "Your store was not approved", "Your store has been sent for review") }</p>
+			<p class="mt-1 whitespace-pre-line text-[12.5px] leading-[1.4] text-text">{ tpl.When(rejected, s.RejectReason + "\n\nFix that and save the store again to send it back for review.", "An admin is looking at it. You can add products as soon as it is approved — shoppers see it then too.") }</p>
+		</div>
+	</div>
+}
+
+templ statTile(label, value, colour string) {
+	<div class="flex min-w-0 flex-1 flex-col items-center rounded-featured bg-white px-2.5 py-3.5">
+		<span class="text-[20px] font-extrabold" style={ templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)) }>{ value }</span>
+		<span class="mt-0.5 text-center text-[11.5px] text-muted">{ label }</span>
+	</div>
+}
+
+// sellerOrderRow is _OrderRow: the stage, what and for whom, and — only for
+// a brand new order — Accept and Reject.
+templ sellerOrderRow(o backend.Order) {
+	{{ colour := sellerStageColour(o.Stage) }}
+	<div class="flex items-center rounded-featured bg-white p-3.5">
+		<div class="min-w-0 flex-1">
+			<div class="flex items-center">
+				<span class="rounded-[10px] px-2 py-[3px] text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ sellerStageLabel(o.Stage) }</span>
+				<span class="ml-2 text-[11.5px] text-muted">{ shop.OrderRef(o.ID) }</span>
+			</div>
+			<p class="mt-1.5 truncate text-[14px] font-bold text-text">{ shop.Itoa(o.Units) } × { o.ItemTitle }</p>
+			<p class="mt-0.5 text-[12.5px] text-muted">₹{ shop.Money(o.Amount) }</p>
+			if o.ReceiverName != "" {
+				<p class="mt-1.5 truncate text-[11.5px] text-muted">For { o.ReceiverName } · { o.ReceiverPhone }</p>
+			}
+			if o.RejectReason != "" {
+				<p class="mt-1 text-[11.5px] text-danger">Rejected: { o.RejectReason }</p>
+			}
+		</div>
+		if o.Stage == backend.StageReceived {
+			<div class="ml-2 flex flex-col items-center">
+				<button type="button" x-on:click={ "accept(" + jsonArg(o.ID) + ")" } class="rounded-[20px] bg-text px-4 py-2.5 text-[12.5px] font-bold text-white">Accept</button>
+				<button type="button" x-on:click={ "openReject(" + jsonArg(o.ID) + ")" } class="min-h-touch px-3 text-[12px] text-danger">Reject</button>
+			</div>
+		}
+	</div>
+}
+
+// sellerItemRow is _ItemRow: tap to edit; quick stock, hide and delete beside.
+templ sellerItemRow(it backend.InventoryItem) {
+	{{ label, colour := stockStatus(it) }}
+	<div class="relative flex items-center rounded-featured bg-white p-3">
+		<a href={ templ.SafeURL("/seller/products/" + it.ID) } class="absolute inset-0 rounded-featured" aria-label={ "Edit " + it.Title }></a>
+		<span class="pointer-events-none relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-small bg-[#E8E8E4]">
+			if len(it.ImageURLs) > 0 {
+				<img src={ templ.URL(shop.CatalogueImage(it.ImageURLs[0], 160)) } alt="" loading="lazy" class="h-full w-full object-contain"/>
+			} else {
+				@ui.Icon("image", "h-[22px] w-[22px] text-[#9E9E9E]")
+			}
+		</span>
+		<div class="pointer-events-none relative ml-3 min-w-0 flex-1">
+			<p class="truncate text-[14.5px] font-bold text-text">{ it.Title }</p>
+			<p class="mt-0.5 truncate text-[12.5px] text-muted">₹{ shop.Money(it.Price) } · { it.Category }</p>
+			<div class="mt-1.5 flex flex-wrap items-center gap-2">
+				<span class="rounded-[10px] px-2 py-[3px] text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ label }</span>
+				<span class="text-[11.5px] text-muted">{ tpl.When(it.Reserved > 0, strconv.Itoa(it.Available())+" to sell · "+strconv.Itoa(it.Reserved)+" in orders", strconv.Itoa(it.Stock)+" left") }</span>
+				if it.Delisted {
+					<span class="rounded-[10px] bg-track px-2 py-[3px] text-[11px] font-bold text-muted">Hidden</span>
+				}
+			</div>
+		</div>
+		<div class="relative flex flex-col">
+			@stockButton("plus", "Add one to stock", "stock("+jsonArg(it.ID)+", 1)", false)
+			@stockButton("minus", "Take one off stock", "stock("+jsonArg(it.ID)+", -1)", it.Stock == 0)
+		</div>
+		<button type="button" class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-strong/[.06]" x-on:click={ "listing(" + jsonArg(it.ID) + ", " + jsonArg(it.Title) + ", " + tpl.When(it.Delisted, "false", "true") + ")" } aria-label={ tpl.When(it.Delisted, "Put back on sale", "Hide from shop") } title={ tpl.When(it.Delisted, "Put back on sale", "Hide from shop") }>
+			@ui.Icon(tpl.When(it.Delisted, "eye", "eye-off"), "h-[17px] w-[17px]")
+		</button>
+		<button type="button" class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/[.06]" x-on:click={ "openRemove(" + jsonArg(it.ID) + ", " + jsonArg(it.Title) + ")" } aria-label="Remove" title="Remove">
+			@ui.Icon("trash-2", "h-[17px] w-[17px]")
+		</button>
+	</div>
+}
+
+templ stockButton(icon, label, action string, disabled bool) {
+	<button type="button" class="flex h-[34px] w-[34px] items-center justify-center disabled:cursor-not-allowed" x-on:click={ action } disabled?={ disabled } aria-label={ label } title={ label }>
+		<span class={ "flex h-7 w-7 items-center justify-center rounded-[9px] bg-canvas " + tpl.When(disabled, "text-muted", "text-text") }>
+			@ui.Icon(icon, "h-[15px] w-[15px]")
+		</span>
+	</button>
+}
+
+type SellerStoreFormData struct {
+	Page        viewdata.Page
+	Store       *backend.SellerStore // nil when opening the first one
+	Departments []string
+	Cities      []string
+}
+
+templ SellerStoreForm(d SellerStoreFormData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", sellerStoreBody(d))
+}
+
+templ sellerStoreBody(d SellerStoreFormData) {
+	{{ editing := d.Store != nil }}
+	<main id="main" class="mx-auto w-full max-w-readable">
+		<form class="flex min-h-[100dvh] flex-col" x-data={ "sellerStoreForm(" + jsonArg(storeFormConfig(d)) + ")" } x-on:submit.prevent="save()">
+			@navigation.ScreenHeader(tpl.When(editing, "Edit store", "Open your store"))
+			<div class="flex-1 px-5 pb-6 pt-1">
+				<p class="text-[13.5px] text-muted">{ tpl.When(editing, "Changes show on your store page and to shoppers.", "Sell to everyone ordering on campus. Takes a minute.") }</p>
+				<div class="h-5"></div>
+				@account.Section("Store photo", "Your shopfront, counter or logo")
+				<input type="file" accept="image/*" class="hidden" x-ref="photo" x-on:change="choose($event)"/>
+				<div class="relative h-[150px] overflow-hidden rounded bg-white">
+					<template x-if="preview || photoUrl">
+						<div class="h-full w-full">
+							<img x-bind:src="preview || photoUrl" alt="" class="h-full w-full object-contain"/>
+							<div class="absolute bottom-2.5 right-2.5 flex gap-2">
+								<button type="button" x-on:click="$refs.photo.click()" class="flex items-center rounded-[20px] bg-black/60 px-3 py-2 text-[12px] font-bold text-white">
+									@ui.Icon("repeat-2", "h-[15px] w-[15px]")
+									<span class="ml-1.5">Replace</span>
+								</button>
+								<button type="button" x-show="preview" x-on:click="clearPhoto()" aria-label="Remove photo" class="flex items-center rounded-[20px] bg-black/60 px-3 py-2 text-white">
+									@ui.Icon("trash-2", "h-[15px] w-[15px]")
+								</button>
+							</div>
+						</div>
+					</template>
+					<template x-if="!preview && !photoUrl">
+						<button type="button" x-on:click="$refs.photo.click()" class="flex h-full w-full flex-col items-center justify-center rounded border-[1.4px] border-[#D9D9D4] px-2.5">
+							@ui.Icon("image-plus", "h-[26px] w-[26px] text-muted")
+							<span class="mt-2 text-[14px] font-bold text-text">Upload store photo</span>
+							<span class="mt-0.5 text-[12px] text-muted">Tap to choose</span>
+						</button>
+					</template>
+				</div>
+				<div class="h-[22px]"></div>
+				@account.Section("Business name", "")
+				@account.Field("name", "e.g. Campus Snacks Corner", "store", "text", "organization")
+				<div class="h-[22px]"></div>
+				@account.Section("Store location", "Where buyers collect or you hand over")
+				@account.Field("location", "Block / shop number, area", "map-pin", "text", "off")
+				<div class="h-2.5"></div>
+				@account.Field("city", "Campus / city", "building-2", "text", "off")
+				<p class="mt-2 text-[12px] text-danger" x-show="city.trim() && !serviceable" x-cloak x-text="`We only deliver around ${cities[0] || 'campus'} today.`"></p>
+				<div class="h-[22px]"></div>
+				@account.Section("What will you sell?", "Pick every category that applies")
+				<div class="flex flex-wrap gap-2">
+					for _, c := range d.Departments {
+						<button
+							type="button"
+							x-on:click={ "toggle(" + jsonArg(c) + ")" }
+							x-bind:aria-pressed={ "picked.includes(" + jsonArg(c) + ")" }
+							x-bind:class={ "picked.includes(" + jsonArg(c) + ") ? 'bg-strong text-white' : 'bg-white text-text'" }
+							class="flex items-center rounded-[22px] px-[15px] py-2.5 text-[13px] font-semibold transition-colors duration-150 motion-reduce:transition-none">
+							<span class="mr-1.5 flex" x-show={ "picked.includes(" + jsonArg(c) + ")" } x-cloak>
+								@ui.Icon("check", "h-3.5 w-3.5")
+							</span>
+							{ c }
+						</button>
+					}
+				</div>
+			</div>
+			@account.SubmitBar(tpl.When(editing, "Save changes", "Create store"), "Saving…")
+		</form>
+	</main>
+}
+
+func storeFormConfig(d SellerStoreFormData) map[string]any {
+	c := map[string]any{"name": "", "location": "", "city": "", "categories": []string{}, "photoUrl": "", "cities": d.Cities}
+	if len(d.Cities) > 0 {
+		c["city"] = d.Cities[0]
+	}
+	if s := d.Store; s != nil {
+		c["name"], c["location"], c["city"], c["photoUrl"] = s.Name, s.Location, s.City, s.PhotoURL
+		if s.Categories != nil {
+			c["categories"] = s.Categories
+		}
+	}
+	return c
+}
+
+func dashboardPane(d SellerDashboardData) string {
+	if d.Pane == "orders" || d.Pane == "inventory" {
+		return d.Pane
+	}
+	if len(d.Orders) == 0 {
+		return "inventory"
+	}
+	return "orders"
+}
+
+func cloakUnless(visible bool) templ.Attributes {
+	if visible {
+		return templ.Attributes{}
+	}
+	return templ.Attributes{"x-cloak": true}
+}
+
+// lowStockAt is seller.dart's restock warning line.
+const lowStockAt = 5
+
+func stockStatus(it backend.InventoryItem) (string, string) {
+	switch a := it.Available(); {
+	case a <= 0:
+		return "Sold out", "#B93643"
+	case a <= lowStockAt:
+		return "Low stock", "#9A5B12"
+	}
+	return "In stock", "#1D4939"
+}
+
+func needsRestock(items []backend.InventoryItem) int {
+	n := 0
+	for _, it := range items {
+		if it.Available() <= lowStockAt {
+			n++
+		}
+	}
+	return n
+}
+
+func unitsInStock(items []backend.InventoryItem) int {
+	n := 0
+	for _, it := range items {
+		n += max(it.Stock, 0)
+	}
+	return n
+}
+
+func inventoryValue(items []backend.InventoryItem) float64 {
+	v := 0.0
+	for _, it := range items {
+		v += it.Price * float64(it.Stock)
+	}
+	return v
+}
+
+func countStage(orders []backend.Order, s backend.OrderStage) int {
+	n := 0
+	for _, o := range orders {
+		if o.Stage == s {
+			n++
+		}
+	}
+	return n
+}
+
+func sellerStageLabel(s backend.OrderStage) string {
+	switch s {
+	case backend.StageAccepted:
+		return "Accepted"
+	case backend.StageRejected:
+		return "Rejected"
+	case backend.StagePicked:
+		return "With the rider"
+	case backend.StageDelivered:
+		return "Delivered"
+	}
+	return "New"
+}
+
+func sellerStageColour(s backend.OrderStage) string {
+	switch s {
+	case backend.StageAccepted:
+		return "#2F6FED"
+	case backend.StagePicked:
+		return "#6A1B9A"
+	case backend.StageRejected:
+		return "#B93643"
+	case backend.StageDelivered:
+		return "#1D4939"
+	}
+	return "#9A5B12"
+}
+
+var _ = strings.TrimSpace

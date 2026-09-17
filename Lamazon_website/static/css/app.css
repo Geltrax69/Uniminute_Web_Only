@@ -1,0 +1,215 @@
+/* Lamazon storefront — Tailwind source.
+   All design tokens come from tailwind.config.js, which lifts them verbatim
+   from frontend/lib/widgets/design_system.dart. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Font face ─────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "InterTight";
+  src: url("/static/fonts/InterTight-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Custom properties ──────────────────────────────────────────────────── */
+:root {
+  /* Gutter scale: 16px on phone, 24px at tablet, 32px at wide.
+     These match LamazonTheme.gutter steps exactly. */
+  --gutter: 16px;
+
+  /* Season skin defaults = forest chrome. The header writes its own
+     --season-* vars inline so the root values only show on non-season pages. */
+  --season-ground:       #143E32;
+  --season-ground-shade: #0F3126;
+  --season-accent:       #C6EE63;
+  --season-ink:          #FFFDF8;
+}
+
+@media (min-width: 700px)  { :root { --gutter: 24px; } }
+@media (min-width: 1200px) { :root { --gutter: 32px; } }
+
+/* ── Layout utilities ───────────────────────────────────────────────────── */
+@layer utilities {
+  /* px-gutter: follows the responsive --gutter variable */
+  .px-gutter { padding-left: var(--gutter); padding-right: var(--gutter); }
+  .pl-gutter { padding-left: var(--gutter); }
+  .pr-gutter { padding-right: var(--gutter); }
+  .mx-gutter { margin-left: var(--gutter); margin-right: var(--gutter); }
+
+  /* no-scrollbar: hides the scrollbar on the department strip / banner rail */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* bleed: a horizontal rail that scrolls edge to edge through the gutter,
+     the way Flutter's clipBehavior: Clip.none rails do. */
+  .bleed { margin-left: calc(-1 * var(--gutter)); margin-right: calc(-1 * var(--gutter)); padding-left: var(--gutter); padding-right: var(--gutter); }
+}
+
+/* ── Product grid ───────────────────────────────────────────────────────── */
+/* SliverGridDelegateWithMaxCrossAxisExtent(150, spacing 14, aspect 0.50):
+   Flutter takes ceil(width / 164) columns. */
+.grid-host { container-type: inline-size; }
+.product-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 14px; }
+.product-grid > * { aspect-ratio: 1 / 2; min-width: 0; }
+@container (min-width: 165px)  { .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 329px)  { .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 493px)  { .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 657px)  { .product-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 821px)  { .product-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (min-width: 985px)  { .product-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+@container (min-width: 1149px) { .product-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+@container (min-width: 1313px) { .product-grid { grid-template-columns: repeat(9, minmax(0, 1fr)); } }
+
+/* Search's grids use 16px spacing, so the column step is 166px. */
+.product-grid.spaced { gap: 16px; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+@container (min-width: 167px)  { .product-grid.spaced { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 333px)  { .product-grid.spaced { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 499px)  { .product-grid.spaced { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 665px)  { .product-grid.spaced { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 831px)  { .product-grid.spaced { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (min-width: 997px)  { .product-grid.spaced { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+@container (min-width: 1163px) { .product-grid.spaced { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+@container (min-width: 1329px) { .product-grid.spaced { grid-template-columns: repeat(9, minmax(0, 1fr)); } }
+
+/* ── Search department tiles (GridView.extent 240, spacing 10, 3.6) ────── */
+.dept-host { container-type: inline-size; }
+.dept-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px; }
+.dept-grid > * { aspect-ratio: 3.6; }
+@container (min-width: 251px)  { .dept-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 501px)  { .dept-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 751px)  { .dept-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 1001px) { .dept-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 1251px) { .dept-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+/* ── Category shelf grid (_CategorySection) ─────────────────────────────── */
+/* 3 across, 5 from 690px, 6 from 1060px; tiles 0.73 wide per tall. */
+.cat-host { container-type: inline-size; }
+.cat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; }
+.cat-grid > * { aspect-ratio: 0.73; }
+@container (min-width: 690px)  { .cat-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 1060px) { .cat-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+/* Desktop only: past 1200px six tiles grow to 220px wide and 300 tall, so the
+   board keeps its phone-sized tiles and shows more of them instead. */
+.cat-grid.limited > :nth-child(n+7) { display: none; }
+@container (min-width: 1200px) {
+  .cat-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .cat-grid.limited > :nth-child(n+7) { display: flex; }
+}
+
+/* ── Campaign banner (CampaignBanner) ───────────────────────────────────── */
+/* 230px tall; from 760px wide, 348px with the art a third of the way in. */
+.banner-host { container-type: inline-size; }
+.banner { position: relative; height: 230px; }
+.banner-art { position: absolute; top: 0; right: 0; bottom: 0; left: 24%; }
+.banner-art > img, .banner-art > video { width: 100%; height: 100%; object-fit: cover; object-position: right center; }
+.banner-copy { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 18px 36% 18px 20px; }
+.banner-title, .banner-sub { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.banner-title { font-size: 22px; line-height: 28px; letter-spacing: -0.7px; font-weight: 600; }
+@container (min-width: 760px) {
+  .banner { height: 348px; }
+  .banner-art { left: 33%; }
+  .banner-copy { padding: 28px 43% 28px 30px; }
+  .banner-title { font-size: 31px; line-height: 36px; letter-spacing: -1px; -webkit-line-clamp: 3; }
+  .banner-sub { -webkit-line-clamp: 3; }
+}
+
+/* ── Login backdrop (ImageMarquee) ──────────────────────────────────────── */
+/* Two copies of each row; sliding one copy's width loops seamlessly. */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee-row { animation: marquee 40s linear infinite; }
+.marquee-row.reverse { animation-direction: reverse; }
+.marquee-row.is-paused { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .marquee-row { animation: none; } }
+
+/* ── Material 3 switch (SwitchListTile, activeTrackColor #A6D544) ───────── */
+.m3-switch { appearance: none; position: relative; flex-shrink: 0; width: 52px; height: 32px; margin-left: 12px; border-radius: 9999px; border: 2px solid #66716A; background: #E1E5DD; cursor: pointer; transition: background-color 150ms, border-color 150ms; }
+.m3-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 9999px; background: #66716A; transform: scale(.667); transition: transform 150ms cubic-bezier(.2,0,0,1), background-color 150ms; }
+.m3-switch:checked { background: #A6D544; border-color: #A6D544; }
+.m3-switch:checked::after { transform: translateX(20px); background: #FFFFFF; }
+.m3-switch:disabled { cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .m3-switch, .m3-switch::after { transition: none; } }
+
+/* ── TactileIconButton, disabled: track ground, muted icon, no lift ─────── */
+.tactile:disabled { background-image: linear-gradient(to bottom right, #F1F2EF, #E1E5DD) !important; color: #66716A; box-shadow: none; cursor: not-allowed; }
+
+/* ── Quick-add disc (CartButton) ────────────────────────────────────────── */
+.qa-disc { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 9999px; color: #1D4939; background-image: linear-gradient(to bottom right, #E4F7B4, #C6EE63); transition: transform 180ms; }
+.qa-disc.is-added { transform: scale(1.06); }
+.qa-disc.is-added, .qa-disc.is-out { color: #66716A; background-image: linear-gradient(to bottom right, #F1F2EF, #E1E5DD); }
+@media (prefers-reduced-motion: reduce) { .qa-disc { transition: none; } }
+
+/* ── HTMX busy states ────────────────────────────────────────────────────── */
+/* The htmx-indicator class is hidden by default and shown while a request
+   is in flight (paired with hx-indicator="..." on the triggering element). */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator { display: inline-block; }
+.htmx-request.htmx-indicator  { display: inline-block; }
+
+/* Dim the element that fired the request while the response loads. */
+.htmx-request { opacity: 0.6; pointer-events: none; }
+
+/* QuickAdd button: keep it visible while the cart mutation runs so the user
+   can see the spin, even though the button itself is the request initiator. */
+button.htmx-request { opacity: 0.6; pointer-events: none; }
+
+/* ── Alpine cloak ───────────────────────────────────────────────────────── */
+[x-cloak] { display: none !important; }
+
+/* ── Focus ring ─────────────────────────────────────────────────────────── */
+/* Keep the browser default where it matters; suppress it on mouse clicks.
+   This matches Flutter's FocusRing suppression on pointer devices. */
+:focus-visible { outline: 2px solid #1D4939; outline-offset: 2px; }
+:focus:not(:focus-visible) { outline: none; }
+/* Text fields show focus on their own container (ring or underline), not a
+   second browser box drawn inside it. */
+input:not([type=checkbox]):not([type=radio]):not([type=file]):focus-visible,
+textarea:focus-visible { outline: none; }
+
+/* ── Drawer open — prevent body scroll ─────────────────────────────────── */
+body.drawer-open { overflow: hidden; }
+
+/* ── Bottom nav padding guard ───────────────────────────────────────────── */
+/* The fixed bottom nav (96px tall including bottom gap) would otherwise
+   obscure the last line of every scrollable page. */
+.page-body { padding-bottom: 96px; }
+
+/* ── Utility: truncate two lines ────────────────────────────────────────── */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ── Cart item quantity ring ────────────────────────────────────────────── */
+/* The stepper buttons are 36×36 minimum-touch targets surrounding a
+   two-digit quantity readout. */
+.qty-btn {
+  @apply flex h-9 w-9 items-center justify-center rounded-full border border-track bg-surface text-strong shadow-tactile hover:bg-strong/5 disabled:opacity-40 disabled:pointer-events-none;
+}
+
+/* ── Responsiveness ─────────────────────────────────────────────────────── */
+/* A tap answers at once: no double-tap-zoom wait, no grey flash, a press the
+   finger can feel, and pages that cross-fade instead of blanking. */
+html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+:where(a, button, [role="button"], label) { transition-property: transform, background-color, color, box-shadow, filter; }
+:where(button, [role="button"], .tactile, nav[aria-label^="Main"] a):active:not(:disabled) { transform: scale(0.96); transition-duration: 60ms; }
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 140ms; }
+@media (prefers-reduced-motion: reduce) {
+  :where(button, [role="button"], .tactile, nav[aria-label^="Main"] a):active { transform: none; }
+  @view-transition { navigation: none; }
+}
+
+/* ── Desktop chrome ─────────────────────────────────────────────────────── */
+/* From 1024px the tabs move to a top bar: the page starts below it, and the
+   bottom clearance the floating bar needed is given back. */
+@media (min-width: 1024px) {
+  body:has(#lw-topbar) { padding-top: 72px; }
+  body:has(#lw-topbar) main { padding-bottom: 48px !important; }
+  #toasts { bottom: 24px !important; }
+}

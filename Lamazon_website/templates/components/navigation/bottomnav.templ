@@ -1,0 +1,123 @@
+package navigation
+
+// bottomnav.templ — AppBottomNav from app_nav.dart: a Material 3
+// NavigationBar (72px, labels always shown, a 64x32 indicator pill in the
+// season accent at 74%) on a surface card with the raised shadow, 12px clear
+// of the screen edges and capped at 960px. Cart carries the peach badge.
+// "Saved" becomes "My store" for somebody who sells. A screen that is no tab
+// ("", or "search", whose own field makes the top bar's redundant) still
+// lights Home, as AppTab.none selects index 0.
+
+import (
+	"strconv"
+
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+templ BottomNav(p viewdata.Page, current string) {
+	@TopBar(p, current)
+	<nav
+		aria-label="Main"
+		class="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(12px+env(safe-area-inset-bottom))] lg:hidden"
+		style={ templ.SafeCSS(p.SeasonCSS()) }>
+		<div class="pointer-events-auto grid h-[72px] w-full max-w-navbar grid-cols-4 rounded-featured bg-surface shadow-raised">
+			@navItem("/", "house", "Home", current == "home" || current == "" || current == "search", -1)
+			@navItem("/cart", "shopping-cart", "Cart", current == "cart", p.CartCount)
+			if p.User != nil && p.User.HasStore {
+				@navItem("/seller", "store", "My store", current == "store", -1)
+			} else {
+				@navItem("/saved", "heart", "Saved", current == "saved", -1)
+			}
+			@navItem("/account", "user", "Account", current == "account", -1)
+		</div>
+	</nav>
+}
+
+// navItem is one NavigationDestination. badge < 0 means none; 0 renders the
+// badge hidden so the cart count can reveal it without a reload.
+templ navItem(href, icon, label string, selected bool, badge int) {
+	<a href={ templ.SafeURL(href) } { current(selected)... } class="group flex flex-col items-center justify-center rounded-featured">
+		<span
+			class="relative flex h-8 w-16 items-center justify-center rounded-full transition-colors duration-200 group-hover:bg-strong/[.06] motion-reduce:transition-none"
+			style={ templ.SafeCSS(tpl.When(selected, "background-color:color-mix(in srgb,var(--season-accent) 74%,transparent)", "")) }>
+			@ui.Icon(icon, "h-6 w-6 text-text")
+			if badge >= 0 && !selected {
+				<span
+					data-cart-count
+					class="absolute left-[calc(50%+4px)] top-0 h-4 min-w-4 rounded-full bg-peach px-1 text-center text-[11px] font-medium leading-4 text-text"
+					hidden?={ badge == 0 }>{ strconv.Itoa(badge) }</span>
+			}
+		</span>
+		<span class={ "mt-1 text-[12px] leading-4 text-text " + tpl.When(selected, "font-semibold", "font-normal") }>{ label }</span>
+	</a>
+}
+
+func current(selected bool) templ.Attributes {
+	if selected {
+		return templ.Attributes{"aria-current": "page"}
+	}
+	return templ.Attributes{}
+}
+
+// TopBar is the same four destinations for a desktop: a sticky forest bar
+// with the wordmark and delivery place, search always to hand, and the tabs
+// as labelled links. A phone keeps the app's floating bottom bar instead;
+// screens with no bottom bar still carry this one on a desktop.
+templ TopBar(p viewdata.Page, current string) {
+	<header id="lw-topbar" class="fixed inset-x-0 top-0 z-50 hidden h-[72px] shadow-raised lg:block" style={ templ.SafeCSS(p.SeasonCSS() + ";background-image:linear-gradient(to right,var(--season-ground),var(--season-ground-shade))") }>
+		<div class="mx-auto flex h-full max-w-[1400px] items-center gap-8 px-gutter">
+			<div class="flex min-w-0 shrink-0 flex-col">
+				<a href="/" class="text-[22px] font-semibold leading-[26px] tracking-[-0.7px]" style="color:var(--season-ink)">Lamazon</a>
+				<a href={ templ.SafeURL(tpl.When(p.User == nil, "/login?next=/account", "/addresses")) } class="mt-0.5 inline-flex max-w-[220px] items-center rounded-small text-[12.5px] leading-4 hover:underline">
+					<span class="flex" style="color:var(--season-accent)">
+						@ui.Icon("map-pin", "h-3.5 w-3.5")
+					</span>
+					<span class="ml-1 truncate" style="color:color-mix(in srgb,var(--season-ink) 82%,transparent)">{ deliverTo(p) }</span>
+				</a>
+			</div>
+			if current != "search" {
+				<form action="/search" method="get" role="search" class="flex h-11 min-w-0 max-w-[640px] flex-1 items-center rounded-full bg-surface px-4 focus-within:ring-2 focus-within:ring-[color:var(--season-accent)]">
+					@ui.Icon("search", "h-[18px] w-[18px] shrink-0 text-strong")
+					<input type="search" name="q" value={ p.Query } placeholder="Search products, shops and more" aria-label="Search products and stores" autocomplete="off" class="ml-3 h-full min-w-0 flex-1 bg-transparent text-[14.5px] text-text outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"/>
+				</form>
+			} else {
+				<div class="flex-1"></div>
+			}
+			<nav aria-label="Main menu" class="ml-auto flex shrink-0 items-center gap-1">
+				@topLink("/", "house", "Home", current == "home", -1)
+				@topLink("/cart", "shopping-cart", "Cart", current == "cart", p.CartCount)
+				if p.User != nil && p.User.HasStore {
+					@topLink("/seller", "store", "My store", current == "store", -1)
+				} else {
+					@topLink("/saved", "heart", "Saved", current == "saved", -1)
+				}
+				@topLink("/account", "user", "Account", current == "account", -1)
+			</nav>
+		</div>
+	</header>
+}
+
+templ topLink(href, icon, label string, selected bool, badge int) {
+	<a
+		href={ templ.SafeURL(href) }
+		{ current(selected)... }
+		class="relative flex h-11 items-center gap-2 rounded-full px-4 text-[14px] font-semibold transition-colors duration-150 hover:bg-white/10 motion-reduce:transition-none"
+		style={ templ.SafeCSS(tpl.When(selected, "background-color:var(--season-accent);color:var(--season-ground)", "color:var(--season-ink)")) }>
+		<span class="relative flex">
+			@ui.Icon(icon, "h-5 w-5")
+			if badge >= 0 {
+				<span data-cart-count class="absolute -right-2 -top-1.5 h-4 min-w-4 rounded-full bg-peach px-1 text-center text-[11px] font-medium leading-4 text-text" hidden?={ badge == 0 }>{ strconv.Itoa(badge) }</span>
+			}
+		</span>
+		{ label }
+	</a>
+}
+
+func deliverTo(p viewdata.Page) string {
+	if p.Address == nil {
+		return "Choose delivery location"
+	}
+	return p.Address.Line
+}

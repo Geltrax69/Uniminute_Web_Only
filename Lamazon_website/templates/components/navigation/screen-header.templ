@@ -1,0 +1,17 @@
+package navigation
+
+// screen-header.templ — ScreenHeader from widgets/screen_header.dart: the
+// back button, the centred title (the page's h1), and a 46px balance slot.
+
+import "lamazon/website/templates/components/ui"
+
+templ ScreenHeader(title string) {
+	<div class="flex items-center justify-between px-5 pb-3 pt-2">
+		@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
+			"x-data":     "",
+			"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
+		})
+		<h1 class="min-w-0 flex-1 truncate px-2 text-center text-[17px] font-bold text-text">{ title }</h1>
+		<div class="w-[46px] shrink-0"></div>
+	</div>
+}

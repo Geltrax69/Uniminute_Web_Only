@@ -1,0 +1,255 @@
+package pages
+
+// delivery.templ — DeliveryScreen at /delivery: the rider signs in with the
+// number an admin approved and the PIN they were given; then what is on this
+// run, what is ready to collect, and the four digits that close a drop. Every
+// action posts to the site, which calls the backend with the rider's token.
+
+import (
+	"strconv"
+	"strings"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+const riderGreen = "#1B7F3B"
+
+type RiderLoginData struct {
+	Page  viewdata.Page
+	Phone string
+	Error string
+}
+
+templ RiderLogin(d RiderLoginData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", riderLoginBody(d))
+}
+
+templ riderLoginBody(d RiderLoginData) {
+	<main id="main" class="mx-auto flex min-h-[100dvh] w-full max-w-[460px] items-center p-6">
+		<form method="post" action="/delivery/login" class="flex w-full flex-col" x-data="{ busy: false }" x-on:submit="busy = true">
+			<span class="flex justify-center" style={ templ.SafeCSS("color:" + riderGreen) }>
+				@ui.Icon("bike", "h-10 w-10")
+			</span>
+			<h1 class="mt-4 text-center text-[22px] font-extrabold text-text">Lamazon delivery</h1>
+			<p class="mt-1.5 text-center text-[13px] text-muted">Only numbers an admin has approved can sign in here.</p>
+			<div class="h-6"></div>
+			@riderField("phone", "Mobile number", "tel", "tel", d.Phone)
+			<div class="h-3"></div>
+			@riderField("pin", "PIN from your admin", "password", "current-password", "")
+			if d.Error != "" {
+				<p class="mt-3 text-[12.5px] text-danger" role="alert">{ d.Error }</p>
+			}
+			<button type="submit" class="mt-5 rounded-[26px] py-[15px] text-[14px] font-semibold leading-[18px] text-white shadow-[0_1px_3.3px_rgba(27,127,59,.26),0_2px_4.5px_rgba(27,127,59,.18)] disabled:opacity-60" style={ templ.SafeCSS("background-color:" + riderGreen) } x-bind:disabled="busy" x-text="busy ? 'Signing in…' : 'Sign in'">Sign in</button>
+		</form>
+	</main>
+}
+
+// riderField is _boxed: the theme's TextField on white with a 14px radius.
+templ riderField(name, label, kind, autocomplete, value string) {
+	<div class="relative h-12 rounded-[14px] bg-white focus-within:ring-2 focus-within:ring-inset focus-within:ring-strong">
+		<input
+			id={ "rider-" + name }
+			name={ name }
+			type={ kind }
+			autocomplete={ autocomplete }
+			inputmode={ tpl.When(name == "pin", "numeric", "tel") }
+			value={ value }
+			required
+			placeholder=" "
+			class="peer h-full w-full rounded-[14px] bg-transparent px-5 text-[14.5px] text-text outline-none"/>
+		<label for={ "rider-" + name } class="pointer-events-none absolute left-5 top-1/2 max-w-[calc(100%-40px)] -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[11px] motion-reduce:transition-none">{ label }</label>
+	</div>
+}
+
+type DeliveryData struct {
+	Page    viewdata.Page
+	Rider   shop.Staff
+	Panel   backend.RiderPanel
+	History backend.RiderHistory
+	Error   string
+	Message string // shown once, after an action
+}
+
+templ Delivery(d DeliveryData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", deliveryBody(d))
+}
+
+templ deliveryBody(d DeliveryData) {
+	{{ carrying := ordersAt(d.Panel.Orders, backend.StagePicked) }}
+	{{ waiting := ordersAt(d.Panel.Orders, backend.StageAccepted) }}
+	<main id="main" class="mx-auto w-full max-w-[720px] px-5 pb-10 pt-4" x-data="{ delivering: null, code: '' }">
+		<div class="flex items-center">
+			<div class="min-w-0 flex-1">
+				<h1 class="text-[22px] font-extrabold text-text">Hello { tpl.When(riderName(d) == "", "rider", riderName(d)) }</h1>
+				<p class="text-[12.5px] text-muted">{ d.Rider.Subject }</p>
+			</div>
+			<a href="/delivery" class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/[.06]" aria-label="Refresh" title="Refresh">
+				@ui.Icon("refresh-cw", "h-[18px] w-[18px]")
+			</a>
+			<form method="post" action="/delivery/logout">
+				<button type="submit" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Sign out</button>
+			</form>
+		</div>
+		<div class="mt-3 flex gap-2.5">
+			@riderTile("On this run", strconv.Itoa(len(carrying)), riderGreen)
+			@riderTile("Ready to collect", strconv.Itoa(len(waiting)), "")
+			@riderTile("Delivered", strconv.Itoa(d.Panel.Rider.Delivered), "")
+		</div>
+		if d.Error != "" {
+			<p class="mt-3 text-[13px] text-danger">{ d.Error }</p>
+		}
+		<h2 class="mt-6 pb-2.5 text-[16px] font-bold text-text">On this run</h2>
+		if len(carrying) == 0 {
+			<p class="pb-3 text-[13px] text-muted">Nothing picked up yet.</p>
+		} else {
+			for _, o := range carrying {
+				@riderOrderCard(o, "Delivered — enter code")
+			}
+		}
+		<h2 class="mt-6 pb-2.5 text-[16px] font-bold text-text">Ready to collect</h2>
+		if len(waiting) == 0 {
+			<p class="pb-3 text-[13px] text-muted">Nothing right now. Orders land here on their own when a shop accepts one — refresh to check again.</p>
+		} else {
+			for _, o := range waiting {
+				@riderOrderCard(o, "Picked up")
+			}
+		}
+		<details class="group mt-6">
+			<summary class="flex cursor-pointer list-none items-center rounded-small py-1 [&::-webkit-details-marker]:hidden">
+				<span class="text-[16px] font-bold text-text">Delivery history</span>
+				@ui.Icon("chevron-down", "ml-2 h-[17px] w-[17px] text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none")
+				<span class="ml-auto text-[12.5px] text-muted">{ historySummary(d.History) }</span>
+			</summary>
+			<div class="mt-2">
+				if len(d.History.Orders) == 0 {
+					<p class="pb-3 text-[13px] text-muted">Nothing delivered yet. Finished drops land here.</p>
+				} else {
+					for _, o := range d.History.Orders {
+						<div class="mb-2 flex items-start rounded-[14px] bg-white px-3.5 py-3">
+							<span class="mr-2.5 mt-0.5 flex" style={ templ.SafeCSS("color:" + riderGreen) }>
+								@ui.Icon("circle-check-big", "h-4 w-4")
+							</span>
+							<div class="min-w-0 flex-1">
+								<p class="text-[13.5px] font-bold text-text">#{ strings.ToUpper(o.ID) } · { strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+								<p class="mt-0.5 text-[12.5px] text-muted">{ o.StoreName } → { o.ReceiverName }</p>
+								<p class="line-clamp-2 text-[12px] leading-[1.3] text-muted">{ o.ReceiverAddress }</p>
+							</div>
+							<div class="ml-2 text-right">
+								<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>₹{ shop.Money(o.Amount) }</p>
+								if o.DeliveredAt != nil {
+									<p class="text-[11.5px] text-muted">{ o.DeliveredAt.Local().Format("2 Jan, 15:04") }</p>
+								}
+							</div>
+						</div>
+					}
+				}
+			</div>
+		</details>
+		// The code is the hand-over: four digits, typed like a code.
+		<dialog x-ref="deliver" class="w-[min(400px,90vw)] rounded-[20px] bg-white p-0 text-text backdrop:bg-black/40">
+			<form method="post" x-bind:action="`/delivery/orders/${delivering}/deliver`" class="px-6 pb-4 pt-6">
+				<p class="text-[18px] font-extrabold">Delivery code</p>
+				<p class="mt-3 text-[13px] leading-[1.4] text-muted">Ask the customer for their 4 digits. The order only closes if they match.</p>
+				<input
+					name="code"
+					x-model="code"
+					x-on:input="code = code.replace(/\D/g, '').slice(0, 4)"
+					inputmode="numeric"
+					autocomplete="one-time-code"
+					maxlength="4"
+					placeholder="0000"
+					aria-label="Delivery code"
+					class="mt-5 w-full rounded-[14px] border-[1.5px] border-transparent bg-[#F4F4F4] py-4 pl-[14px] text-center text-[30px] font-bold tracking-[14px] text-text outline-none placeholder:text-black/[.18] focus:border-[#1B7F3B]"/>
+				<div class="mt-2 flex justify-end gap-2">
+					<button type="button" x-on:click="$refs.deliver.close()" class="min-h-touch rounded-full px-3 text-label text-muted">Cancel</button>
+					<button type="submit" x-bind:disabled="code.length !== 4" class="min-h-touch rounded-[22px] px-[22px] text-[14px] font-bold text-white disabled:opacity-40" style={ templ.SafeCSS("background-color:" + riderGreen) }>Delivered</button>
+				</div>
+			</form>
+		</dialog>
+		if d.Message != "" {
+			<div x-init={ "setTimeout(() => lwToast(" + jsonArg(d.Message) + "), 50)" }></div>
+		}
+	</main>
+}
+
+// riderOrderCard is _OrderCard: the number, both stops, and the one action.
+templ riderOrderCard(o backend.RiderOrder, action string) {
+	<div class="mb-2.5 rounded-featured bg-white p-4">
+		<div class="flex items-center">
+			<p class="min-w-0 flex-1 text-[14.5px] font-extrabold text-text">Order No. { shop.OrderRef(o.ID) }</p>
+			if o.AssignedTo != "" {
+				<span class="mr-2 rounded-[10px] px-2 py-[3px] text-[10.5px] font-extrabold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(riderGreen, .12) + ";color:" + riderGreen) }>Yours</span>
+			}
+			<span class="text-[14.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>₹{ shop.Money(o.Amount) }</span>
+		</div>
+		<p class="mt-2 text-[13.5px] font-semibold text-text">{ strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+		<div class="my-2.5 h-px bg-track"></div>
+		@riderStop("store", "Collect from", o.StoreName, "", o.StoreAddress)
+		<div class="h-3"></div>
+		@riderStop("map-pin", "Deliver to", o.ReceiverName, o.ReceiverPhone, o.ReceiverAddress)
+		if o.Stage == backend.StagePicked {
+			<button type="button" x-on:click={ "delivering = " + jsonArg(o.ID) + "; code = ''; $refs.deliver.showModal()" } class="mt-3.5 w-full rounded-[24px] py-3.5 text-[14px] font-bold text-white" style={ templ.SafeCSS("background-color:" + riderGreen) }>{ action }</button>
+		} else {
+			<form method="post" action={ templ.SafeURL("/delivery/orders/" + o.ID + "/pick") } class="mt-3.5" x-data="{ busy: false }" x-on:submit="busy = true">
+				<button type="submit" x-bind:disabled="busy" class="w-full rounded-[24px] py-3.5 text-[14px] font-bold text-white disabled:opacity-60" style={ templ.SafeCSS("background-color:" + riderGreen) }>{ action }</button>
+			</form>
+		}
+	</div>
+}
+
+// riderStop is _Stop: one end of the run.
+templ riderStop(icon, label, name, phone, address string) {
+	<div class="flex items-start">
+		<span class="mr-2.5 mt-0.5 flex text-muted">
+			@ui.Icon(icon, "h-[15px] w-[15px]")
+		</span>
+		<div class="min-w-0 flex-1">
+			<p class="text-[11.5px] text-muted">{ label }</p>
+			<p class="mt-0.5 text-[14px] font-bold text-text">{ name }</p>
+			if phone != "" {
+				<p class="text-[13px] text-text">{ phone }</p>
+			}
+			if address == "" {
+				<p class="text-[13px] italic leading-[1.35] text-muted">Address not on file — call the shop</p>
+			} else {
+				<p class="text-[13px] leading-[1.35] text-muted">{ address }</p>
+			}
+		</div>
+	</div>
+}
+
+templ riderTile(label, value, colour string) {
+	<div class="flex min-w-0 flex-1 flex-col items-center rounded-featured bg-white px-2.5 py-4">
+		<span class="text-[22px] font-extrabold" style={ templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)) }>{ value }</span>
+		<span class="mt-0.5 text-center text-[12px] text-muted">{ label }</span>
+	</div>
+}
+
+func ordersAt(orders []backend.RiderOrder, stage backend.OrderStage) []backend.RiderOrder {
+	var out []backend.RiderOrder
+	for _, o := range orders {
+		if o.Stage == stage {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+func riderName(d DeliveryData) string {
+	if d.Panel.Rider.Name != "" {
+		return d.Panel.Rider.Name
+	}
+	return d.Rider.Name
+}
+
+func historySummary(h backend.RiderHistory) string {
+	if len(h.Orders) == 0 {
+		return "None yet"
+	}
+	return strconv.Itoa(len(h.Orders)) + " · ₹" + shop.Money(h.Value)
+}

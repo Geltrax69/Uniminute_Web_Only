@@ -1,0 +1,33 @@
+package navigation
+
+// breadcrumbs.templ — the trail a website needs and a phone app does not draw:
+// Home / department / category / product. Required by the folder structure;
+// kept quiet (body-small, muted) so it never competes with the page's heading.
+
+import "lamazon/website/templates/components/ui"
+
+type Crumb struct {
+	Label string
+	Href  string // empty for the page you are on
+}
+
+templ Breadcrumbs(trail []Crumb) {
+	if len(trail) > 0 {
+		<nav class="px-gutter pt-4" aria-label="Breadcrumb">
+			<ol class="flex flex-wrap items-center gap-1 text-small text-muted">
+				for i, c := range trail {
+					if i > 0 {
+						<li aria-hidden="true">@ui.Icon("chevron-right", "h-3.5 w-3.5")</li>
+					}
+					<li>
+						if c.Href != "" {
+							<a href={ templ.URL(c.Href) } class="hover:text-strong hover:underline">{ c.Label }</a>
+						} else {
+							<span aria-current="page" class="text-text">{ c.Label }</span>
+						}
+					</li>
+				}
+			</ol>
+		</nav>
+	}
+}

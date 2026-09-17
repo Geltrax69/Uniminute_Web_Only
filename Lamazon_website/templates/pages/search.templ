@@ -1,0 +1,76 @@
+package pages
+
+// search.templ — SearchScreen: a back button and a rounded search field (the
+// scope in its label, a clear button once something is typed), the "In X"
+// chip that drops the department scope, then the results body, which HTMX
+// replaces 250ms after typing stops.
+
+import (
+	searchfrag "lamazon/website/templates/fragments/search"
+
+	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+templ Search(p viewdata.Page, d searchfrag.Data) {
+	@layouts.Base(p.Title, p.Description, "", searchPage(p, d))
+}
+
+templ searchPage(p viewdata.Page, d searchfrag.Data) {
+	<main id="main">
+		<div class="flex items-center px-5 pb-3 pt-2">
+			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
+				"x-data":     "",
+				"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
+			})
+			<div class="ml-3 flex h-14 min-w-0 flex-1 items-center rounded-[24px] bg-surface px-4" x-data={ "{ q: " + jsonArg(d.Q) + " }" }>
+				@ui.Icon("search", "h-[18px] w-[18px] text-muted")
+				// labelText: the label sits in the field until it is focused or
+				// filled, then rides above the value.
+				<label class="relative ml-2.5 h-full min-w-0 flex-1 border-b-2 border-transparent focus-within:border-strong">
+				<input
+					type="search"
+					name="q"
+					x-ref="input"
+					x-model="q"
+					value={ d.Q }
+					autofocus?={ d.Q == "" }
+					autocomplete="off"
+					enterkeyhint="search"
+					aria-label={ searchLabel(d.Tab) }
+					placeholder=" "
+					class="peer h-full w-full bg-transparent px-4 pt-3.5 text-[16px] text-text outline-none [&::-webkit-search-cancel-button]:hidden"
+					hx-get="/fragments/search"
+					hx-trigger="input changed delay:250ms, search"
+					hx-target="#search-body"
+					hx-swap="outerHTML"
+					hx-include="[name='tab'],[name='sort']"/>
+					<span class="pointer-events-none absolute left-4 top-1/2 max-w-[calc(100%-32px)] -translate-y-1/2 truncate text-[16px] text-muted transition-all duration-150 peer-focus:top-[21px] peer-focus:text-[12px] peer-[:not(:placeholder-shown)]:top-[21px] peer-[:not(:placeholder-shown)]:text-[12px] motion-reduce:transition-none" aria-hidden="true">{ searchLabel(d.Tab) }</span>
+				</label>
+				<input type="hidden" name="tab" value={ d.Tab }/>
+				<span class="flex" x-show="q.trim() !== ''" x-cloak>
+					@ui.TactileButton("x", "Clear search", 36, "", templ.Attributes{
+						"x-on:click": "q = ''; $nextTick(() => { $refs.input.dispatchEvent(new Event('input', {bubbles: true})); $refs.input.focus() })",
+					})
+				</span>
+			</div>
+		</div>
+		if d.Tab != "" {
+			<div class="flex h-12 items-center px-5">
+				<a href={ templ.SafeURL(searchfrag.URL(d.Q, "", d.Sort)) } aria-label={ "Search every department, not only " + d.Tab } class="inline-flex h-[34px] items-center rounded-lg border border-track bg-surface pl-4 pr-[7px] text-[13px] font-semibold tracking-normal text-text hover:bg-[#F9F8F2]">
+					In { d.Tab }
+					@ui.Icon("x", "ml-2 h-[18px] w-[18px] text-muted")
+				</a>
+			</div>
+		}
+		@searchfrag.Body(d)
+	</main>
+	@navigation.BottomNav(p, "search")
+}
+
+func searchLabel(tab string) string {
+	return tpl.When(tab != "", "Search in "+tab, "Search products, shops")
+}

@@ -1,0 +1,48 @@
+package collection
+
+// card.templ — a category/collection tile. Mirrors _CategoryTile from
+// shop_screen.dart: a square artwork, a name, a child count.
+
+import "lamazon/website/backend"
+
+templ Card(c backend.Category) {
+	<a
+		href={ templ.URL("/c/" + c.Name) }
+		class="group flex flex-col items-center gap-2 rounded-tile p-2 hover:bg-strong/5">
+		<div
+			class="flex h-[74px] w-[74px] items-center justify-center overflow-hidden rounded-tile shadow-surface"
+			style={ categoryBg(c) }>
+			if c.ImageURL != "" {
+				<img src={ templ.URL(c.ImageURL) } alt="" class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" loading="lazy"/>
+			} else {
+				<span class="text-2xl">{ categoryEmoji(c) }</span>
+			}
+		</div>
+		<span class="text-center text-strip-label leading-tight tracking-[0.1px]">{ c.Name }</span>
+	</a>
+}
+
+func categoryBg(c backend.Category) string {
+	if c.Colour != "" {
+		return "background-color:" + c.Colour
+	}
+	return "background-color:#FFFDF8"
+}
+
+func categoryEmoji(c backend.Category) string {
+	// Fallback glyphs for common departments when no image is set.
+	switch c.Name {
+	case "Food":
+		return "🍱"
+	case "Grocery":
+		return "🛒"
+	case "Electronics":
+		return "📱"
+	case "Fashion":
+		return "👗"
+	case "Books":
+		return "📚"
+	default:
+		return "🏪"
+	}
+}

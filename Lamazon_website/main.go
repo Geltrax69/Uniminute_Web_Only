@@ -1,0 +1,200 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"strings"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+)
+
+// The Lamazon storefront website: Go + templ + HTMX + Alpine + Tailwind.
+//
+// It renders every page server-side and calls the existing backend in
+// ../backend for all data. The only state this side owns is what the Flutter
+// app keeps on the device (cart, wishlist, session tokens) — in cookies.
+
+func main() {
+	apiBase := os.Getenv("API_BASE")
+	if apiBase == "" {
+		apiBase = "http://localhost:8080"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8100"
+	}
+
+	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
+	log.Printf("Lamazon website on :%s, calling backend at %s", port, apiBase)
+	if err := http.ListenAndServe(":"+port, site.routes()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type Site struct {
+	backend *backend.Backend
+	apiBase string
+}
+
+func (s *Site) routes() http.Handler {
+	mux := http.NewServeMux()
+
+	// --- pages -----------------------------------------------------------
+	mux.HandleFunc("GET /{$}", s.handleHome)
+	mux.HandleFunc("GET /shop", s.handleShopRedirect)
+	mux.HandleFunc("GET /c/{name}", s.handleCollectionRedirect)
+	mux.HandleFunc("GET /stores", s.handleStores)
+	mux.HandleFunc("GET /store/{name}", s.handleStore)
+	mux.HandleFunc("GET /p/{id}", s.handleProduct)
+	mux.HandleFunc("GET /search", s.handleSearch)
+	mux.HandleFunc("GET /cart", s.handleCartPage)
+	mux.HandleFunc("GET /checkout", s.handleCheckoutPage)
+	mux.HandleFunc("GET /login", s.handleLoginPage)
+	mux.HandleFunc("GET /register", s.handleRegisterPage)
+	mux.HandleFunc("GET /account", s.handleAccountPage)
+	mux.HandleFunc("GET /addresses", s.handleAddressesPage)
+	mux.HandleFunc("GET /addresses/new", s.handleAddressForm)
+	mux.HandleFunc("GET /addresses/{id}/edit", s.handleAddressForm)
+	mux.HandleFunc("GET /settings", s.handleSettingsPage)
+	mux.HandleFunc("GET /orders", s.handleOrdersPage)
+	mux.HandleFunc("GET /orders/placed", s.handleOrderPlaced)
+	mux.HandleFunc("GET /orders/{id}", s.handleOrderDetail)
+	mux.HandleFunc("GET /help", s.handleHelpPage)
+	mux.HandleFunc("GET /admin", s.handleAdmin)
+	mux.HandleFunc("GET /admin/{rest...}", s.handleAdminAlias)
+	mux.HandleFunc("POST /admin/login", s.handleAdminLogin)
+	mux.HandleFunc("POST /admin/logout", s.handleAdminLogout)
+	mux.HandleFunc("GET /admin/export", s.handleAdminExport)
+	mux.HandleFunc("GET /admin/banners/new", s.handleAdminBanner)
+	mux.HandleFunc("GET /admin/banners/{id}", s.handleAdminBanner)
+	mux.HandleFunc("GET /admin/policies/{slug}", s.handleAdminPolicy)
+	mux.HandleFunc("GET /admin/stores/{owner}/photos", s.handleAdminStorePhotos)
+	mux.Handle("/staff-api/admin/", staffProxy(s.apiBase, "admin", s.backend))
+	mux.HandleFunc("GET /delivery", s.handleDelivery)
+	mux.HandleFunc("POST /delivery/login", s.handleDeliveryLogin)
+	mux.HandleFunc("POST /delivery/logout", s.handleDeliveryLogout)
+	mux.HandleFunc("POST /delivery/orders/{id}/pick", s.handleDeliveryPick)
+	mux.HandleFunc("POST /delivery/orders/{id}/deliver", s.handleDeliveryDeliver)
+	mux.HandleFunc("GET /seller", s.handleSellerDashboard)
+	mux.HandleFunc("GET /seller/store", s.handleSellerStoreForm)
+	mux.HandleFunc("GET /seller/products/new", s.handleSellerProductForm)
+	mux.HandleFunc("GET /seller/products/{id}", s.handleSellerProductForm)
+	mux.HandleFunc("GET /compare/{id}", s.handleCompare)
+	mux.HandleFunc("GET /notifications", s.handleNotificationsPage)
+	mux.HandleFunc("GET /profile/setup", s.handleProfileSetupPage)
+	mux.HandleFunc("POST /profile/setup", s.handleProfileSetup)
+	mux.HandleFunc("GET /policies", s.handlePoliciesPage)
+	mux.HandleFunc("GET /policy/{slug}", s.handlePolicyPage)
+	mux.HandleFunc("GET /saved", s.handleSavedPage)
+
+	// --- HTMX fragments and mutations ------------------------------------
+	mux.HandleFunc("GET /fragments/home-products", s.handleHomeProducts)
+	mux.HandleFunc("GET /fragments/products", s.handleProductsFragment)
+	mux.HandleFunc("GET /fragments/search", s.handleSearchFragment)
+	mux.HandleFunc("POST /cart/add", s.handleCartAdd)
+	mux.HandleFunc("POST /cart/set", s.handleCartSet)
+	mux.HandleFunc("POST /cart/remove", s.handleCartRemove)
+	mux.HandleFunc("POST /wishlist/toggle", s.handleWishlistToggle)
+
+	mux.HandleFunc("POST /login/start", s.handleLoginStart)
+	mux.HandleFunc("POST /login/verify", s.handleLoginVerify)
+	mux.HandleFunc("POST /login/password", s.handleLoginPassword)
+	mux.HandleFunc("POST /logout", s.handleLogout)
+
+	mux.HandleFunc("POST /account/profile", s.handleProfileUpdate)
+	mux.HandleFunc("POST /account/preferences", s.handlePreferencesUpdate)
+	mux.HandleFunc("POST /account/addresses", s.handleAddressCreate)
+	mux.HandleFunc("POST /account/addresses/{id}", s.handleAddressUpdate)
+	mux.HandleFunc("POST /account/addresses/{id}/default", s.handleAddressDefault)
+	mux.HandleFunc("POST /account/addresses/{id}/delete", s.handleAddressDelete)
+
+	mux.HandleFunc("POST /checkout", s.handleCheckout)
+	mux.HandleFunc("POST /orders/{id}/cancel", s.handleOrderCancel)
+
+	// --- static and proxy -------------------------------------------------
+	mux.Handle("GET /static/", http.StripPrefix("/static/", staticFileServer()))
+
+	// /api/* passes through untouched to the existing backend, with the
+	// session cookie injected as the Bearer token the backend expects.
+	mux.Handle("/api/", bearerProxy(s.apiBase, s.backend))
+
+	mux.HandleFunc("/", s.handleNotFound)
+	return mux
+}
+
+func staticFileServer() http.Handler {
+	fs := http.FileServer(http.Dir("static"))
+	// Fonts, CSS, JS and vendored libraries never change under a running
+	// binary; a month of immutability is safe and quiet.
+	return cache(fs, "public, max-age=2592000")
+}
+
+func cache(next http.Handler, value string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", value)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// bearerProxy forwards /api/* to the existing backend unchanged — same paths,
+// same handlers — adding only the session cookie as the Authorization header
+// the backend's withAuth middleware looks for.
+// staffProxy is /staff-api/<role>/* passed through as /api/<role>/* with that
+// staff panel's own token. The panels' pages call the backend's routes through
+// it exactly as the app does, without the token ever reaching page script.
+func staffProxy(apiBase, role string, b *backend.Backend) http.Handler {
+	target, err := url.Parse(apiBase)
+	if err != nil {
+		log.Fatalf("API_BASE %q: %v", apiBase, err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		staff, ok := shop.ReadStaff(r, role)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"Your session ended. Sign in again."}`))
+			return
+		}
+		r.URL.Path = "/api" + strings.TrimPrefix(r.URL.Path, "/staff-api")
+		r.URL.RawPath = ""
+		r.Header.Set("Authorization", "Bearer "+staff.Token)
+		r.Header.Del("Cookie")
+		r.Host = target.Host
+		proxy.ServeHTTP(w, r)
+		forgetOnWrite(b, r)
+	})
+}
+
+// forgetOnWrite drops every cached read once a write has passed through a
+// proxy: the server did not make the change, so it cannot tell what it touched.
+func forgetOnWrite(b *backend.Backend, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		b.Forget("")
+	}
+}
+
+func bearerProxy(apiBase string, b *backend.Backend) http.Handler {
+	target, err := url.Parse(apiBase)
+	if err != nil {
+		log.Fatalf("API_BASE %q: %v", apiBase, err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		access, _ := shop.SessionTokens(r)
+		if access != "" && r.Header.Get("Authorization") == "" {
+			r.Header.Set("Authorization", "Bearer "+access)
+		}
+		r.Host = target.Host
+		proxy.ServeHTTP(w, r)
+		forgetOnWrite(b, r)
+	})
+}
+
+// notProxied lists every /api prefix the website answers itself — there are
+// none today; the site never re-implements a backend route.
+var _ = strings.TrimSpace

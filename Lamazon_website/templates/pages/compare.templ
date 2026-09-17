@@ -1,0 +1,201 @@
+package pages
+
+// compare.templ — CompareScreen: when the product belongs to a comparison
+// group, the rivals table first (the answer before the detail); then the
+// product, the saving to be had, and every local vendor selling it, cheapest
+// first, each with its own "Add from" button at its own price.
+
+import (
+	"sort"
+	"strconv"
+
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+	"lamazon/website/templates/components/ui"
+	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
+	"lamazon/website/viewdata"
+)
+
+type CompareData struct {
+	Page    viewdata.Page
+	Product backend.Product
+	Rivals  backend.Comparison // empty unless the product has a group
+}
+
+type vendorOffer struct {
+	Store string
+	Price float64
+}
+
+templ ComparePage(d CompareData) {
+	@layouts.Base(d.Page.Title, d.Page.Description, "", withTopBar(d.Page, compareBody(d)))
+}
+
+templ compareBody(d CompareData) {
+	{{ p := d.Product }}
+	{{ rows := vendorRows(p) }}
+	{{ saving := rows[len(rows)-1].Price - rows[0].Price }}
+	<main id="main" class="mx-auto w-full max-w-[700px] px-5 pb-6 pt-2">
+		<div class="flex items-center justify-between">
+			<button
+				type="button"
+				x-data
+				x-on:click="history.length > 1 ? history.back() : location.assign('/')"
+				aria-label="Back"
+				class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-white text-text">
+				@ui.Icon("arrow-left", "h-[18px] w-[18px]")
+			</button>
+			<h1 class="text-[17px] font-bold text-text">Compare Prices</h1>
+			<div class="w-[46px] shrink-0"></div>
+		</div>
+		<div class="h-4"></div>
+		if len(d.Rivals.Products) >= 2 {
+			@rivals(d.Rivals, p.ID)
+		}
+		<div class="flex items-center">
+			<span class="flex h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px]">
+				if p.ImageURL != "" {
+					<img src={ templ.URL(shop.CatalogueImage(p.ImageURL, 300)) } alt="" class="h-full w-full object-cover"/>
+				} else {
+					<span class="flex h-full w-full items-center justify-center bg-img-ground">
+						@ui.Icon("image-off", "h-6 w-6 text-muted")
+					</span>
+				}
+			</span>
+			<div class="ml-3 min-w-0 flex-1">
+				<p class="text-[16px] font-bold text-text">{ p.Name }</p>
+				<p class="mt-0.5 text-[12px] text-muted">{ p.Category }</p>
+			</div>
+		</div>
+		if saving > 0 {
+			<div class="mt-4 flex items-center rounded bg-[#E8F5E9] px-3.5 py-3 text-strong">
+				@ui.Icon("trending-down", "h-[18px] w-[18px] shrink-0")
+				<p class="ml-2.5 text-[13px] font-semibold">Save ₹{ shop.Money(saving) } by buying from { rows[0].Store }</p>
+			</div>
+		}
+		<h2 class="mt-5 text-[15px] font-bold text-text">{ strconv.Itoa(len(rows)) } local vendors</h2>
+		<div class="mt-3">
+			for i, row := range rows {
+				<div class={ "mb-3 rounded-featured bg-white p-3.5", templ.KV("ring-[1.5px] ring-strong", i == 0) }>
+					<div class="flex items-center">
+						<span class="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-canvas text-text">
+							@ui.Icon("store", "h-[18px] w-[18px]")
+						</span>
+						<div class="ml-3 min-w-0 flex-1">
+							<div class="flex items-center">
+								<span class="truncate text-[14px] font-bold text-text">{ row.Store }</span>
+								if i == 0 {
+									<span class="ml-1.5 shrink-0 rounded-[10px] bg-strong px-2 py-[3px] text-[9px] font-extrabold text-white">BEST PRICE</span>
+								}
+							</div>
+							<div class="mt-[3px] flex items-center text-[11px] text-muted">
+								@ui.Icon("map-pin", "h-[11px] w-[11px]")
+								<span class="ml-[3px]">{ strconv.FormatFloat(1.2+float64(i)*0.8, 'f', 1, 64) } km</span>
+								@ui.Icon("timer", "ml-2.5 h-[11px] w-[11px]")
+								<span class="ml-[3px]">{ strconv.Itoa(10+i*4) } mins</span>
+							</div>
+						</div>
+						<p class={ "text-[17px] font-extrabold " + tpl.When(i == 0, "text-strong", "text-text") }>₹{ shop.Money(row.Price) }</p>
+					</div>
+					<button
+						type="button"
+						class={ "mt-3 flex h-10 w-full items-center justify-center rounded-[20px] px-3 text-[13px] font-bold " + tpl.When(i == 0, "bg-strong text-white", "bg-canvas text-text") }
+						hx-post="/cart/add"
+						hx-vals={ templ.JSONString(map[string]any{"id": vendorItemID(p, row.Store), "qty": 1}) }
+						hx-swap="none">
+						<span class="truncate">Add from { row.Store }</span>
+					</button>
+				</div>
+			}
+		</div>
+	</main>
+}
+
+// rivals is _Rivals: the other products in the same comparison group, side by
+// side on the group's fields, with the findings above the table.
+templ rivals(c backend.Comparison, currentID string) {
+	<section class="mb-5">
+		<h2 class="text-[15px] font-bold text-text">Other { c.Group }</h2>
+		<p class="mt-0.5 text-[12px] text-muted">Same job, side by side. Cheapest first.</p>
+		if len(c.Highlights) > 0 {
+			<ul class="mt-2.5">
+				for _, line := range c.Highlights {
+					<li class="mb-1 flex items-start">
+						@ui.Icon("check", "mt-0.5 h-[13px] w-[13px] shrink-0 text-strong")
+						<span class="ml-1.5 text-[12.5px] leading-[1.35] text-text">{ line }</span>
+					</li>
+				}
+			</ul>
+		}
+		<div class="mt-2.5 overflow-x-auto">
+			<div class="inline-block rounded bg-white p-3">
+				for _, row := range c.Products {
+					<div class="flex items-center py-1.5">
+						<div class="w-[170px] shrink-0 pr-2">
+							<p class={ "truncate text-[13px] text-text " + tpl.When(row.ID == currentID, "font-extrabold", "font-semibold") }>{ row.Title }</p>
+							<p class="text-[11px] text-muted">{ row.Store }</p>
+						</div>
+						<p class={ "w-[92px] shrink-0 text-[13.5px] font-extrabold " + tpl.When(row.ID == c.Products[0].ID, "text-strong", "text-text") }>₹{ shop.Money(row.Price) }</p>
+						for _, f := range c.Attributes {
+							@compareCell(showValue(row.Values[f.Name], f.Unit), f.Winner == row.ID)
+						}
+						for _, dr := range c.Derived {
+							@compareCell(derivedValue(dr, row.ID), dr.Winner == row.ID)
+						}
+					</div>
+				}
+				<div class="my-1.5 h-px bg-track"></div>
+				<div class="flex items-center text-[11px] text-muted">
+					<span class="w-[170px] shrink-0"></span>
+					<span class="w-[92px] shrink-0">Price</span>
+					for _, f := range c.Attributes {
+						<span class="w-[96px] shrink-0">{ f.Name }</span>
+					}
+					for _, dr := range c.Derived {
+						<span class="w-[96px] shrink-0">{ dr.Name }</span>
+					}
+				</div>
+			</div>
+		</div>
+	</section>
+}
+
+templ compareCell(text string, won bool) {
+	<p class={ "w-[96px] shrink-0 text-[12.5px] " + tpl.When(won, "font-extrabold text-strong", "text-text") }>{ text }</p>
+}
+
+// vendorRows is this shop's own price plus every other vendor's, cheapest first.
+func vendorRows(p backend.Product) []vendorOffer {
+	rows := []vendorOffer{{p.Store, p.Price}}
+	for _, o := range p.Offers {
+		rows = append(rows, vendorOffer{o.Store, o.Price})
+	}
+	sort.SliceStable(rows, func(i, j int) bool { return rows[i].Price < rows[j].Price })
+	return rows
+}
+
+// vendorItemID is the basket id for buying from one vendor: the product itself
+// from its own shop, "id@Store" from anyone else (what the app's cart stores).
+func vendorItemID(p backend.Product, store string) string {
+	if store == p.Store {
+		return p.ID
+	}
+	return p.ID + "@" + store
+}
+
+// showValue is GroupAttribute.show: "20" plus "W" reads as 20W, blank is a dash.
+func showValue(v, unit string) string {
+	if v == "" {
+		return "—"
+	}
+	return v + unit
+}
+
+func derivedValue(d backend.CompareDerived, id string) string {
+	v, ok := d.Values[id]
+	if !ok {
+		return "—"
+	}
+	return "₹" + strconv.FormatFloat(v, 'f', 2, 64)
+}

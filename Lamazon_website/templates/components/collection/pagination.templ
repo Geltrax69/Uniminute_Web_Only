@@ -1,0 +1,93 @@
+package collection
+
+// pagination.templ — simple page links for the product grid.
+// The backend returns all results; pagination is done client-side by the
+// handler slicing the slice. Pages are 48 items (matches Flutter's pageSize).
+
+const PageSize = 48
+
+type PageLinks struct {
+	Current int
+	Total   int
+	BaseURL string // without page param
+}
+
+templ Pagination(pl PageLinks) {
+	if pl.Total <= 1 {
+		<!-- no pagination needed -->
+	} else {
+		<nav class="mt-8 flex items-center justify-center gap-2" aria-label="Page navigation">
+			if pl.Current > 1 {
+				<a
+					href={ templ.URL(pageURL(pl.BaseURL, pl.Current-1)) }
+					class="flex h-10 w-10 items-center justify-center rounded-full border border-track bg-surface text-body hover:bg-strong/5"
+					aria-label="Previous page">
+					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+				</a>
+			}
+			for i := 1; i <= pl.Total; i++ {
+				if i == pl.Current {
+					<span class="flex h-10 w-10 items-center justify-center rounded-full bg-forest text-label text-white" aria-current="page">{ itoa(i) }</span>
+				} else if shouldShow(i, pl.Current, pl.Total) {
+					<a
+						href={ templ.URL(pageURL(pl.BaseURL, i)) }
+						class="flex h-10 w-10 items-center justify-center rounded-full border border-track bg-surface text-body hover:bg-strong/5"
+						aria-label={ "Page " + itoa(i) }>
+						{ itoa(i) }
+					</a>
+				} else if isEllipsis(i, pl.Current, pl.Total) {
+					<span class="px-1 text-muted">…</span>
+				}
+			}
+			if pl.Current < pl.Total {
+				<a
+					href={ templ.URL(pageURL(pl.BaseURL, pl.Current+1)) }
+					class="flex h-10 w-10 items-center justify-center rounded-full border border-track bg-surface text-body hover:bg-strong/5"
+					aria-label="Next page">
+					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+				</a>
+			}
+		</nav>
+	}
+}
+
+func pageURL(base string, page int) string {
+	if page <= 1 {
+		return base
+	}
+	sep := "?"
+	for _, c := range base {
+		if c == '?' {
+			sep = "&"
+			break
+		}
+	}
+	return base + sep + "page=" + itoa(page)
+}
+
+func shouldShow(i, current, total int) bool {
+	return i <= 2 || i >= total-1 || (i >= current-1 && i <= current+1)
+}
+
+func isEllipsis(i, current, total int) bool {
+	return (i == 3 && current > 4) || (i == total-2 && current < total-3)
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	digits := ""
+	for n > 0 {
+		digits = string(rune('0'+n%10)) + digits
+		n /= 10
+	}
+	if neg {
+		return "-" + digits
+	}
+	return digits
+}

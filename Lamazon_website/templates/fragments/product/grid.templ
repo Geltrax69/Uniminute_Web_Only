@@ -1,0 +1,22 @@
+package productfrag
+
+// grid.templ — the HTMX partial for GET /fragments/products.
+// Replaces #product-grid when the user changes tabs, filters, or sort.
+
+import (
+	"lamazon/website/backend"
+	"lamazon/website/templates/components/product"
+	"lamazon/website/templates/components/ui"
+)
+
+templ Grid(items []backend.Product, wishlist map[string]bool) {
+	if len(items) == 0 {
+		<div id="product-grid">
+			@ui.EmptyState("package", "Nothing here yet", "No products match your filters. Try a different category or search.", "Browse all", "/shop")
+		</div>
+	} else {
+		<div id="product-grid">
+			@product.Grid(items, product.GridOpts{ShowStore: true, Wishlist: wishlist})
+		</div>
+	}
+}

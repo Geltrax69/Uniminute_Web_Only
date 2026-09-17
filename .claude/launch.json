@@ -2,6 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "lamazon-api",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "set -a && . ./.env && set +a && cd backend && go run ."
+      ],
+      "port": 8080,
+      "url": "http://localhost:8080"
+    },
+    {
+      "name": "lamazon-website",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd Lamazon_website && ~/go/bin/templ generate && npm run build && API_BASE=https://api.geltrax.engineer go run ."
+      ],
+      "port": 8100,
+      "url": "http://localhost:8100"
+    },
+    {
       "name": "lamazon-frontend",
       "runtimeExecutable": "bash",
       "runtimeArgs": [
