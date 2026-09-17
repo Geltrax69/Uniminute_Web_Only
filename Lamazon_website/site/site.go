@@ -1,8 +1,6 @@
 package site
 
 import (
-	"embed"
-	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -12,6 +10,7 @@ import (
 
 	"lamazon/website/backend"
 	"lamazon/website/shop"
+	"lamazon/website/static"
 )
 
 // The Uniminute storefront website: Go + templ + HTMX + Alpine + Tailwind.
@@ -34,9 +33,6 @@ func New(apiBase string) http.Handler {
 	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
 	return site.routes()
 }
-
-//go:embed static
-var staticFiles embed.FS
 
 type Site struct {
 	backend *backend.Backend
@@ -130,14 +126,10 @@ func (s *Site) routes() http.Handler {
 }
 
 func staticFileServer() http.Handler {
-	sub, err := fs.Sub(staticFiles, "static")
-	if err != nil {
-		log.Fatal(err)
-	}
-	files := http.FileServer(http.FS(sub))
+	files := http.FileServer(http.FS(static.Files))
 	// Fonts, CSS, JS and vendored libraries never change under a running
 	// binary; a month of immutability is safe and quiet.
-	return cache(files,"public, max-age=2592000")
+	return cache(files, "public, max-age=2592000")
 }
 
 func cache(next http.Handler, value string) http.Handler {

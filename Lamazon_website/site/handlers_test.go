@@ -10,13 +10,13 @@ import (
 // A sign-in link must never be able to send a shopper off the site.
 func TestLocalPath(t *testing.T) {
 	for in, want := range map[string]string{
-		"":                    "/",
-		"/cart":               "/cart",
-		"/search?q=a":         "/search?q=a",
-		"//evil.example":      "/",
-		"/\\evil.example":     "/",
+		"":                     "/",
+		"/cart":                "/cart",
+		"/search?q=a":          "/search?q=a",
+		"//evil.example":       "/",
+		"/\\evil.example":      "/",
 		"https://evil.example": "/",
-		"javascript:alert(1)": "/",
+		"javascript:alert(1)":  "/",
 	} {
 		if got := localPath(in); got != want {
 			t.Errorf("localPath(%q) = %q, want %q", in, got, want)

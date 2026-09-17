@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	site "lamazon/website"
+	"lamazon/website/site"
 )
 
 func main() {

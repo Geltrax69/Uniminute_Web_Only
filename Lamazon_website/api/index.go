@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	site "lamazon/website"
+	"lamazon/website/site"
 )
 
 // Vercel routes every request here (see vercel.json); the site is built once per instance.

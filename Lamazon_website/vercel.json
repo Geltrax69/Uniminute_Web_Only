@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build && rm -rf public && mkdir public && cp -R static public/static",
+  "buildCommand": "npm run build && rm -rf public && mkdir public && cp -R static public/static && rm public/static/static.go",
   "outputDirectory": "public",
   "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
 }

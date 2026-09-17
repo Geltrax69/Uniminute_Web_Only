@@ -29,12 +29,12 @@ import (
 	cartfrag "lamazon/website/templates/fragments/cart"
 
 	"lamazon/website/shop"
-	"lamazon/website/tpl"
 	"lamazon/website/templates/components/cart"
 	"lamazon/website/templates/components/collection"
 	"lamazon/website/templates/components/navigation"
 	"lamazon/website/templates/layouts"
 	"lamazon/website/templates/pages"
+	"lamazon/website/tpl"
 	"lamazon/website/viewdata"
 
 	"github.com/a-h/templ"
@@ -799,7 +799,6 @@ func (s *Site) handleSearchFragment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Replace-Url", searchfrag.URL(d.Q, d.Tab, d.Sort))
 	renderOK(w, r, searchfrag.Body(d))
 }
-
 
 // ── Cart mutation handlers ────────────────────────────────────────────────────
 
