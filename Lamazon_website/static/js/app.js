@@ -43,7 +43,7 @@ document.addEventListener('alpine:init', () => {
 
     init() {
       window.addEventListener('lw:toast', (e) => {
-        const { message, title, added, basket, undo, undoLabel, undoAction, reload } = e.detail || {};
+        const { message, title, added, basket, undo, undoLabel, undoAction, reload, tone } = e.detail || {};
         if (!message) return;
         const id = this._next++;
         // One at a time, like hideCurrentSnackBar before every show.
@@ -57,6 +57,7 @@ document.addEventListener('alpine:init', () => {
           undoLabel: undoLabel || 'Undo',
           undoAction,
           reload: !!reload,
+          tone: tone || '',
           visible: true,
         }];
         // 1.4s for the added card, 3s (5s with Undo) for a message.
@@ -216,7 +217,7 @@ document.addEventListener('alpine:init', () => {
         await sellerCall('POST', '/api/seller/store', body);
         location.assign('/seller');
       } catch (err) {
-        lwToast(err.message);
+        lwToast(err.message, 'error');
         this.saving = false;
       }
     },
@@ -239,7 +240,7 @@ document.addEventListener('alpine:init', () => {
         return out ?? {};
       } catch (err) {
         this.$refs.dlg.close();
-        lwToast(err.message);
+        lwToast(err.message, 'error');
         return null;
       } finally {
         this.dlg.busy = false;
@@ -340,7 +341,7 @@ document.addEventListener('alpine:init', () => {
       try {
         await sellerCall('POST', `/staff-api/admin/categories/${encodeURIComponent(this.uploadTarget)}/photo`, body);
         lwReload();
-      } catch (err) { lwToast(err.message); }
+      } catch (err) { lwToast(err.message, 'error'); }
     },
     openCategoryDelete(name) {
       this.confirm(`Remove ${name}?`, 'It disappears from the shop and sellers can no longer list under it. Anything already filed under it has to be moved first.',
@@ -676,7 +677,7 @@ document.addEventListener('alpine:init', () => {
         }
         location.assign('/seller?pane=inventory');
       } catch (err) {
-        lwToast(err.message);
+        lwToast(err.message, 'error');
         this.saving = false;
       }
     },
@@ -698,7 +699,7 @@ document.addEventListener('alpine:init', () => {
         await sellerCall(method, path, body);
         lwReload(message);
       } catch (err) {
-        lwToast(err.message);
+        lwToast(err.message, 'error');
       }
     },
     accept(id) {
@@ -853,22 +854,37 @@ window.photoMethods = (base) => ({
     try {
       let urls = next.filter((s) => s.url).map((s) => s.url);
       const fresh = next.filter((s) => s.file);
-      if (fresh.length) {
+      // One upload per photo, so one bad file doesn't lose the others.
+      const failed = [];
+      let lastError = '';
+      for (const shot of fresh) {
         const body = new FormData();
-        fresh.forEach((s) => body.append('file', s.file));
-        const after = await sellerCall('POST', `${base}/${this.id}/photos`, body);
-        urls = [...urls, ...after.imageUrls.filter((u) => !urls.includes(u))];
+        body.append('file', shot.file);
+        try {
+          const after = await sellerCall('POST', `${base}/${this.id}/photos`, body);
+          urls = [...urls, ...after.imageUrls.filter((u) => !urls.includes(u))];
+        } catch (err) {
+          failed.push(shot);
+          lastError = err.message;
+        }
       }
       const saved = await sellerCall('PUT', `${base}/${this.id}/photos`, { imageUrls: urls });
       this.shots = saved.imageUrls.map((url) => ({ url }));
+      if (fresh.length > 1 && failed.length && failed.length < fresh.length) {
+        lwToast(`${fresh.length - failed.length} of ${fresh.length} photos added. ${failed.length} failed: ${lastError}`, 'error');
+      } else if (failed.length) {
+        lwToast(lastError, 'error');
+      } else if (fresh.length) {
+        lwToast(fresh.length === 1 ? 'Photo added.' : `${fresh.length} photos added.`, 'success');
+      }
     } catch (err) {
-      lwToast(err.message);
+      lwToast(err.message, 'error');
     }
     this.busy = false;
   },
 });
 
-window.lwToast = (message) => window.dispatchEvent(new CustomEvent('lw:toast', { detail: { message } }));
+window.lwToast = (message, tone) => window.dispatchEvent(new CustomEvent('lw:toast', { detail: { message, tone } }));
 
 // Reloads the page and shows message on the fresh one.
 window.lwReload = (message) => {
@@ -884,7 +900,7 @@ window.addEventListener('alpine:initialized', () => {
     flash = sessionStorage.getItem('lw:flash');
     sessionStorage.removeItem('lw:flash');
   } catch {}
-  if (flash) setTimeout(() => lwToast(flash), 50);
+  if (flash) setTimeout(() => lwToast(flash, 'success'), 50);
 });
 
 // ── HTMX event hooks ─────────────────────────────────────────────────────
@@ -907,4 +923,114 @@ window.addEventListener('popstate', () => {
   if (window.Alpine) {
     Alpine.store('drawers').closeAll();
   }
+});
+
+// ── App states: offline, loading, confirmation, processing ───────────────
+// Markup lives in ui.templ AppStates, mounted once in the base layout.
+
+document.addEventListener('alpine:init', () => {
+  Alpine.data('netStatus', () => ({
+    online: navigator.onLine,
+    init() {
+      window.addEventListener('online', () => { this.online = true; lwToast("You're back online.", 'success'); });
+      window.addEventListener('offline', () => { this.online = false; });
+    },
+  }));
+
+  Alpine.data('confirmDialog', () => ({
+    title: '', body: '', ok: 'Confirm', cancel: 'Cancel', danger: false, resolve: null,
+    init() {
+      window.lwConfirm = (opts) => new Promise((resolve) => {
+        this.settle(false);
+        Object.assign(this, { title: '', body: '', ok: 'Confirm', cancel: 'Cancel', danger: false }, opts, { resolve });
+        this.$el.showModal();
+      });
+    },
+    settle(answer) {
+      const done = this.resolve;
+      this.resolve = null;
+      if (this.$el.open) this.$el.close();
+      if (done) done(answer);
+    },
+  }));
+
+  Alpine.data('processing', () => ({
+    active: false, title: '',
+    init() {
+      const guard = (e) => { e.preventDefault(); e.returnValue = ''; };
+      window.lwProcessing = (title) => {
+        this.active = !!title;
+        this.title = title || '';
+        if (title) window.addEventListener('beforeunload', guard);
+        else window.removeEventListener('beforeunload', guard);
+      };
+      // The server has answered: let its redirect through, keep the overlay up.
+      window.lwProcessingRelease = () => window.removeEventListener('beforeunload', guard);
+    },
+  }));
+});
+
+// hx-confirm="Title\n\nBody" opens the styled dialog instead of window.confirm.
+document.addEventListener('htmx:confirm', (e) => {
+  const question = e.detail.question;
+  if (!question || !window.lwConfirm) return;
+  e.preventDefault();
+  const [title, ...rest] = question.split('\n\n');
+  const el = e.detail.elt;
+  lwConfirm({
+    title,
+    body: rest.join('\n\n'),
+    ok: el.dataset.confirmOk || 'Confirm',
+    cancel: el.dataset.confirmCancel || 'Cancel',
+    danger: el.dataset.confirmDanger !== undefined,
+  }).then((yes) => { if (yes) e.detail.issueRequest(true); });
+});
+
+// Loading: a thin bar while any HTMX request or page navigation is running.
+(() => {
+  let inFlight = 0, timer = null;
+  const bar = () => document.getElementById('lw-progress');
+  const show = () => {
+    const el = bar(); if (!el) return;
+    clearTimeout(timer);
+    el.style.opacity = '1';
+    el.style.transform = 'scaleX(0.7)';
+  };
+  const hide = () => {
+    const el = bar(); if (!el) return;
+    el.style.transform = 'scaleX(1)';
+    timer = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'scaleX(0)'; }, 250);
+  };
+  document.addEventListener('htmx:beforeRequest', () => { inFlight++; show(); });
+  document.addEventListener('htmx:afterRequest', () => { inFlight = Math.max(0, inFlight - 1); if (!inFlight) hide(); });
+  window.addEventListener('beforeunload', show);
+  window.addEventListener('pageshow', hide);
+})();
+
+// Error and offline: HTMX requests that never reached the server, or failed.
+document.addEventListener('htmx:sendError', () => {
+  lwToast(navigator.onLine ? 'Could not reach Uniminute. Try again in a moment.' : "You're offline. Reconnect and try again.", 'error');
+});
+document.addEventListener('htmx:responseError', (e) => {
+  const status = e.detail.xhr.status;
+  if (status === 401) {
+    location.href = '/login?expired=1&next=' + encodeURIComponent(location.pathname + location.search);
+    return;
+  }
+  lwToast(status === 403 ? "You don't have access to do that."
+    : status === 404 ? 'That is no longer here. Refresh the page and try again.'
+    : status === 429 ? 'Too many attempts. Wait a minute, then try again.'
+    : status >= 500 ? 'Uniminute had a problem on its side. Try again in a moment.'
+    : "That didn't go through. Try again.", 'error');
+});
+
+// Permission required: the browser's notification prompt, asked for on purpose.
+document.addEventListener('alpine:init', () => {
+  Alpine.data('notifyPermission', () => ({
+    state: 'Notification' in window ? Notification.permission : 'unsupported',
+    async ask() {
+      this.state = await Notification.requestPermission();
+      if (this.state === 'granted') lwToast('Notifications are on.', 'success');
+    },
+  }));
 });

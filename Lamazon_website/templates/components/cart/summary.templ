@@ -65,21 +65,26 @@ templ Summary(d Data) {
 			</p>
 		}
 		<div class="h-3.5"></div>
+		{{ short := shop.CartShortfall(d.Entries) }}
 		if d.SignedIn {
 			<form
 				hx-post="/checkout"
 				hx-swap="none"
 				x-data="{ busy: false }"
-				x-on:htmx:before-request="busy = true"
-				x-on:htmx:after-request="busy = false">
+				x-on:htmx:before-request="busy = true; lwProcessing('Placing your order…')"
+				x-on:htmx:before-on-load="lwProcessingRelease()"
+				x-on:htmx:after-request="busy = false; if (!$event.detail.xhr.getResponseHeader('HX-Redirect')) lwProcessing('')">
 				if d.Address != nil {
 					<input type="hidden" name="addressId" value={ d.Address.ID }/>
 				}
-				<button type="submit" class={ ui.ButtonClass(true) + " w-full" } x-bind:disabled="busy" x-bind:aria-busy="busy">
+				<button type="submit" class={ ui.ButtonClass(true) + " w-full" } x-bind:disabled={ tplWhen(short > 0, "true", "busy") } disabled?={ short > 0 } x-bind:aria-busy="busy">
 					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
 					<span class="truncate whitespace-pre" x-show="!busy">Place order  ·  ₹{ shop.Money(total) }</span>
 					<span class="truncate" x-show="busy" x-cloak>Placing your order…</span>
 				</button>
+				if short > 0 {
+					@ui.Unavailable(tplWhen(short == 1, "1 item is short on stock. Lower its quantity or remove it to place your order.", shop.Itoa(short)+" items are short on stock. Lower their quantity or remove them to place your order."))
+				}
 			</form>
 		} else {
 			<a href="/login?next=/cart" class={ ui.ButtonClass(true) + " w-full" }>

@@ -8,9 +8,8 @@ package pages
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-// 404.templ — an address the shop does not know. The app sends unknown routes
-// to the shop itself; the website says so and offers the way back, in the
-// app's own EmptyState.
+// 404.templ — every full-page state (not found, error, maintenance, signed
+// out, …) is one StatusScreen card in the middle of the page.
 
 import (
 	"lamazon/website/templates/components/navigation"
@@ -19,7 +18,7 @@ import (
 	"lamazon/website/viewdata"
 )
 
-func NotFound(p viewdata.Page) templ.Component {
+func StatusPage(p viewdata.Page, s ui.Status) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -40,7 +39,7 @@ func NotFound(p viewdata.Page) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = layouts.Base(p.Title, p.Description, "", notFoundBody(p)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layouts.Base(p.Title, p.Description, "", statusBody(p, s)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -48,7 +47,7 @@ func NotFound(p viewdata.Page) templ.Component {
 	})
 }
 
-func notFoundBody(p viewdata.Page) templ.Component {
+func statusBody(p viewdata.Page, s ui.Status) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -73,7 +72,7 @@ func notFoundBody(p viewdata.Page) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = ui.EmptyState("search", "Page not found", "That page doesn't exist. Maybe it moved, or the link is wrong.", "Go home", "/").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.StatusScreen(s).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -82,6 +81,39 @@ func notFoundBody(p viewdata.Page) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = navigation.BottomNav(p, "").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func NotFound(p viewdata.Page) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var3 == nil {
+			templ_7745c5c3_Var3 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = StatusPage(p, ui.Status{
+			Icon: "search", Title: "Page not found",
+			Message: "That page doesn't exist. Maybe it moved, or the link is wrong.",
+			Action:  "Go home", Href: "/",
+		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

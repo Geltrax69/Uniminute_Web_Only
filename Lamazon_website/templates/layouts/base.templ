@@ -42,6 +42,7 @@ templ Base(title, description, canonical string, content templ.Component) {
 			<div class="mx-auto min-h-screen w-full max-w-shell">
 				@content
 			</div>
+			@ui.AppStates()
 			@ui.ToastRegion()
 		</body>
 	</html>

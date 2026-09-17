@@ -97,7 +97,7 @@ templ accountBody(p viewdata.Page) {
 		if p.User != nil {
 			<div class="mt-3.5">
 				@menuCard() {
-					<form method="post" action="/logout">
+					<form method="post" action="/logout" x-data x-on:submit.prevent="lwConfirm({ title: 'Log out?', body: 'You will need your email to sign back in. Your cart stays on this device.', ok: 'Log out', danger: true }).then((yes) => yes && $el.submit())">
 						<button type="submit" class="flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-danger/[.04]">
 							@menuRowInner("log-out", "Log out", true)
 						</button>

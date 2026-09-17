@@ -154,6 +154,87 @@ templ EmptyState(iconName string, title string, message string, actionLabel stri
 	</div>
 }
 
+// Status is one full-screen state: loading, success, error, empty, offline,
+// signed out, permission, processing, maintenance, not found, unavailable.
+type Status struct {
+	Icon      string
+	Tone      string // "success" | "danger" | "warning" | "" (neutral)
+	Title     string
+	Message   string
+	Action    string // primary button label; empty hides it
+	Href      string // primary button link; "" with Action set means reload
+	Secondary string
+	SecHref   string
+}
+
+func statusDisc(tone string) string {
+	switch tone {
+	case "success":
+		return "bg-[#E3F4E4] text-[#2E7D32]"
+	case "danger":
+		return "bg-[#FBE5E7] text-danger"
+	case "warning":
+		return "bg-[#FDF0D5] text-[#9A6400]"
+	}
+	return "bg-lime text-strong"
+}
+
+// StatusScreen is the one card every full-page state uses.
+templ StatusScreen(s Status) {
+	<div class="mx-auto w-full max-w-[420px] rounded-featured bg-surface p-7 text-center shadow-surface" role={ tpl.When(s.Tone == "danger", "alert", "status") }>
+		<div class={ "mx-auto flex h-16 w-16 items-center justify-center rounded-full " + statusDisc(s.Tone) }>
+			@Icon(s.Icon, "h-7 w-7")
+		</div>
+		<h1 class="mt-5 text-title text-text">{ s.Title }</h1>
+		<p class="mt-2 text-body text-muted">{ s.Message }</p>
+		if s.Action != "" || s.Secondary != "" {
+			<div class="mt-[22px] flex flex-col gap-2.5">
+				if s.Action != "" && s.Href != "" {
+					@ActionButton(s.Action, true, templ.Attributes{"href": s.Href})
+				} else if s.Action != "" {
+					@ActionButton(s.Action, true, templ.Attributes{"type": "button", "x-data": "", "x-on:click": "location.reload()"})
+				}
+				if s.Secondary != "" {
+					@ActionButton(s.Secondary, false, templ.Attributes{"href": s.SecHref})
+				}
+			</div>
+		}
+	</div>
+}
+
+// Unavailable explains why a control that exists cannot be used right now.
+templ Unavailable(message string) {
+	<p class="mt-2 flex items-center justify-center gap-1.5 text-center text-[12.5px] text-muted" role="note">
+		@Icon("ban", "h-3.5 w-3.5 shrink-0")
+		<span>{ message }</span>
+	</p>
+}
+
+// AppStates is mounted once per page: the loading bar, the offline banner,
+// the confirmation dialog and the processing overlay (see static/js/app.js).
+templ AppStates() {
+	<div id="lw-progress" class="pointer-events-none fixed inset-x-0 top-0 z-[90] h-[3px] origin-left scale-x-0 bg-lime opacity-0 transition-[transform,opacity] duration-300" aria-hidden="true"></div>
+	<div x-data="netStatus()" x-show="!online" x-cloak x-transition.opacity class="fixed inset-x-0 top-0 z-[85] flex items-center justify-center gap-2 bg-[#2E312E] px-4 py-2.5 text-[13px] text-[#EFF1EC]" role="alert">
+		@Icon("wifi-off", "h-4 w-4 shrink-0")
+		<span>You're offline. Showing what was already loaded — changes will fail until you reconnect.</span>
+	</div>
+	<dialog id="lw-confirm" x-data="confirmDialog()" x-on:close="settle(false)" class="w-[min(400px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
+		<p class="text-[22px] leading-7 text-text" x-text="title"></p>
+		<p class="mt-3 whitespace-pre-line text-body text-muted" x-text="body"></p>
+		<div class="mt-6 flex justify-end gap-2">
+			<button type="button" x-on:click="settle(false)" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-text="cancel"></button>
+			<button type="button" x-on:click="settle(true)" class="min-h-touch rounded-full px-3 text-label hover:bg-strong/[.06]" x-bind:class="danger ? 'text-danger' : 'text-strong'" x-text="ok"></button>
+		</div>
+	</dialog>
+	<div x-data="processing()" x-show="active" x-cloak class="fixed inset-0 z-[95] flex items-center justify-center bg-canvas/85 px-6 backdrop-blur-sm" role="alertdialog" aria-live="assertive" x-bind:aria-label="title">
+		<div class="w-full max-w-[360px] rounded-featured bg-surface p-7 text-center shadow-raised">
+			<span class="mx-auto block h-10 w-10 animate-spin rounded-full border-[3px] border-strong border-t-transparent motion-reduce:animate-none"></span>
+			<p class="mt-5 text-title text-text" x-text="title"></p>
+			<p class="mt-2 text-body text-muted">Don't close or refresh this page.</p>
+		</div>
+	</div>
+}
+
 // ToastRegion is the one shape for every transient message — the app's
 // showAppSnack, floating above the bottom bar. HTMX responses ask for a toast
 // with the lw:toast event (see static/js/app.js).
@@ -182,6 +263,12 @@ templ ToastRegion() {
 				// showAppSnack: Material's floating snackbar on the inverse surface.
 				<template x-if="!t.added">
 					<div class="flex items-center gap-3 rounded-[4px] bg-[#2E312E] px-4 py-3.5 text-[14px] text-[#EFF1EC] shadow-raised">
+						<span class="flex shrink-0 text-[#8BD48F]" x-show="t.tone === 'success'">
+							@Icon("circle-check", "h-[18px] w-[18px]")
+						</span>
+						<span class="flex shrink-0 text-[#FF8A95]" x-show="t.tone === 'error'">
+							@Icon("circle-alert", "h-[18px] w-[18px]")
+						</span>
 						<span class="flex-1" x-text="t.message"></span>
 						<template x-if="t.undo">
 							<button type="button" class="text-label text-lime" x-on:click="undo(t)" x-text="t.undoLabel"></button>

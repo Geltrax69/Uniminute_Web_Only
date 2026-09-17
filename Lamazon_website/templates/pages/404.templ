@@ -1,8 +1,7 @@
 package pages
 
-// 404.templ — an address the shop does not know. The app sends unknown routes
-// to the shop itself; the website says so and offers the way back, in the
-// app's own EmptyState.
+// 404.templ — every full-page state (not found, error, maintenance, signed
+// out, …) is one StatusScreen card in the middle of the page.
 
 import (
 	"lamazon/website/templates/components/navigation"
@@ -11,13 +10,21 @@ import (
 	"lamazon/website/viewdata"
 )
 
-templ NotFound(p viewdata.Page) {
-	@layouts.Base(p.Title, p.Description, "", notFoundBody(p))
+templ StatusPage(p viewdata.Page, s ui.Status) {
+	@layouts.Base(p.Title, p.Description, "", statusBody(p, s))
 }
 
-templ notFoundBody(p viewdata.Page) {
+templ statusBody(p viewdata.Page, s ui.Status) {
 	<main id="main" class="flex min-h-[100dvh] items-center justify-center px-5 pb-[108px]">
-		@ui.EmptyState("search", "Page not found", "That page doesn't exist. Maybe it moved, or the link is wrong.", "Go home", "/")
+		@ui.StatusScreen(s)
 	</main>
 	@navigation.BottomNav(p, "")
+}
+
+templ NotFound(p viewdata.Page) {
+	@StatusPage(p, ui.Status{
+		Icon: "search", Title: "Page not found",
+		Message: "That page doesn't exist. Maybe it moved, or the link is wrong.",
+		Action: "Go home", Href: "/",
+	})
 }

@@ -346,7 +346,7 @@ func accountBody(p viewdata.Page) templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<form method=\"post\" action=\"/logout\"><button type=\"submit\" class=\"flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-danger/[.04]\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<form method=\"post\" action=\"/logout\" x-data x-on:submit.prevent=\"lwConfirm({ title: 'Log out?', body: 'You will need your email to sign back in. Your cart stays on this device.', ok: 'Log out', danger: true }).then((yes) => yes && $el.submit())\"><button type=\"submit\" class=\"flex min-h-14 w-full items-center pl-4 pr-6 text-left hover:bg-danger/[.04]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

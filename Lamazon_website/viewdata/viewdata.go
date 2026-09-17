@@ -14,14 +14,15 @@ type Page struct {
 	Description string
 	Canonical   string
 
-	User        *backend.User    // nil when browsing as a guest
-	Season      *backend.Season
-	Address     *backend.Address // the default delivery address, when signed in
-	AccessToken string           // the live JWT, for server-side API calls
+	User           *backend.User // nil when browsing as a guest
+	SessionExpired bool          // had a session cookie the API no longer accepts
+	Season         *backend.Season
+	Address        *backend.Address // the default delivery address, when signed in
+	AccessToken    string           // the live JWT, for server-side API calls
 
 	CartCount   int
 	WishlistLen int
-	Wishlist    map[string]bool  // product IDs the shopper has saved
+	Wishlist    map[string]bool // product IDs the shopper has saved
 	Query       string
 	ActiveTab   string // "" means All
 }

@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"slices"
 	"sort"
 	"strconv"
@@ -32,6 +33,7 @@ import (
 	"lamazon/website/templates/components/cart"
 	"lamazon/website/templates/components/collection"
 	"lamazon/website/templates/components/navigation"
+	"lamazon/website/templates/components/ui"
 	"lamazon/website/templates/layouts"
 	"lamazon/website/templates/pages"
 	"lamazon/website/tpl"
@@ -45,11 +47,14 @@ import (
 // buildPage constructs the chrome data that every page layout needs.
 func (s *Site) buildPage(r *http.Request) viewdata.Page {
 	access, refresh := shop.SessionTokens(r)
+	expired := false
 
 	// Try to refresh an expired access token silently.
 	if access == "" && refresh != "" {
 		if sess, err := s.backend.Refresh(r.Context(), refresh); err == nil {
 			access = sess.Token
+		} else if !backendDown(err) {
+			expired = true
 		}
 	}
 
@@ -62,8 +67,11 @@ func (s *Site) buildPage(r *http.Request) viewdata.Page {
 	if access != "" {
 		if u, err := s.backend.Me(r.Context(), access); err == nil {
 			p.User = &u
+		} else if !backendDown(err) {
+			expired = true
 		}
 	}
+	p.SessionExpired = expired && p.User == nil
 
 	if season, err := s.backend.Season(r.Context()); err == nil {
 		p.Season = season
@@ -140,6 +148,14 @@ func toast(w http.ResponseWriter, message string) {
 	addTrigger(w, "lw:toast", map[string]any{"message": message})
 }
 
+func errorToast(w http.ResponseWriter, message string) {
+	addTrigger(w, "lw:toast", map[string]any{"message": message, "tone": "error"})
+}
+
+func successToast(w http.ResponseWriter, message string) {
+	addTrigger(w, "lw:toast", map[string]any{"message": message, "tone": "success"})
+}
+
 // addedToast is showAddedToast: a basket for food and grocery, a cart otherwise.
 func addedToast(w http.ResponseWriter, p backend.Product) {
 	basket := p.Tab == "Food" || p.Tab == "Grocery"
@@ -169,7 +185,11 @@ func redirect(w http.ResponseWriter, r *http.Request, target string) {
 // requireAuth redirects to /login if the user is not signed in.
 func requireAuth(w http.ResponseWriter, r *http.Request, p viewdata.Page) bool {
 	if p.User == nil {
-		target := "/login?next=" + r.URL.RequestURI()
+		target := "/login?next=" + url.QueryEscape(r.URL.RequestURI())
+		if p.SessionExpired {
+			shop.ClearSessionCookies(w)
+			target += "&expired=1"
+		}
 		redirect(w, r, target)
 		return false
 	}
@@ -235,12 +255,20 @@ func paginate(products []backend.Product, pageStr, _ string) ([]backend.Product,
 
 func (s *Site) handleHome(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
+	// Someone who has never been here starts at sign-up; "Browse the shop" there lets them in.
+	if p.User == nil && !visited(r) && r.Header.Get("HX-Request") == "" {
+		http.Redirect(w, r, "/login?next=%2F", http.StatusSeeOther)
+		return
+	}
 	p.Title = "Uniminute — Local shops, delivered"
 	p.Description = "Browse and order from local campus shops. Real stock, real prices, cash on delivery."
 
 	ctx := r.Context()
 	cats, _ := s.backend.Categories(ctx)
-	products, _ := s.backend.Products(ctx, "", "", "")
+	products, err := s.backend.Products(ctx, "", "", "")
+	if maintenance(w, r, p, err) {
+		return
+	}
 	shops, _ := s.backend.Shops(ctx, "")
 	camps, err := s.backend.Campaigns(ctx)
 	if err != nil {
@@ -406,7 +434,10 @@ func (s *Site) handleStores(w http.ResponseWriter, r *http.Request) {
 		tab = ""
 	}
 	d := pages.StoresPageData{Page: p, Tab: tab}
-	all, _ := s.backend.Shops(r.Context(), "")
+	all, err := s.backend.Shops(r.Context(), "")
+	if maintenance(w, r, p, err) {
+		return
+	}
 	for _, sh := range all {
 		if tab == "" || sh.Tab == tab {
 			d.Stores = append(d.Stores, sh)
@@ -422,13 +453,21 @@ func (s *Site) handleStore(w http.ResponseWriter, r *http.Request) {
 	p.Title = name + " — Uniminute"
 	// There is no single-shop endpoint; the list carries the picture and tagline.
 	d := pages.StorePageData{Page: p, Store: backend.Shop{Name: name}}
-	shops, _ := s.backend.Shops(r.Context(), "")
+	shops, err := s.backend.Shops(r.Context(), "")
+	if maintenance(w, r, p, err) {
+		return
+	}
+	found := false
 	for _, sh := range shops {
 		if sh.Name == name {
-			d.Store = sh
+			d.Store, found = sh, true
 		}
 	}
 	d.Products, _ = s.backend.ShopProducts(r.Context(), name)
+	if !found && len(d.Products) == 0 {
+		s.handleNotFound(w, r)
+		return
+	}
 	renderOK(w, r, pages.StorePage(d))
 }
 
@@ -438,6 +477,9 @@ func (s *Site) handleProduct(w http.ResponseWriter, r *http.Request) {
 
 	prod, err := s.cartProduct(r.Context(), id)
 	if err != nil {
+		if maintenance(w, r, p, err) {
+			return
+		}
 		s.handleNotFound(w, r)
 		return
 	}
@@ -607,7 +649,12 @@ func (s *Site) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Title = "Sign in — Uniminute"
+	markVisited(w)
 	d := pages.LoginPageData{Step: "email", Next: next}
+	if r.URL.Query().Get("expired") == "1" || p.SessionExpired {
+		shop.ClearSessionCookies(w)
+		d.Notice = "Your session expired. Sign in again to pick up where you left off."
+	}
 
 	// The backdrop is what the shop actually sells, never stand-ins.
 	products, _ := s.backend.Products(r.Context(), "", "", "")
@@ -629,6 +676,17 @@ func (s *Site) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 		d.PoliciesPublished = live == 2
 	}
 	renderOK(w, r, pages.Login(p, d))
+}
+
+const visitedCookie = "um_visited"
+
+func visited(r *http.Request) bool {
+	_, err := r.Cookie(visitedCookie)
+	return err == nil
+}
+
+func markVisited(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: visitedCookie, Value: "1", Path: "/", MaxAge: 365 * 24 * 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 }
 
 // localPath keeps a post-login destination on this site: a path, never a
@@ -719,6 +777,9 @@ func (s *Site) handleOrdersPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orders, err := s.backend.MyOrders(r.Context(), p.AccessToken)
+	if maintenance(w, r, p, err) {
+		return
+	}
 	d := pages.OrdersPageData{Page: p, Orders: orders}
 	if err != nil {
 		d.Error = "Could not reach Uniminute — try again in a moment."
@@ -773,6 +834,60 @@ func (s *Site) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
 	p.Title = "Page not found — Uniminute"
 	render(w, r, http.StatusNotFound, pages.NotFound(p))
+}
+
+var (
+	statusMaintenance = ui.Status{
+		Icon: "wrench", Tone: "warning", Title: "We'll be right back",
+		Message: "The shop's server isn't answering right now. Your cart and saved items are safe — try again in a minute.",
+		Action:  "Try again",
+	}
+	statusError = ui.Status{
+		Icon: "circle-alert", Tone: "danger", Title: "Something went wrong",
+		Message: "This page failed to load on our side. Try again, or head back to the shop.",
+		Action:  "Try again", Secondary: "Go home", SecHref: "/",
+	}
+)
+
+// backendDown is true when the API never answered or failed on its side —
+// not when it answered "no" (404, 401, a validation error).
+func backendDown(err error) bool {
+	var apiErr *backend.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Status >= 500
+	}
+	var netErr *url.Error
+	return errors.As(err, &netErr)
+}
+
+// maintenance renders "We'll be right back" when err means the API is down.
+func maintenance(w http.ResponseWriter, r *http.Request, p viewdata.Page, err error) bool {
+	if !backendDown(err) {
+		return false
+	}
+	p.Title = "Back soon — Uniminute"
+	w.Header().Set("Retry-After", "30")
+	render(w, r, http.StatusServiceUnavailable, pages.StatusPage(p, statusMaintenance))
+	return true
+}
+
+// recoverer turns a handler panic into the error screen instead of a dropped connection.
+func recoverer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			v := recover()
+			if v == nil {
+				return
+			}
+			if v == http.ErrAbortHandler {
+				panic(v)
+			}
+			log.Printf("panic %s %s: %v\n%s", r.Method, r.URL.Path, v, debug.Stack())
+			render(w, r, http.StatusInternalServerError,
+				pages.StatusPage(viewdata.Page{Title: "Something went wrong — Uniminute"}, statusError))
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 // ── HTMX fragment handlers ────────────────────────────────────────────────────
@@ -1012,9 +1127,9 @@ func (s *Site) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 		"phone": r.FormValue("phone"),
 	}
 	if err := s.backend.UpdateMe(r.Context(), p.AccessToken, changes); err != nil {
-		toast(w, "Couldn't save profile.")
+		errorToast(w, "Couldn't save profile.")
 	} else {
-		toast(w, "Profile saved.")
+		successToast(w, "Profile saved.")
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -1040,7 +1155,7 @@ func (s *Site) handlePreferencesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.backend.PatchPreferences(r.Context(), p.AccessToken, changes); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -1063,7 +1178,7 @@ func (s *Site) handleAddressCreate(w http.ResponseWriter, r *http.Request) {
 		Phone:   r.FormValue("phone"),
 	}
 	if _, err := s.backend.SaveAddress(r.Context(), p.AccessToken, addr, ""); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1089,7 +1204,7 @@ func (s *Site) handleAddressUpdate(w http.ResponseWriter, r *http.Request) {
 		Phone:   r.FormValue("phone"),
 	}
 	if _, err := s.backend.SaveAddress(r.Context(), p.AccessToken, addr, id); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1103,7 +1218,7 @@ func (s *Site) handleAddressDefault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.backend.DefaultAddress(r.Context(), p.AccessToken, id); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1117,7 +1232,7 @@ func (s *Site) handleAddressDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.backend.DeleteAddress(r.Context(), p.AccessToken, id); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1157,7 +1272,7 @@ func (s *Site) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	result, err := s.backend.Checkout(r.Context(), p.AccessToken, lines, addressID, shop.CheckoutRequestID(r), expected)
 	if err != nil {
 		// The backend's own sentence ("not enough stock for …"), as the app shows it.
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1213,7 +1328,7 @@ func (s *Site) handleOrderCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.backend.CancelOrder(r.Context(), p.AccessToken, id); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1713,7 +1828,10 @@ func (s *Site) handleOrderDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("id")
-	orders, _ := s.backend.MyOrders(r.Context(), p.AccessToken)
+	orders, err := s.backend.MyOrders(r.Context(), p.AccessToken)
+	if maintenance(w, r, p, err) {
+		return
+	}
 	for _, o := range orders {
 		if o.ID == id {
 			p.Title = "Order " + shop.OrderRef(id) + " — Uniminute"
@@ -1770,7 +1888,7 @@ func (s *Site) handleProfileSetup(w http.ResponseWriter, r *http.Request) {
 		changes["password"] = pw
 	}
 	if err := s.backend.UpdateMe(r.Context(), p.AccessToken, changes); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -1782,7 +1900,7 @@ func (s *Site) handleProfileSetup(w http.ResponseWriter, r *http.Request) {
 		Phone: phone,
 	}
 	if _, err := s.backend.SaveAddress(r.Context(), p.AccessToken, addr, ""); err != nil {
-		toast(w, apiMessage(err))
+		errorToast(w, apiMessage(err))
 		w.WriteHeader(http.StatusOK)
 		return
 	}

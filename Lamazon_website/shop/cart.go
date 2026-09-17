@@ -192,3 +192,14 @@ func SaveWishlist(w http.ResponseWriter, ids map[string]bool) {
 	}
 	writeListCookie(w, WishlistCookie, list)
 }
+
+// CartShortfall counts lines asking for more than the shop has left.
+func CartShortfall(entries []CartEntry) int {
+	n := 0
+	for _, e := range entries {
+		if limit, ok := e.Cap(); ok && e.Qty > limit {
+			n++
+		}
+	}
+	return n
+}

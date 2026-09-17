@@ -19,6 +19,7 @@ type LoginPageData struct {
 	Email             string
 	Step              string // "email" | "code" | "password"
 	Error             string
+	Notice            string // shown above the card, e.g. an expired session
 	Backdrop          []string
 	PoliciesPublished bool
 }
@@ -33,14 +34,22 @@ templ loginPage(d LoginPageData) {
 			@marquee(d.Backdrop)
 		}
 		<div class="pointer-events-none relative z-10 flex min-h-[100dvh] flex-col">
-			<div class="pointer-events-auto flex justify-end pr-4 pt-2">
-				@ui.ActionButton("Browse the shop", false, templ.Attributes{"href": d.Next})
-			</div>
 			<div class="flex-1"></div>
 			<img src="/static/images/logo.png" alt="Uniminute" class="mx-auto h-24 w-24 rounded-featured object-cover"/>
 			<p class="mt-[18px] text-center text-[26px] font-semibold leading-[31px] tracking-[-0.9px] text-text">Local choice. Global experience.</p>
 			<div class="pointer-events-auto mt-[22px] px-5">
 				<div class="mx-auto max-w-[440px]">
+					<a href={ templ.SafeURL(d.Next) } class={ ui.ButtonClass(false) + " mb-3 w-full" }>
+						@ui.Icon("store", "h-[18px] w-[18px]")
+						<span class="truncate">Browse the shop</span>
+						@ui.Icon("arrow-right", "h-[18px] w-[18px]")
+					</a>
+					if d.Notice != "" {
+						<p class="mb-3 flex items-center gap-2 rounded-featured bg-[#FDF0D5] px-4 py-3 text-[13.5px] text-[#6B4600]" role="alert">
+							@ui.Icon("lock", "h-4 w-4 shrink-0")
+							<span>{ d.Notice }</span>
+						</p>
+					}
 					@LoginCard(d)
 				</div>
 			</div>

@@ -31,7 +31,7 @@ func APIBase() string {
 // New is the whole site as one handler, shared by cmd/server and the Vercel function.
 func New(apiBase string) http.Handler {
 	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
-	return site.routes()
+	return recoverer(site.routes())
 }
 
 type Site struct {

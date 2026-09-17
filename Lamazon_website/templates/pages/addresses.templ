@@ -71,6 +71,8 @@ templ addressesBody(d AddressesPageData) {
 								hx-post={ "/account/addresses/" + a.ID + "/delete" }
 								hx-swap="none"
 								hx-confirm={ "Delete address?\n\n" + addressFull(a) }
+								data-confirm-ok="Delete"
+								data-confirm-danger
 								aria-label="Delete address"
 								title="Delete address">
 								@ui.Icon("trash-2", "h-4 w-4")
