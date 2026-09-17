@@ -85,14 +85,14 @@ templ accountBody(p viewdata.Page) {
 					@menuRowInner("info", "About us", false)
 				</button>
 				<dialog x-ref="about" class="w-[min(360px,90vw)] rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40">
-					<p class="text-title">Lamazon</p>
+					<p class="text-title">Uniminute</p>
 					<div class="mt-6 flex justify-end">
 						<button type="button" x-on:click="$refs.about.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Close</button>
 					</div>
 				</dialog>
 			</div>
 			@menuDivider()
-			@menuRow("store", tpl.When(p.User != nil && p.User.HasStore, "Your store", "Sell on Lamazon"), "/seller", false)
+			@menuRow("store", tpl.When(p.User != nil && p.User.HasStore, "Your store", "Sell on Uniminute"), "/seller", false)
 		}
 		if p.User != nil {
 			<div class="mt-3.5">
@@ -106,7 +106,7 @@ templ accountBody(p viewdata.Page) {
 			</div>
 		}
 		<div class="mt-[26px] p-4 text-center">
-			<p class="text-[24px] font-extrabold text-text">Lamazon</p>
+			<p class="text-[24px] font-extrabold text-text">Uniminute</p>
 			<p class="mt-1 text-body text-muted">Version { tpl.AppVersion }</p>
 		</div>
 		</div>

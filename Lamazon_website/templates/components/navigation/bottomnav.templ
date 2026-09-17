@@ -69,7 +69,7 @@ templ TopBar(p viewdata.Page, current string) {
 	<header id="lw-topbar" class="fixed inset-x-0 top-0 z-50 hidden h-[72px] shadow-raised lg:block" style={ templ.SafeCSS(p.SeasonCSS() + ";background-image:linear-gradient(to right,var(--season-ground),var(--season-ground-shade))") }>
 		<div class="mx-auto flex h-full max-w-[1400px] items-center gap-8 px-gutter">
 			<div class="flex min-w-0 shrink-0 flex-col">
-				<a href="/" class="text-[22px] font-semibold leading-[26px] tracking-[-0.7px]" style="color:var(--season-ink)">Lamazon</a>
+				<a href="/" class="flex items-center gap-2 text-[22px] font-semibold leading-[26px] tracking-[-0.7px]" style="color:var(--season-ink)"><img src="/static/images/logo.png" alt="" class="h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5"/> Uniminute</a>
 				<a href={ templ.SafeURL(tpl.When(p.User == nil, "/login?next=/account", "/addresses")) } class="mt-0.5 inline-flex max-w-[220px] items-center rounded-small text-[12.5px] leading-4 hover:underline">
 					<span class="flex" style="color:var(--season-accent)">
 						@ui.Icon("map-pin", "h-3.5 w-3.5")

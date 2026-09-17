@@ -1,4 +1,4 @@
-package main
+package site
 
 // handlers.go — every HTTP handler the Site struct exposes. Each handler
 // follows the same three-step pattern:
@@ -235,7 +235,7 @@ func paginate(products []backend.Product, pageStr, _ string) ([]backend.Product,
 
 func (s *Site) handleHome(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Lamazon — Local shops, delivered"
+	p.Title = "Uniminute — Local shops, delivered"
 	p.Description = "Browse and order from local campus shops. Real stock, real prices, cash on delivery."
 
 	ctx := r.Context()
@@ -339,7 +339,7 @@ func (s *Site) handleShop(w http.ResponseWriter, r *http.Request) {
 	pageStr := q.Get("page")
 
 	p := s.buildPage(r)
-	p.Title = tabTitle(tab) + " — Lamazon"
+	p.Title = tabTitle(tab) + " — Uniminute"
 	p.ActiveTab = tab
 	p.Query = search
 
@@ -374,7 +374,7 @@ func (s *Site) handleCollection(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 
 	p := s.buildPage(r)
-	p.Title = name + " — Lamazon"
+	p.Title = name + " — Uniminute"
 
 	products, _ := s.backend.Products(r.Context(), "", "", name)
 	sortProducts(products, sortBy)
@@ -412,14 +412,14 @@ func (s *Site) handleStores(w http.ResponseWriter, r *http.Request) {
 			d.Stores = append(d.Stores, sh)
 		}
 	}
-	d.Page.Title = tpl.When(tab == "", "Stores near you", tab+" stores") + " — Lamazon"
+	d.Page.Title = tpl.When(tab == "", "Stores near you", tab+" stores") + " — Uniminute"
 	renderOK(w, r, pages.StoresPage(d))
 }
 
 func (s *Site) handleStore(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	p := s.buildPage(r)
-	p.Title = name + " — Lamazon"
+	p.Title = name + " — Uniminute"
 	// There is no single-shop endpoint; the list carries the picture and tagline.
 	d := pages.StorePageData{Page: p, Store: backend.Shop{Name: name}}
 	shops, _ := s.backend.Shops(r.Context(), "")
@@ -441,7 +441,7 @@ func (s *Site) handleProduct(w http.ResponseWriter, r *http.Request) {
 		s.handleNotFound(w, r)
 		return
 	}
-	p.Title = prod.Name + " — Lamazon"
+	p.Title = prod.Name + " — Uniminute"
 	p.Description = prod.Description
 	renderOK(w, r, pages.ProductPage(pages.ProductPageData{
 		Page:       p,
@@ -452,7 +452,7 @@ func (s *Site) handleProduct(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleSearch(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Search — Lamazon"
+	p.Title = "Search — Uniminute"
 	d := s.searchData(r)
 	d.Wishlist = p.Wishlist
 	renderOK(w, r, pages.Search(p, d))
@@ -516,7 +516,7 @@ func sortResults(items []backend.Product, by string) {
 
 func (s *Site) handleCartPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "My Cart — Lamazon"
+	p.Title = "My Cart — Uniminute"
 	d, trimmed := s.cartData(w, r.Context(), shop.ReadCart(r), p)
 	p.CartCount = d.Count()
 	renderOK(w, r, pages.CartPage(pages.CartPageData{Page: p, Cart: d, Trimmed: trimmed}))
@@ -595,7 +595,7 @@ func (s *Site) handleOrderPlaced(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/orders", http.StatusSeeOther)
 		return
 	}
-	p.Title = "Order placed — Lamazon"
+	p.Title = "Order placed — Uniminute"
 	renderOK(w, r, pages.OrderPlaced(pages.PlacedPageData{Page: p, Orders: placed}))
 }
 
@@ -606,7 +606,7 @@ func (s *Site) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, next, http.StatusSeeOther)
 		return
 	}
-	p.Title = "Sign in — Lamazon"
+	p.Title = "Sign in — Uniminute"
 	d := pages.LoginPageData{Step: "email", Next: next}
 
 	// The backdrop is what the shop actually sells, never stand-ins.
@@ -658,7 +658,7 @@ func (s *Site) handleRegisterPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleAccountPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Account — Lamazon"
+	p.Title = "Account — Uniminute"
 	renderOK(w, r, pages.AccountPage(p))
 }
 
@@ -667,7 +667,7 @@ func (s *Site) handleAddressesPage(w http.ResponseWriter, r *http.Request) {
 	if !requireAuth(w, r, p) {
 		return
 	}
-	p.Title = "Delivery addresses — Lamazon"
+	p.Title = "Delivery addresses — Uniminute"
 	addrs, _ := s.backend.Addresses(r.Context(), p.AccessToken)
 	renderOK(w, r, pages.AddressesPage(pages.AddressesPageData{Page: p, Addresses: addrs}))
 }
@@ -692,14 +692,14 @@ func (s *Site) handleAddressForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	p.Title = tpl.When(d.Address == nil, "Add delivery address", "Edit delivery address") + " — Lamazon"
+	p.Title = tpl.When(d.Address == nil, "Add delivery address", "Edit delivery address") + " — Uniminute"
 	d.Page = p
 	renderOK(w, r, pages.AddressForm(d))
 }
 
 func (s *Site) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Settings — Lamazon"
+	p.Title = "Settings — Uniminute"
 	// The app's own starting values, shown (disabled) until the real ones load.
 	d := pages.SettingsPageData{Page: p, Preferences: backend.Preferences{Push: true, OrderUpdates: true}}
 	if p.User == nil {
@@ -714,21 +714,21 @@ func (s *Site) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleOrdersPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "My Orders — Lamazon"
+	p.Title = "My Orders — Uniminute"
 	if !requireAuth(w, r, p) {
 		return
 	}
 	orders, err := s.backend.MyOrders(r.Context(), p.AccessToken)
 	d := pages.OrdersPageData{Page: p, Orders: orders}
 	if err != nil {
-		d.Error = "Could not reach Lamazon — try again in a moment."
+		d.Error = "Could not reach Uniminute — try again in a moment."
 	}
 	renderOK(w, r, pages.OrdersPage(d))
 }
 
 func (s *Site) handlePoliciesPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Policies — Lamazon"
+	p.Title = "Policies — Uniminute"
 	policies, _ := s.backend.Policies(r.Context())
 	renderOK(w, r, pages.PoliciesPage(pages.PoliciesPageData{Page: p, Policies: policies}))
 }
@@ -741,13 +741,13 @@ func (s *Site) handlePolicyPage(w http.ResponseWriter, r *http.Request) {
 	// for them rather than half-written terms, exactly as the app reads it.
 	for _, pol := range policies {
 		if pol.Slug == slug {
-			p.Title = pol.Title + " — Lamazon"
+			p.Title = pol.Title + " — Uniminute"
 			renderOK(w, r, pages.PolicyPage(pages.PolicyPageData{Page: p, Policy: pol}))
 			return
 		}
 	}
 	// ponytail: the app bundles offline copies; the website shows its stand-in.
-	p.Title = "Policy — Lamazon"
+	p.Title = "Policy — Uniminute"
 	renderOK(w, r, pages.PolicyPage(pages.PolicyPageData{Page: p, Policy: backend.Policy{
 		Slug: slug, Title: "Policy", Body: "This policy has not been written yet.",
 	}}))
@@ -756,7 +756,7 @@ func (s *Site) handlePolicyPage(w http.ResponseWriter, r *http.Request) {
 // handleSavedPage renders wishlist products — the "Saved" tab in the bottom nav.
 func (s *Site) handleSavedPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Wishlist — Lamazon"
+	p.Title = "Wishlist — Uniminute"
 	// One catalogue read, filtered, in the catalogue's order — not one
 	// request per saved id.
 	all, _ := s.backend.Products(r.Context(), "", "", "")
@@ -771,7 +771,7 @@ func (s *Site) handleSavedPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Page not found — Lamazon"
+	p.Title = "Page not found — Uniminute"
 	render(w, r, http.StatusNotFound, pages.NotFound(p))
 }
 
@@ -1187,7 +1187,7 @@ func apiMessage(err error) string {
 	return offlineMessage
 }
 
-const offlineMessage = "Could not reach Lamazon. Check your connection and try again."
+const offlineMessage = "Could not reach Uniminute. Check your connection and try again."
 
 // statusMessage stands in when the backend answers without a sentence of its
 // own; a raw body can be an HTML error page, never something to show.
@@ -1202,7 +1202,7 @@ func statusMessage(status int) string {
 	case status == http.StatusTooManyRequests:
 		return "Too many attempts. Wait a minute, then try again."
 	case status >= 500:
-		return "Lamazon had a problem on its side. Try again in a moment."
+		return "Uniminute had a problem on its side. Try again in a moment."
 	}
 	return "That didn't go through. Check the details and try again."
 }
@@ -1249,7 +1249,7 @@ func (s *Site) adminStaff(w http.ResponseWriter, r *http.Request) (shop.Staff, b
 	staff, ok := shop.ReadStaff(r, "admin")
 	if !ok {
 		p := s.buildPage(r)
-		p.Title = "Lamazon admin"
+		p.Title = "Uniminute admin"
 		renderOK(w, r, pages.AdminLogin(pages.AdminLoginData{Page: p}))
 	}
 	return staff, ok
@@ -1271,7 +1271,7 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 	ctx, token := r.Context(), staff.Token
 	q := r.URL.Query()
 	p := s.buildPage(r)
-	p.Title = "Admin — Lamazon"
+	p.Title = "Admin — Uniminute"
 	d := pages.AdminData{Page: p, Staff: staff, Tab: q.Get("tab"), Q: strings.TrimSpace(q.Get("q")),
 		Stage: q.Get("stage"), From: q.Get("from"), To: q.Get("to"), OpenDept: q.Get("dept")}
 	d.PageNum, _ = strconv.Atoi(q.Get("page"))
@@ -1349,7 +1349,7 @@ func (s *Site) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 	token, user, err := s.backend.AdminLogin(r.Context(), username, r.FormValue("password"))
 	if err != nil {
 		p := s.buildPage(r)
-		p.Title = "Lamazon admin"
+		p.Title = "Uniminute admin"
 		renderOK(w, r, pages.AdminLogin(pages.AdminLoginData{Page: p, Username: username, Error: apiMessage(err)}))
 		return
 	}
@@ -1433,7 +1433,7 @@ func (s *Site) handleAdminBanner(w http.ResponseWriter, r *http.Request) {
 			d.Departments = append(d.Departments, d.Campaign.Department)
 		}
 	}
-	d.Page.Title = tpl.When(d.Campaign == nil, "Create banner", "Edit banner") + " — Lamazon"
+	d.Page.Title = tpl.When(d.Campaign == nil, "Create banner", "Edit banner") + " — Uniminute"
 	renderOK(w, r, pages.BannerEditor(d))
 }
 
@@ -1445,7 +1445,7 @@ func (s *Site) handleAdminPolicy(w http.ResponseWriter, r *http.Request) {
 	for _, pol := range policies {
 		if pol.Slug == r.PathValue("slug") {
 			p := s.buildPage(r)
-			p.Title = pol.Title + " — Lamazon"
+			p.Title = pol.Title + " — Uniminute"
 			renderOK(w, r, pages.PolicyEditor(pages.PolicyEditorData{Page: p, Policy: pol}))
 			return
 		}
@@ -1475,14 +1475,14 @@ func (s *Site) handleAdminStorePhotos(w http.ResponseWriter, r *http.Request) {
 		d.Error = apiMessage(err)
 	}
 	d.Items = items.Items
-	d.Page.Title = d.StoreName + " — Lamazon"
+	d.Page.Title = d.StoreName + " — Uniminute"
 	renderOK(w, r, pages.StorePhotos(d))
 }
 
 // handleDelivery is DeliveryScreen: the rider's sign-in, or their panel.
 func (s *Site) handleDelivery(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Lamazon delivery"
+	p.Title = "Uniminute delivery"
 	rider, ok := shop.ReadStaff(r, "rider")
 	if !ok {
 		renderOK(w, r, pages.RiderLogin(pages.RiderLoginData{Page: p}))
@@ -1516,7 +1516,7 @@ func (s *Site) handleDeliveryLogin(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.backend.RiderLogin(r.Context(), phone, strings.TrimSpace(r.FormValue("pin")))
 	if err != nil {
 		p := s.buildPage(r)
-		p.Title = "Lamazon delivery"
+		p.Title = "Uniminute delivery"
 		renderOK(w, r, pages.RiderLogin(pages.RiderLoginData{Page: p, Phone: phone, Error: apiMessage(err)}))
 		return
 	}
@@ -1575,14 +1575,14 @@ func (s *Site) handleSellerDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		p.Title = "Your store — Lamazon"
+		p.Title = "Your store — Uniminute"
 		render(w, r, http.StatusBadGateway, pages.NotFound(p))
 		return
 	}
 	d := pages.SellerDashboardData{Page: p, Store: *store, Pane: r.URL.Query().Get("pane")}
 	d.Items, _ = s.backend.SellerItems(ctx, p.AccessToken)
 	d.Orders, _ = s.backend.SellerOrders(ctx, p.AccessToken)
-	d.Page.Title = "Your store — Lamazon"
+	d.Page.Title = "Your store — Uniminute"
 	renderOK(w, r, pages.SellerDashboard(d))
 }
 
@@ -1602,7 +1602,7 @@ func (s *Site) handleSellerStoreForm(w http.ResponseWriter, r *http.Request) {
 			d.Departments = append(d.Departments, c.Name)
 		}
 	}
-	d.Page.Title = tpl.When(d.Store == nil, "Open your store", "Edit store") + " — Lamazon"
+	d.Page.Title = tpl.When(d.Store == nil, "Open your store", "Edit store") + " — Uniminute"
 	renderOK(w, r, pages.SellerStoreForm(d))
 }
 
@@ -1643,7 +1643,7 @@ func (s *Site) handleSellerProductForm(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Sections = sellableSections(cats, store.Categories)
 	d.Groups, _ = s.backend.CompareGroups(ctx)
-	d.Page.Title = tpl.When(d.Item == nil, "Add product", "Edit product") + " — Lamazon"
+	d.Page.Title = tpl.When(d.Item == nil, "Add product", "Edit product") + " — Uniminute"
 	renderOK(w, r, pages.SellerProductForm(d))
 }
 
@@ -1699,7 +1699,7 @@ func (s *Site) handleCompare(w http.ResponseWriter, r *http.Request) {
 		s.handleNotFound(w, r)
 		return
 	}
-	p.Title = "Compare Prices — Lamazon"
+	p.Title = "Compare Prices — Uniminute"
 	d := pages.CompareData{Page: p, Product: prod}
 	if prod.CompareGroup != "" {
 		d.Rivals, _ = s.backend.Compare(r.Context(), prod.CompareGroup)
@@ -1717,7 +1717,7 @@ func (s *Site) handleOrderDetail(w http.ResponseWriter, r *http.Request) {
 	orders, _ := s.backend.MyOrders(r.Context(), p.AccessToken)
 	for _, o := range orders {
 		if o.ID == id {
-			p.Title = "Order " + shop.OrderRef(id) + " — Lamazon"
+			p.Title = "Order " + shop.OrderRef(id) + " — Uniminute"
 			renderOK(w, r, pages.OrderDetail(pages.OrderDetailData{Page: p, Order: o}))
 			return
 		}
@@ -1727,14 +1727,14 @@ func (s *Site) handleOrderDetail(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleHelpPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Help & Support — Lamazon"
+	p.Title = "Help & Support — Uniminute"
 	policies, _ := s.backend.Policies(r.Context())
 	renderOK(w, r, pages.HelpPage(p, policies))
 }
 
 func (s *Site) handleNotificationsPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "Notifications — Lamazon"
+	p.Title = "Notifications — Uniminute"
 	renderOK(w, r, pages.NotificationsPage(p))
 }
 
@@ -1744,7 +1744,7 @@ func (s *Site) handleProfileSetupPage(w http.ResponseWriter, r *http.Request) {
 	if !requireAuth(w, r, p) {
 		return
 	}
-	p.Title = "Your details — Lamazon"
+	p.Title = "Your details — Uniminute"
 	d := pages.ProfileSetupData{Page: p, Next: localPath(r.URL.Query().Get(shop.NextParam))}
 	if cities, _, err := s.backend.Locations(r.Context()); err == nil && len(cities) > 0 {
 		d.City = cities[0]

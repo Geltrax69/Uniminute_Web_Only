@@ -60,3 +60,4 @@ backend/backend
 
 # A dump of real user data — emails, phones, addresses, session hashes.
 old_Database.sql
+backups/

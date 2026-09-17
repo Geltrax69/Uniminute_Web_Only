@@ -95,7 +95,7 @@ func cartPage(d CartPageData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue("setTimeout(() => window.dispatchEvent(new CustomEvent('lw:toast', {detail: {message: " + jsonArg(trimmedMessage(d.Trimmed)) + "}})), 0)")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/cart.templ`, Line: 31, Col: 150}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/cart.templ`, Line: 31, Col: 150}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {

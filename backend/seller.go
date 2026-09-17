@@ -71,7 +71,7 @@ func (a *API) handleCreateStore(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Status == "pending" {
 		a.notify(r.Context(), in.Owner, in.Name+" has been sent for review",
-			"Thanks for opening "+in.Name+" on Lamazon. An admin is looking at it "+
+			"Thanks for opening "+in.Name+" on Uniminute. An admin is looking at it "+
 				"now — you can add stock as soon as it is approved.")
 	}
 	writeJSON(w, http.StatusCreated, in)

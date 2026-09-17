@@ -1,7 +1,7 @@
 package pages
 
 // login.templ — LoginScreen: product photographs drifting behind (pausable,
-// still under reduced motion), "Browse the shop" top right, the Lamazon mark
+// still under reduced motion), "Browse the shop" top right, the Uniminute mark
 // and tagline, and one card that asks for email, then a code or a password.
 // Each step posts and the server answers with the next card.
 
@@ -37,7 +37,7 @@ templ loginPage(d LoginPageData) {
 				@ui.ActionButton("Browse the shop", false, templ.Attributes{"href": d.Next})
 			</div>
 			<div class="flex-1"></div>
-			<img src="/static/images/logo.png" alt="Lamazon" class="mx-auto h-24 w-24 rounded-featured object-cover"/>
+			<img src="/static/images/logo.png" alt="Uniminute" class="mx-auto h-24 w-24 rounded-featured object-cover"/>
 			<p class="mt-[18px] text-center text-[26px] font-semibold leading-[31px] tracking-[-0.9px] text-text">Local choice. Global experience.</p>
 			<div class="pointer-events-auto mt-[22px] px-5">
 				<div class="mx-auto max-w-[440px]">

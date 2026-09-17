@@ -1,4 +1,4 @@
-// Lamazon storefront — Alpine stores + HTMX hooks.
+// Uniminute storefront — Alpine stores + HTMX hooks.
 // Loaded with defer before alpine/cdn.min.js so alpine:init fires first.
 
 document.addEventListener('alpine:init', () => {
@@ -813,7 +813,7 @@ window.sellerCall = async (method, path, body) => {
   try {
     res = await fetch(path, opts);
   } catch {
-    throw new Error('Could not reach Lamazon. Check your connection and try again.');
+    throw new Error('Could not reach Uniminute. Check your connection and try again.');
   }
   if (res.ok) return res.status === 204 ? null : res.json().catch(() => null);
   // Same fallbacks as statusMessage in handlers.go.
@@ -822,7 +822,7 @@ window.sellerCall = async (method, path, body) => {
     : res.status === 404 ? 'That is no longer here. Refresh the page and try again.'
     : res.status === 413 ? 'That file is too large. Choose a smaller one.'
     : res.status === 429 ? 'Too many attempts. Wait a minute, then try again.'
-    : res.status >= 500 ? 'Lamazon had a problem on its side. Try again in a moment.'
+    : res.status >= 500 ? 'Uniminute had a problem on its side. Try again in a moment.'
     : "That didn't go through. Check the details and try again.";
   try { message = (await res.json()).error || message; } catch {}
   throw new Error(message);

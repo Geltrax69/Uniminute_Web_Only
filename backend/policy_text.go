@@ -1,7 +1,7 @@
 package main
 
 // shippedPolicies is the text a fresh database starts with. It is a draft, not
-// legal advice: it says what Lamazon actually does today, and it is written to
+// legal advice: it says what Uniminute actually does today, and it is written to
 // be replaced from the admin panel.
 //
 // It contains no bracketed blanks, because a blank anywhere in a document
@@ -28,7 +28,7 @@ func shippedPolicies() []Policy {
 }
 
 const termsText = `## Who we are
-Lamazon is a campus marketplace, operated under the name Lamazon. Shops on
+Uniminute is a campus marketplace, operated under the name Uniminute. Shops on
 campus list what they sell, students and staff order it, and a delivery partner
 brings it across. We run the platform; we do not make or own the goods.
 
@@ -56,7 +56,7 @@ delivery is charged per order and the amount is shown before you place it. We
 may cancel an order that was listed at an incorrect price, and anything already
 paid is refunded in full.
 
-## Selling on Lamazon
+## Selling on Uniminute
 Anyone on campus can open a store, and an admin reviews it before shoppers can
 see it. You are responsible for what you list: that it is yours to sell, that
 it is described honestly, and that it is safe to eat, use or wear. We can take
@@ -73,7 +73,7 @@ applicable Indian law, including the Consumer Protection Act, 2019.
 ## Changes
 We may update these terms. The latest version is always the one in the app, and
 the date it last changed is shown at the top of this page. If a change matters
-to how you use Lamazon we will say so before it takes effect.`
+to how you use Uniminute we will say so before it takes effect.`
 
 const privacyText = `## What we collect
 Your email address, and the name and mobile number you give us so an order can
@@ -109,7 +109,7 @@ them to keep may remain with them.
 
 ## Who else sees it
 The shop you ordered from, the rider delivering it, and the services we use to
-run Lamazon:
+run Uniminute:
 
 - Resend, to send sign-in codes and order email.
 - Cloudinary, to store and serve store and product photographs.
@@ -199,7 +199,7 @@ const contactText = `If you have questions, complaints, refund requests, or othe
 touch. We would rather hear about a problem than have you work around it.
 
 ## How to reach us
-- Reply to any Lamazon email you have had from us — a sign-in code or an order
+- Reply to any Uniminute email you have had from us — a sign-in code or an order
   update. Replies reach the same inbox we answer from.
 - Use Help in the app, which opens this page and the rest of our policies.
 

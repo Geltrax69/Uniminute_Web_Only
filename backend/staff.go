@@ -547,7 +547,7 @@ func (a *API) reviewStore(w http.ResponseWriter, r *http.Request, status, reason
 
 	if status == "approved" {
 		a.notify(r.Context(), owner, name+" is approved",
-			"Your store is live on Lamazon. Open the seller panel to add stock — "+
+			"Your store is live on Uniminute. Open the seller panel to add stock — "+
 				"shoppers can see it now.")
 	} else {
 		a.notify(r.Context(), owner, name+" was not approved",

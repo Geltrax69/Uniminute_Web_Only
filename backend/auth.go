@@ -59,8 +59,8 @@ func mailerFromEnv() *Mailer {
 }
 
 func (m *Mailer) sendCode(ctx context.Context, to, code string) error {
-	return m.send(ctx, to, code+" is your Lamazon sign-in code",
-		"Your Lamazon sign-in code is "+code+
+	return m.send(ctx, to, code+" is your Uniminute sign-in code",
+		"Your Uniminute sign-in code is "+code+
 			"\n\nIt expires in 10 minutes. If you did not ask to sign in, ignore this email.",
 		codeHTML(code))
 }

@@ -165,7 +165,7 @@ func (a *API) handleStoreHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.render(w, "home.html", storePage{
-		Title:       "Lamazon — local shops, delivered on campus",
+		Title:       "Uniminute — local shops, delivered on campus",
 		Description: "Order from shops around campus. Real stock, real prices, cash on delivery.",
 		Products:    items,
 		Offers:      savingsOn(items),
@@ -204,9 +204,9 @@ func (a *API) handleStoreSearch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	title := "Search — Lamazon"
+	title := "Search — Uniminute"
 	if q != "" {
-		title = q + " — Lamazon"
+		title = q + " — Uniminute"
 	}
 	a.render(w, "search.html", storePage{
 		Title:       title,
@@ -226,7 +226,7 @@ func (a *API) handleStoreSearch(w http.ResponseWriter, r *http.Request) {
 // button.
 func (a *API) handleStoreLogin(w http.ResponseWriter, r *http.Request) {
 	a.render(w, "login.html", storePage{
-		Title:       "Log in — Lamazon",
+		Title:       "Log in — Uniminute",
 		Description: "Sign in to order from shops around campus.",
 		Canonical:   "/login",
 		Bare:        true,

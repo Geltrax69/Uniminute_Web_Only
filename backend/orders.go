@@ -64,7 +64,7 @@ func (a *API) handlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 		in.Units = 1
 	}
 	if in.ExpectedTotal == nil {
-		writeError(w, http.StatusConflict, "please update Lamazon or reload the website before ordering")
+		writeError(w, http.StatusConflict, "please update Uniminute or reload the website before ordering")
 		return
 	}
 	a.placeBasket(w, r, []checkoutLine{{in.ItemID, in.Units}}, in.AddressID, in.ExpectedTotal, true, "")
@@ -235,7 +235,7 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 	}
 	for _, o := range out {
 		a.notifyOrder(r.Context(), o.StoreOwner, fmt.Sprintf("New order: %d × %s", o.Units, o.ItemTitle),
-			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + delivery ₹%.2f = total ₹%.2f\n\nOpen Lamazon to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount))
+			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + delivery ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount))
 	}
 	if single {
 		writeJSON(w, 201, out[0])

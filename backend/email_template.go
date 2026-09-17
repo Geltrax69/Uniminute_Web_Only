@@ -11,7 +11,7 @@ import (
 // allows them — so nothing important is ever only in a picture.
 const logoURL = "https://res.cloudinary.com/dq3da5bkb/image/upload/v1785489094/Lamazon/brand/logo.png"
 
-// emailHTML wraps content in the shell every Lamazon email shares.
+// emailHTML wraps content in the shell every Uniminute email shares.
 //
 // Written with tables and inline styles on purpose: Gmail strips <style>
 // blocks, Outlook ignores flexbox, and a plain <div> layout collapses in
@@ -27,7 +27,7 @@ func emailHTML(heading, body, footer string) string {
                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
                     Roboto,Helvetica,Arial,sans-serif;">
         <tr><td style="padding:28px 28px 0 28px;">
-          <img src="%s" width="44" height="44" alt="Lamazon"
+          <img src="%s" width="44" height="44" alt="Uniminute"
                style="display:block;border-radius:10px;">
         </td></tr>
         <tr><td style="padding:18px 28px 0 28px;">
@@ -44,7 +44,7 @@ func emailHTML(heading, body, footer string) string {
       <div style="max-width:480px;padding:14px 6px;font-size:11px;
                   color:#A5A5A0;font-family:-apple-system,BlinkMacSystemFont,
                   'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        Lamazon · Lovely Professional University
+        Uniminute · Lovely Professional University
       </div>
     </td></tr>
   </table>
@@ -76,5 +76,5 @@ func notifyHTML(title, text string) string {
 		}
 		fmt.Fprintf(&b, `<p style="margin:0 0 10px 0;">%s</p>`, html.EscapeString(line))
 	}
-	return emailHTML(title, b.String(), "You get this because you sell on Lamazon.")
+	return emailHTML(title, b.String(), "You get this because you sell on Uniminute.")
 }

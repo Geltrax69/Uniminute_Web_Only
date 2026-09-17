@@ -1,6 +1,8 @@
-package main
+package site
 
 import (
+	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -12,28 +14,29 @@ import (
 	"lamazon/website/shop"
 )
 
-// The Lamazon storefront website: Go + templ + HTMX + Alpine + Tailwind.
+// The Uniminute storefront website: Go + templ + HTMX + Alpine + Tailwind.
 //
-// It renders every page server-side and calls the existing backend in
-// ../backend for all data. The only state this side owns is what the Flutter
-// app keeps on the device (cart, wishlist, session tokens) — in cookies.
+// It renders every page server-side and calls the backend API for all data.
+// The only state this side owns (cart, wishlist, session tokens) is in cookies.
 
-func main() {
-	apiBase := os.Getenv("API_BASE")
-	if apiBase == "" {
-		apiBase = "http://localhost:8080"
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8100"
-	}
+const defaultAPIBase = "https://api.geltrax.engineer"
 
-	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
-	log.Printf("Lamazon website on :%s, calling backend at %s", port, apiBase)
-	if err := http.ListenAndServe(":"+port, site.routes()); err != nil {
-		log.Fatal(err)
+// APIBase is the backend this site calls: $API_BASE, else production.
+func APIBase() string {
+	if v := os.Getenv("API_BASE"); v != "" {
+		return strings.TrimRight(v, "/")
 	}
+	return defaultAPIBase
 }
+
+// New is the whole site as one handler, shared by cmd/server and the Vercel function.
+func New(apiBase string) http.Handler {
+	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
+	return site.routes()
+}
+
+//go:embed static
+var staticFiles embed.FS
 
 type Site struct {
 	backend *backend.Backend
@@ -127,10 +130,14 @@ func (s *Site) routes() http.Handler {
 }
 
 func staticFileServer() http.Handler {
-	fs := http.FileServer(http.Dir("static"))
+	sub, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		log.Fatal(err)
+	}
+	files := http.FileServer(http.FS(sub))
 	// Fonts, CSS, JS and vendored libraries never change under a running
 	// binary; a month of immutability is safe and quiet.
-	return cache(fs, "public, max-age=2592000")
+	return cache(files,"public, max-age=2592000")
 }
 
 func cache(next http.Handler, value string) http.Handler {

@@ -76,7 +76,7 @@ func main() {
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Printf("Lamazon API on :%s, Postgres ready", port)
+	log.Printf("Uniminute API on :%s, Postgres ready", port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
