@@ -1070,3 +1070,12 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 });
+
+// Back/forward cache: htmx keeps a form's busy state while HX-Redirect leaves
+// the page, so the snapshot the browser restores on Back is faded and
+// unclickable. Clear every in-flight look when a page comes back that way.
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  document.querySelectorAll('.htmx-request').forEach((el) => el.classList.remove('htmx-request'));
+  if (window.lwProcessing) lwProcessing('');
+});
