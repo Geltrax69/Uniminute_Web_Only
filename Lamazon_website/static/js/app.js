@@ -215,7 +215,7 @@ document.addEventListener('alpine:init', () => {
       if (this.file) body.append('file', this.file);
       try {
         await sellerCall('POST', '/api/seller/store', body);
-        location.assign('/seller');
+        lwLeave('/seller');
       } catch (err) {
         lwToast(err.message, 'error');
         this.saving = false;
@@ -521,7 +521,7 @@ document.addEventListener('alpine:init', () => {
           category: this.category, department: this.department, imageUrl: this.imageUrl.trim(),
           colour: this.colour.trim(), enabled: this.enabled, position: Number(this.position),
         });
-        location.assign('/admin?tab=banners');
+        lwLeave('/admin?tab=banners');
       } catch (err) {
         this.error = `Could not save banner. ${err.message}`;
         this.busy = false;
@@ -557,7 +557,7 @@ document.addEventListener('alpine:init', () => {
       this.busy = true; this.error = '';
       try {
         await sellerCall('PUT', `/staff-api/admin/policies/${encodeURIComponent(this.slug)}`, { title: this.title.trim(), body: this.body });
-        location.assign('/admin?tab=policies');
+        lwLeave('/admin?tab=policies');
       } catch (err) {
         this.error = err.message;
         this.busy = false;
@@ -684,7 +684,7 @@ document.addEventListener('alpine:init', () => {
           this.shots.forEach((s) => s.file && body.append('file', s.file));
           await sellerCall('POST', '/api/seller/items', body);
         }
-        location.assign('/seller?pane=inventory');
+        lwLeave('/seller?pane=inventory');
       } catch (err) {
         lwToast(err.message, 'error');
         this.saving = false;
@@ -1089,23 +1089,28 @@ window.addEventListener('pageshow', (e) => {
   if (window.lwProcessing) lwProcessing('');
 });
 
-// After a save, the server answers HX-Redirect. htmx would push that page on
-// top of the form (List → Edit → List), so Back returned to the form. Instead:
-// going back to the page the form came from steps back to it (and refreshes
-// it), anywhere else replaces the form, so it never stays in history.
-document.addEventListener('htmx:beforeOnLoad', (e) => {
-  const target = e.detail.xhr.getResponseHeader('HX-Redirect');
-  if (!target) return;
-  e.preventDefault();
+// Leaving a form after a save. A plain navigation would stack the page on top
+// of the form (List → Edit → List), so Back returned to the form. Instead:
+// if the form was opened from that page, step back to it (and refresh it);
+// otherwise replace the form, so it never stays in history.
+window.lwLeave = (target) => {
   let from = null;
   try { from = new URL(document.referrer); } catch {}
   const to = new URL(target, location.href);
-  if (from && from.origin === location.origin && from.pathname + from.search === to.pathname + to.search && history.length > 1) {
-    try { sessionStorage.setItem('lw:refresh-on-back', to.pathname + to.search); } catch {}
+  if (from && from.origin === location.origin && from.pathname === to.pathname && history.length > 1) {
+    try { sessionStorage.setItem('lw:refresh-on-back', to.pathname); } catch {}
     history.back();
   } else {
     location.replace(to.href);
   }
+};
+
+// Server-side saves answer HX-Redirect; send those through lwLeave too.
+document.addEventListener('htmx:beforeOnLoad', (e) => {
+  const target = e.detail.xhr.getResponseHeader('HX-Redirect');
+  if (!target) return;
+  e.preventDefault();
+  lwLeave(target);
 });
 
 // The page stepped back to may come from the back/forward cache: reload it so
@@ -1113,7 +1118,7 @@ document.addEventListener('htmx:beforeOnLoad', (e) => {
 window.addEventListener('pageshow', (e) => {
   let want = null;
   try { want = sessionStorage.getItem('lw:refresh-on-back'); sessionStorage.removeItem('lw:refresh-on-back'); } catch {}
-  if (want === location.pathname + location.search && e.persisted) location.reload();
+  if (want === location.pathname && e.persisted) location.reload();
 });
 
 // "₹ 99,900" and "99900" are the same price.
