@@ -631,9 +631,18 @@ func (a *API) handleAddRider(w http.ResponseWriter, r *http.Request) {
 // POST /api/admin/riders/{phone}/pin — a forgotten PIN, or one that has been
 // seen by too many people. The old one stops working immediately, and so does
 // every panel already signed in on it.
+// The admin may choose the PIN (six digits); with none, one is drawn.
 func (a *API) handleResetRiderPIN(w http.ResponseWriter, r *http.Request) {
 	phone := normalisePhone(r.PathValue("phone"))
-	pin, hash, err := newPIN()
+	var in struct {
+		PIN string `json:"pin"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&in)
+	pin, hash, err := chosenPIN(strings.TrimSpace(in.PIN))
+	if errors.Is(err, errBadPIN) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -737,6 +746,20 @@ func (a *API) handleChangeRiderNumber(w http.ResponseWriter, r *http.Request) {
 }
 
 // newPIN is the four digits and the hash that outlives them.
+var errBadPIN = errors.New("a PIN is exactly six digits")
+
+// chosenPIN hashes the PIN the admin typed, or draws one when they typed none.
+func chosenPIN(pin string) (string, string, error) {
+	if pin == "" {
+		return newPIN()
+	}
+	if len(pin) != 6 || strings.Trim(pin, "0123456789") != "" {
+		return "", "", errBadPIN
+	}
+	hash, err := hashPassword(pin)
+	return pin, hash, err
+}
+
 func newPIN() (pin, hash string, err error) {
 	pin, err = sixDigits()
 	if err != nil {

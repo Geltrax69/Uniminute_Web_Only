@@ -381,11 +381,15 @@ document.addEventListener('alpine:init', () => {
       });
     },
     issuePin(phone) {
-      this.confirm(`New PIN for ${phone}?`, 'Their old PIN stops working straight away, and they are signed out of the delivery panel until they use the new one.',
-        'Issue PIN', async () => {
-          const out = await this.call('POST', `/riders/${phone}/pin`);
+      this.open({
+        kind: 'newpin', title: `New PIN for ${phone}`, value: '', action: 'Save PIN',
+        ready: () => this.dlg.value === '' || /^\d{6}$/.test(this.dlg.value),
+        run: async () => {
+          const pin = this.dlg.value.trim();
+          const out = await this.call('POST', `/riders/${phone}/pin`, pin ? { pin } : {});
           if (out !== null) this.showPin(out.pin || '', phone);
-        });
+        },
+      });
     },
     openNumber(phone) {
       this.open({

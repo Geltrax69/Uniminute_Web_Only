@@ -3948,7 +3948,7 @@ func riderRow(r map[string]any) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 297, "</div><div class=\"relative\" x-data=\"{ open: false }\" x-on:click.outside=\"open = false\" x-on:keydown.escape=\"open = false\"><button type=\"button\" x-on:click=\"open = !open\" x-bind:aria-expanded=\"open\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-strong/[.06]\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 297, "</div><div class=\"relative\" x-data=\"{ menu: false }\" x-on:click.outside=\"menu = false\" x-on:keydown.escape=\"menu = false\"><button type=\"button\" x-on:click=\"menu = !menu\" x-bind:aria-expanded=\"menu\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-strong/[.06]\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3969,12 +3969,12 @@ func riderRow(r map[string]any) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 299, "</button><div x-show=\"open\" x-cloak x-transition.opacity.duration.120ms class=\"absolute right-0 z-30 mt-1 w-48 overflow-hidden rounded bg-surface py-2 shadow-raised\" role=\"menu\"><button type=\"button\" role=\"menuitem\" x-on:click=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 299, "</button><div x-show=\"menu\" x-cloak x-transition.opacity.duration.120ms class=\"absolute right-0 z-30 mt-1 w-48 overflow-hidden rounded bg-surface py-2 shadow-raised\" role=\"menu\"><button type=\"button\" role=\"menuitem\" x-on:click=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var187 string
-		templ_7745c5c3_Var187, templ_7745c5c3_Err = templ.ResolveAttributeValue("open = false; issuePin(" + jsonArg(phone) + ")")
+		templ_7745c5c3_Var187, templ_7745c5c3_Err = templ.ResolveAttributeValue("menu = false; issuePin(" + jsonArg(phone) + ")")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 744, Col: 103}
 		}
@@ -3987,7 +3987,7 @@ func riderRow(r map[string]any) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var188 string
-		templ_7745c5c3_Var188, templ_7745c5c3_Err = templ.ResolveAttributeValue("open = false; openNumber(" + jsonArg(phone) + ")")
+		templ_7745c5c3_Var188, templ_7745c5c3_Err = templ.ResolveAttributeValue("menu = false; openNumber(" + jsonArg(phone) + ")")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 745, Col: 105}
 		}
@@ -4000,7 +4000,7 @@ func riderRow(r map[string]any) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var189 string
-		templ_7745c5c3_Var189, templ_7745c5c3_Err = templ.ResolveAttributeValue("open = false; switchRider(" + jsonArg(phone) + ", " + tpl.When(active, "true", "false") + ")")
+		templ_7745c5c3_Var189, templ_7745c5c3_Err = templ.ResolveAttributeValue("menu = false; switchRider(" + jsonArg(phone) + ", " + tpl.When(active, "true", "false") + ")")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 746, Col: 149}
 		}
@@ -4026,7 +4026,7 @@ func riderRow(r map[string]any) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var191 string
-		templ_7745c5c3_Var191, templ_7745c5c3_Err = templ.ResolveAttributeValue("open = false; deleteRider(" + jsonArg(phone) + ")")
+		templ_7745c5c3_Var191, templ_7745c5c3_Err = templ.ResolveAttributeValue("menu = false; deleteRider(" + jsonArg(phone) + ")")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 747, Col: 106}
 		}
@@ -4354,7 +4354,7 @@ func adminDialog() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 328, "<span class=\"ml-2\">Add a field</span></button></div></template><template x-if=\"dlg.kind === 'rider'\"><div><label class=\"mt-4 block text-[12px] text-muted\">Mobile number</label> <input type=\"tel\" x-model=\"dlg.value\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"> <label class=\"mt-3 block text-[12px] text-muted\">Name</label> <input type=\"text\" x-model=\"dlg.name\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"></div></template><template x-if=\"dlg.kind === 'number'\"><div><p class=\"mt-4 text-[13px] text-muted\">Their deliveries, their count and anything in their hand right now come with them. They get a new PIN.</p><label class=\"mt-3 block text-[12px] text-muted\">New mobile number</label> <input type=\"tel\" x-model=\"dlg.value\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"></div></template><template x-if=\"dlg.kind === 'pin'\"><p class=\"mt-4 whitespace-pre-line text-[15px] leading-[1.5] text-text\" x-text=\"dlg.body\"></p></template><div class=\"mt-6 flex flex-wrap justify-end gap-2\"><button type=\"button\" x-show=\"dlg.cancel\" x-on:click=\"$refs.dlg.close()\" class=\"min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]\" x-text=\"dlg.cancel\"></button> <button type=\"button\" x-show=\"dlg.action\" x-on:click=\"dlg.run()\" x-bind:disabled=\"!!(dlg.busy || (dlg.ready && !dlg.ready()))\" class=\"min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40\" x-bind:class=\"dlg.danger ? 'bg-danger' : 'bg-forest'\" x-text=\"dlg.action\"></button></div></dialog>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 328, "<span class=\"ml-2\">Add a field</span></button></div></template><template x-if=\"dlg.kind === 'rider'\"><div><label class=\"mt-4 block text-[12px] text-muted\">Mobile number</label> <input type=\"tel\" x-model=\"dlg.value\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"> <label class=\"mt-3 block text-[12px] text-muted\">Name</label> <input type=\"text\" x-model=\"dlg.name\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"></div></template><template x-if=\"dlg.kind === 'number'\"><div><p class=\"mt-4 text-[13px] text-muted\">Their deliveries, their count and anything in their hand right now come with them. They get a new PIN.</p><label class=\"mt-3 block text-[12px] text-muted\">New mobile number</label> <input type=\"tel\" x-model=\"dlg.value\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[14.5px] text-text outline-none placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"></div></template><template x-if=\"dlg.kind === 'newpin'\"><div><p class=\"mt-4 text-[13px] text-muted\">Their old PIN stops working straight away, and they are signed out of the delivery panel until they use the new one.</p><label class=\"mt-3 block text-[12px] text-muted\" for=\"admin-new-pin\">New PIN</label> <input id=\"admin-new-pin\" type=\"text\" inputmode=\"numeric\" autocomplete=\"off\" maxlength=\"6\" x-model=\"dlg.value\" placeholder=\"6 digits, or leave empty for a random one\" class=\"h-12 w-full rounded-featured bg-canvas px-5 text-[16px] tracking-[0.3em] text-text outline-none placeholder:tracking-normal placeholder:text-[14px] placeholder:text-muted focus:ring-2 focus:ring-inset focus:ring-strong\"><p class=\"mt-1.5 text-[12px] text-danger\" x-show=\"dlg.value && !/^\\d{6}$/.test(dlg.value)\">A PIN is exactly six digits.</p></div></template><template x-if=\"dlg.kind === 'pin'\"><p class=\"mt-4 whitespace-pre-line text-[15px] leading-[1.5] text-text\" x-text=\"dlg.body\"></p></template><div class=\"mt-6 flex flex-wrap justify-end gap-2\"><button type=\"button\" x-show=\"dlg.cancel\" x-on:click=\"$refs.dlg.close()\" class=\"min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]\" x-text=\"dlg.cancel\"></button> <button type=\"button\" x-show=\"dlg.action\" x-on:click=\"dlg.run()\" x-bind:disabled=\"!!(dlg.busy || (dlg.ready && !dlg.ready()))\" class=\"min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40\" x-bind:class=\"dlg.danger ? 'bg-danger' : 'bg-forest'\" x-text=\"dlg.action\"></button></div></dialog>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -4777,7 +4777,7 @@ func chargesSection(charges []backend.Charge) templ.Component {
 		var templ_7745c5c3_Var211 string
 		templ_7745c5c3_Var211, templ_7745c5c3_Err = templ.ResolveAttributeValue("chargesEditor(" + jsonArg(charges) + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 1305, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 1313, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var211)
 		if templ_7745c5c3_Err != nil {

@@ -24,3 +24,17 @@ func TestMatchChoices(t *testing.T) {
 		t.Fatalf("no options: %v %v", got, err)
 	}
 }
+
+func TestChosenPIN(t *testing.T) {
+	if pin, hash, err := chosenPIN("482913"); err != nil || pin != "482913" || !passwordMatches(hash, "482913") {
+		t.Fatalf("typed PIN: %v", err)
+	}
+	if pin, _, err := chosenPIN(""); err != nil || len(pin) != 6 {
+		t.Fatalf("drawn PIN: %q %v", pin, err)
+	}
+	for _, bad := range []string{"12345", "1234567", "12a456"} {
+		if _, _, err := chosenPIN(bad); err != errBadPIN {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
