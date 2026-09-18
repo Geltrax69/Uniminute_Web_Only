@@ -225,8 +225,15 @@ func (e *APIError) Error() string {
 
 // ---------- calls ----------
 
+type freshKey struct{}
+
+// Fresh marks reads that must skip the cache: staff screens show what was just
+// saved, and on Vercel the save may have landed on another instance whose
+// forget never reached this one.
+func Fresh(ctx context.Context) context.Context { return context.WithValue(ctx, freshKey{}, true) }
+
 func (b *Backend) do(ctx context.Context, method, path string, token string, in, out any) error {
-	if method == http.MethodGet {
+	if method == http.MethodGet && ctx.Value(freshKey{}) == nil {
 		raw, err := b.cache.getRaw(token, path, func(ctx context.Context) ([]byte, error) {
 			return b.send(ctx, method, path, token, nil)
 		}, ctx)

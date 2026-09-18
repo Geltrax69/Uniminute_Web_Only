@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"lamazon/website/backend"
 	productfrag "lamazon/website/templates/fragments/product"
@@ -1402,43 +1403,52 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 	if d.Tab == "" {
 		d.Tab = "review"
 	}
-	if err := s.backend.Get(ctx, "/api/admin/overview", token, &d.Overview); err != nil {
-		if adminExpired(w, r, err) {
+	// Independent reads, each a round trip to the API: run them side by side.
+	var (
+		wg          sync.WaitGroup
+		overviewErr error
+		stores      struct {
+			Items []map[string]any `json:"items"`
+		}
+		orders struct {
+			Items []map[string]any `json:"items"`
+		}
+		riders struct {
+			Items []map[string]any `json:"items"`
+		}
+		items struct {
+			Items []backend.InventoryItem `json:"items"`
+		}
+		campaigns struct {
+			Campaigns []backend.Campaign `json:"campaigns"`
+		}
+		cats []backend.Category
+	)
+	for _, load := range []func(){
+		func() { overviewErr = s.backend.Get(ctx, "/api/admin/overview", token, &d.Overview) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/insights", token, &d.Insights) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/stores", token, &stores) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/orders", token, &orders) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/riders", token, &riders) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/items", token, &items) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/campaigns", token, &campaigns) },
+		func() { d.Groups, _ = s.backend.CompareGroups(ctx) },
+		func() { d.Policies, _ = s.backend.Policies(ctx) },
+		func() { d.Charges = s.charges(ctx) },
+		func() { cats, _ = s.backend.Categories(ctx) },
+	} {
+		wg.Add(1)
+		go func() { defer wg.Done(); load() }()
+	}
+	wg.Wait()
+	if overviewErr != nil {
+		if adminExpired(w, r, overviewErr) {
 			return d, false
 		}
-		d.Error = apiMessage(err)
+		d.Error = apiMessage(overviewErr)
 	}
-	var list struct {
-		Items []map[string]any `json:"items"`
-	}
-	_ = s.backend.Get(ctx, "/api/admin/insights", token, &d.Insights)
-	if s.backend.Get(ctx, "/api/admin/stores", token, &list) == nil {
-		d.Stores = list.Items
-	}
-	list.Items = nil
-	if s.backend.Get(ctx, "/api/admin/orders", token, &list) == nil {
-		d.Orders = list.Items
-	}
-	list.Items = nil
-	if s.backend.Get(ctx, "/api/admin/riders", token, &list) == nil {
-		d.Riders = list.Items
-	}
-	var items struct {
-		Items []backend.InventoryItem `json:"items"`
-	}
-	if s.backend.Get(ctx, "/api/admin/items", token, &items) == nil {
-		d.Items = items.Items
-	}
-	var campaigns struct {
-		Campaigns []backend.Campaign `json:"campaigns"`
-	}
-	if s.backend.Get(ctx, "/api/admin/campaigns", token, &campaigns) == nil {
-		d.Campaigns = campaigns.Campaigns
-	}
-	d.Groups, _ = s.backend.CompareGroups(ctx)
-	d.Policies, _ = s.backend.Policies(ctx)
-	d.Charges = s.charges(ctx)
-	cats, _ := s.backend.Categories(ctx)
+	d.Stores, d.Orders, d.Riders = stores.Items, orders.Items, riders.Items
+	d.Items, d.Campaigns = items.Items, campaigns.Campaigns
 	for _, c := range cats {
 		if c.Parent == "" {
 			d.Departments = append(d.Departments, c)

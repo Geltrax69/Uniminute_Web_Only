@@ -2,6 +2,8 @@ package backend
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -46,5 +48,27 @@ func TestReadCache(t *testing.T) {
 	c.getRaw("", "/y", slow, ctx)
 	if _, ok := c.entries[key("", "/y")]; ok {
 		t.Fatal("a read that raced a write was cached")
+	}
+}
+
+// Staff screens read through Fresh, so a save shows on the next load even when
+// another instance handled it.
+func TestFreshSkipsCache(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+	b := NewBackend(srv.URL)
+	ctx := context.Background()
+	b.Categories(ctx)
+	b.Categories(ctx)
+	if hits.Load() != 1 {
+		t.Fatalf("cached reads hit the API %d times", hits.Load())
+	}
+	b.Categories(Fresh(ctx))
+	if hits.Load() != 2 {
+		t.Fatalf("fresh read was served from the cache")
 	}
 }

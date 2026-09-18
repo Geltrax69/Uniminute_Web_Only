@@ -31,7 +31,7 @@ func APIBase() string {
 // New is the whole site as one handler, shared by cmd/server and the Vercel function.
 func New(apiBase string) http.Handler {
 	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
-	return recoverer(site.routes())
+	return recoverer(freshForStaff(site.routes()))
 }
 
 type Site struct {
@@ -197,3 +197,13 @@ func bearerProxy(apiBase string, b *backend.Backend) http.Handler {
 // notProxied lists every /api prefix the website answers itself — there are
 // none today; the site never re-implements a backend route.
 var _ = strings.TrimSpace
+
+// freshForStaff makes admin and seller screens read live data, never the cache.
+func freshForStaff(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p := r.URL.Path; strings.HasPrefix(p, "/admin") || strings.HasPrefix(p, "/seller") {
+			r = r.WithContext(backend.Fresh(r.Context()))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
