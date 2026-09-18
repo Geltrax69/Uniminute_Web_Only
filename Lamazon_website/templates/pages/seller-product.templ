@@ -78,11 +78,11 @@ templ sellerProductBody(d SellerProductData) {
 				<div class="mt-[22px] flex gap-3">
 					<div class="min-w-0 flex-1">
 						@account.Section("MRP", "Optional")
-						@account.Field("mrp", "0", "tag", "text", "off")
+						@moneyField("mrp", "MRP in rupees")
 					</div>
 					<div class="min-w-0 flex-1">
 						@account.Section("Selling price", "What they pay")
-						@account.Field("price", "0", "indian-rupee", "text", "off")
+						@moneyField("price", "Selling price in rupees")
 					</div>
 				</div>
 				<template x-if="discount">
@@ -279,4 +279,23 @@ var swatches = []swatch{
 	{"Pink", "#F06292"}, {"Orange", "#FF8A3D"}, {"Yellow", "#FBC02D"}, {"Green", "#43A047"},
 	{"Blue", "#2F6FED"}, {"Navy", "#1A237E"}, {"Purple", "#9C6ADE"}, {"Brown", "#6D4C41"},
 	{"Beige", "#D7CCC8"}, {"Gold", "#C9A227"},
+}
+
+// moneyField is a rupee amount: ₹ in front, digits only, grouped the Indian
+// way (12,00,000) once the field is left.
+templ moneyField(name, label string) {
+	<label class="flex h-[52px] items-center rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong">
+		<span class="text-[16px] font-semibold text-muted" aria-hidden="true">₹</span>
+		<input
+			id={ "field-" + name }
+			name={ name }
+			type="text"
+			inputmode="decimal"
+			autocomplete="off"
+			placeholder="0"
+			aria-label={ label }
+			x-model={ name }
+			x-on:blur={ name + " = groupRupees(" + name + ")" }
+			class="ml-2 h-full min-w-0 flex-1 bg-transparent text-[16px] font-semibold tabular-nums text-text outline-none placeholder:font-normal placeholder:text-[#9A9A9A]"/>
+	</label>
 }

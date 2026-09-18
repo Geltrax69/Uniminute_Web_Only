@@ -576,8 +576,8 @@ document.addEventListener('alpine:init', () => {
   // ── seller: product form (SellerProductScreen) ───────────────────────────
   Alpine.data('sellerProductForm', (cfg) => ({
     ...cfg,
-    price: cfg.price ? String(cfg.price) : '',
-    mrp: cfg.mrp > 0 ? String(cfg.mrp) : '',
+    price: cfg.price ? Number(cfg.price).toLocaleString('en-IN', { maximumFractionDigits: 2 }) : '',
+    mrp: cfg.mrp > 0 ? Number(cfg.mrp).toLocaleString('en-IN', { maximumFractionDigits: 2 }) : '',
     stock: cfg.id ? String(cfg.stock) : '',
     shots: cfg.imageUrls.map((url) => ({ url })),
     options: cfg.options.map((o) => ({ name: o.name, kind: o.kind || '', values: [...(o.values || [])], entry: '' })),
@@ -598,8 +598,12 @@ document.addEventListener('alpine:init', () => {
       return s ? s.leaves : [];
     },
     pickSection(name) { this.section = name; this.category = this.leaves[0]; },
-    get priceValue() { const t = this.price.trim(); return t === '' ? NaN : Number(t); },
-    get mrpValue() { const t = this.mrp.trim(); return t === '' ? 0 : Number(t); },
+    get priceValue() { const t = rupees(this.price); return t === '' ? NaN : Number(t); },
+    get mrpValue() { const t = rupees(this.mrp); return t === '' ? 0 : Number(t); },
+    groupRupees(v) {
+      const n = Number(rupees(v));
+      return rupees(v) === '' || Number.isNaN(n) ? v : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    },
     get stockValue() { const t = this.stock.trim(); return /^\d+$/.test(t) ? Number(t) : NaN; },
     get blocker() {
       if (!this.shots.length) return 'Add at least one photo';
@@ -1106,3 +1110,6 @@ window.addEventListener('pageshow', (e) => {
   try { want = sessionStorage.getItem('lw:refresh-on-back'); sessionStorage.removeItem('lw:refresh-on-back'); } catch {}
   if (want === location.pathname + location.search && e.persisted) location.reload();
 });
+
+// "₹ 99,900" and "99900" are the same price.
+window.rupees = (v) => String(v ?? '').replace(/[₹,\s]/g, '');
