@@ -9,7 +9,9 @@ import (
 // The logo lives in Cloudinary because email clients will not render an
 // attachment inline reliably, and most block remote images until the reader
 // allows them — so nothing important is ever only in a picture.
-const logoURL = "https://res.cloudinary.com/dq3da5bkb/image/upload/v1785489094/Lamazon/brand/logo.png"
+// logoURL is the clock mark the website serves; it changes with the site, not
+// with an image someone has to remember to upload elsewhere.
+const logoURL = "https://uniminute.vercel.app/static/images/logo.png"
 
 // emailHTML wraps content in the shell every Uniminute email shares.
 //
@@ -76,5 +78,5 @@ func notifyHTML(title, text string) string {
 		}
 		fmt.Fprintf(&b, `<p style="margin:0 0 10px 0;">%s</p>`, html.EscapeString(line))
 	}
-	return emailHTML(title, b.String(), "You get this because you sell on Uniminute.")
+	return emailHTML(title, b.String(), "You get this because you have an account on Uniminute. You can turn these emails off in Settings.")
 }
