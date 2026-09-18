@@ -5,6 +5,9 @@ package pages
 // card per order (a basket spanning shops becomes several), and the way back.
 
 import (
+	"net/url"
+	"strings"
+
 	"lamazon/website/backend"
 	"lamazon/website/shop"
 	"lamazon/website/templates/components/ui"
@@ -28,7 +31,7 @@ templ placedBody(d PlacedPageData) {
 			@ui.Icon("check", "h-9 w-9")
 		</div>
 		<h1 class="mt-6 text-center text-title text-text">Your order is placed</h1>
-		<p class="mt-3 text-center text-body leading-[1.5] text-muted">Order placed successfully. Waiting for the store to receive and accept it.</p>
+		<p class="mt-3 text-center text-body leading-[1.5] text-muted">Order placed successfully. This page updates automatically when the store or rider moves it forward.</p>
 		<div x-data="notifyPermission()" class="mt-5 rounded bg-surface p-4 shadow-surface">
 			<div class="flex items-start gap-3">
 				<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime/40 text-strong">
@@ -58,8 +61,15 @@ templ placedBody(d PlacedPageData) {
 			</p>
 		</div>
 		<div class="h-4"></div>
-		for _, o := range d.Orders {
-			<div class="mb-3 rounded bg-surface p-4 shadow-surface">
+		<div
+			id="placed-orders-live"
+			hx-get={ templ.SafeURL(placedRefreshURL(d.Orders)) }
+			hx-trigger={ placedPollTrigger(d.Orders) }
+			hx-select="#placed-orders-live"
+			hx-target="this"
+			hx-swap="outerHTML">
+			for _, o := range d.Orders {
+				<div class="mb-3 rounded bg-surface p-4 shadow-surface">
 				<p class="select-all text-body font-bold text-text">Order { shop.OrderRef(o.ID) }</p>
 				<p class="mt-1 text-body text-text">{ shop.Itoa(o.Units) } × { o.ItemTitle }</p>
 				if len(o.Options) > 0 {
@@ -67,16 +77,21 @@ templ placedBody(d PlacedPageData) {
 				}
 				<p class="text-body text-muted">{ o.StoreName }</p>
 				<div class="mt-4 rounded bg-canvas p-3">
-					<p class="mb-3 text-body font-semibold text-strong">Waiting for the store</p>
+					<p class="mb-3 text-body font-semibold text-strong" aria-live="polite">{ statusLabel(o) }</p>
 					@statusTrack(o)
+					if o.DeliveryCode != "" && o.Stage != backend.StageDelivered {
+						<p class="mt-3 text-center text-body text-muted">Delivery code</p>
+						<p class="mt-0.5 select-all text-center text-[24px] font-extrabold tracking-[6px] text-strong">{ o.DeliveryCode }</p>
+					}
 				</div>
 				<div class="my-3 h-px"></div>
 				<a href={ templ.SafeURL("/orders/" + o.ID) } class={ ui.ButtonClass(false) }>
 					<span class="truncate">Track order</span>
 					@ui.Icon("package", "h-[18px] w-[18px]")
 				</a>
-			</div>
-		}
+				</div>
+			}
+		</div>
 		<div class="h-6"></div>
 		<a href="/" class={ ui.ButtonClass(true) + " w-full" }>
 			<span class="truncate">Continue shopping</span>
@@ -90,4 +105,21 @@ func ordersTotal(orders []backend.Order) float64 {
 		sum += o.Amount
 	}
 	return sum
+}
+
+func placedRefreshURL(orders []backend.Order) string {
+	ids := make([]string, 0, len(orders))
+	for _, o := range orders {
+		ids = append(ids, o.ID)
+	}
+	return "/orders/placed?ids=" + url.QueryEscape(strings.Join(ids, ","))
+}
+
+func placedPollTrigger(orders []backend.Order) string {
+	for _, o := range orders {
+		if o.Stage != backend.StageDelivered && o.Stage != backend.StageRejected {
+			return "every 5s [document.visibilityState === 'visible']"
+		}
+	}
+	return ""
 }

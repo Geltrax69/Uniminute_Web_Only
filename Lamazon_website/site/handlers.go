@@ -630,7 +630,9 @@ func (s *Site) handleOrderPlaced(w http.ResponseWriter, r *http.Request) {
 	for _, id := range strings.Split(r.URL.Query().Get("ids"), ",") {
 		want[id] = true
 	}
-	all, _ := s.backend.MyOrders(r.Context(), p.AccessToken)
+	// This page polls while an order is live. Bypass the storefront read cache
+	// so a seller acceptance or rider update appears on the very next poll.
+	all, _ := s.backend.MyOrders(backend.Fresh(r.Context()), p.AccessToken)
 	var placed []backend.Order
 	for _, o := range all {
 		if want[o.ID] {
@@ -784,7 +786,9 @@ func (s *Site) handleOrdersPage(w http.ResponseWriter, r *http.Request) {
 	if !requireAuth(w, r, p) {
 		return
 	}
-	orders, err := s.backend.MyOrders(r.Context(), p.AccessToken)
+	// Order detail also polls; cached data would make a successful acceptance
+	// look stuck until the shopper manually refreshed.
+	orders, err := s.backend.MyOrders(backend.Fresh(r.Context()), p.AccessToken)
 	if maintenance(w, r, p, err) {
 		return
 	}
