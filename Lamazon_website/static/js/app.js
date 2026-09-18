@@ -608,6 +608,7 @@ document.addEventListener('alpine:init', () => {
     get blocker() {
       if (!this.shots.length) return 'Add at least one photo';
       if (!this.title.trim()) return 'Give the product a title';
+      if ([...this.title.trim()].length > 250) return 'Shorten the title to 250 characters or fewer';
       if (!(this.priceValue > 0)) return 'Set a price above ₹0';
       if (Number.isNaN(this.mrpValue)) return 'MRP must be a number, or left blank';
       if (this.mrpValue > 0 && this.mrpValue < this.priceValue) return 'MRP cannot be below the selling price';

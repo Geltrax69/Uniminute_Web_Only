@@ -55,10 +55,14 @@ func validateAddress(in *Address) error {
 	return nil
 }
 
+// maxItemTitle fits a full marketplace-style name (brand, model, key specs).
+// Mirrored in the seller form (seller-product.templ) so it is never a surprise.
+const maxItemTitle = 250
+
 func (a *API) validateItem(ctx context.Context, in *InventoryItem) error {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Category = strings.TrimSpace(in.Category)
-	if err := textLimit(in.Title, "title", 160, true); err != nil {
+	if err := textLimit(in.Title, "title", maxItemTitle, true); err != nil {
 		return err
 	}
 	if err := textLimit(in.Description, "description", 5000, false); err != nil {

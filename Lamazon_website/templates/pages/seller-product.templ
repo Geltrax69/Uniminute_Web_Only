@@ -48,6 +48,7 @@ templ sellerProductBody(d SellerProductData) {
 				<div class="h-[22px]"></div>
 				@account.Section("Title", "")
 				@account.Field("title", "e.g. Cold Coffee 300ml", "tag", "text", "off")
+				<p class="mt-1.5 text-right text-[12px] tabular-nums" x-show="[...title.trim()].length > 200" x-cloak x-bind:class="[...title.trim()].length > 250 ? 'font-semibold text-danger' : 'text-muted'" x-text="[...title.trim()].length + ' / 250'" aria-live="polite"></p>
 				if leafCount(d.Sections) > 1 {
 					<div class="h-[22px]"></div>
 					@account.Section("Category", "")

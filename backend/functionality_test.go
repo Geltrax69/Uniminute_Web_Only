@@ -100,7 +100,7 @@ func TestProductLimitsReturnValidationErrors(t *testing.T) {
 	h := testAPI(t)
 	openApprovedStore(t, h, map[string]any{"name": "Store", "location": "Block 1", "city": "LPU", "categories": []string{"Food"}})
 	for _, bad := range []map[string]any{
-		{"title": strings.Repeat("x", 161), "price": 20, "stock": 1},
+		{"title": strings.Repeat("x", maxItemTitle+1), "price": 20, "stock": 1},
 		{"title": "Bad", "price": 1000000, "stock": 1},
 		{"title": "Bad", "price": 1.001, "stock": 1},
 		{"title": "Bad", "price": 20, "stock": 1, "category": "NotARealCategory"},
