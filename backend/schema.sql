@@ -635,3 +635,7 @@ CREATE TABLE IF NOT EXISTS checkout_charges (
 );
 INSERT INTO checkout_charges(id,name,amount,position) VALUES ('delivery','Delivery',15,0)
 ON CONFLICT DO NOTHING;
+
+-- Refresh rotation with a grace minute: a page firing several requests at once
+-- may present the same refresh token more than once before the new pair lands.
+ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS rotated_at TIMESTAMPTZ;

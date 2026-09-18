@@ -217,10 +217,18 @@ func TestRefreshRotatesAndOldOneDies(t *testing.T) {
 	if second == first {
 		t.Fatal("refresh token must rotate, not repeat")
 	}
-	// Spent tokens are dead, so a stolen one is good for one call at most.
+	// Requests racing on the same token inside the grace minute all get a pair.
+	if code, _ := call(t, h, http.MethodPost, "/api/login/refresh",
+		map[string]string{"refreshToken": first}); code != http.StatusOK {
+		t.Fatalf("refresh reused within a minute: want 200, got %d", code)
+	}
+	// After it, a spent token is dead, so a stolen one is short-lived.
+	if _, err := testDBOf(t).sql.Exec(`UPDATE auth_sessions SET rotated_at = now() - interval '2 minutes' WHERE refresh_hash = $1`, hashCode(first)); err != nil {
+		t.Fatal(err)
+	}
 	if code, _ := call(t, h, http.MethodPost, "/api/login/refresh",
 		map[string]string{"refreshToken": first}); code != http.StatusUnauthorized {
-		t.Fatalf("reused refresh token: want 401, got %d", code)
+		t.Fatalf("reused refresh token after the grace minute: want 401, got %d", code)
 	}
 	// The new access token works on a private route.
 	req := httptest.NewRequest(http.MethodGet, "/api/seller/items", nil)

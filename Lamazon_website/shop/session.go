@@ -6,7 +6,7 @@ package shop
 // the browser stays same-origin.
 //
 // The access token lives an hour (backend/auth.go accessLifetime) and the
-// refresh token thirty days; the cookie lifetimes match so a stale cookie is
+// refresh token ninety days; the cookie lifetimes match so a stale cookie is
 // never presented as if it were live.
 
 import (
@@ -29,7 +29,7 @@ func SetSessionCookies(w http.ResponseWriter, s backend.Session) {
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name: RefreshCookie, Value: s.RefreshToken, Path: "/",
-		MaxAge: 30 * 24 * 60 * 60, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		MaxAge: 90 * 24 * 60 * 60, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	})
 }
 
@@ -51,4 +51,20 @@ func SessionTokens(r *http.Request) (access, refresh string) {
 		refresh = c.Value
 	}
 	return access, refresh
+}
+
+// WithSession is r carrying s in place of its session cookies, so everything
+// after a mid-request refresh reads the new pair.
+func WithSession(r *http.Request, s backend.Session) *http.Request {
+	r = r.Clone(r.Context())
+	cookies := r.Cookies()
+	r.Header.Del("Cookie")
+	for _, c := range cookies {
+		if c.Name != AccessCookie && c.Name != RefreshCookie {
+			r.AddCookie(c)
+		}
+	}
+	r.AddCookie(&http.Cookie{Name: AccessCookie, Value: s.Token})
+	r.AddCookie(&http.Cookie{Name: RefreshCookie, Value: s.RefreshToken})
+	return r
 }

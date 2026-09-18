@@ -31,7 +31,7 @@ func APIBase() string {
 // New is the whole site as one handler, shared by cmd/server and the Vercel function.
 func New(apiBase string) http.Handler {
 	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
-	return recoverer(freshForStaff(site.routes()))
+	return recoverer(site.keepSession(freshForStaff(site.routes())))
 }
 
 type Site struct {
@@ -203,6 +203,24 @@ func freshForStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p := r.URL.Path; strings.HasPrefix(p, "/admin") || strings.HasPrefix(p, "/seller") {
 			r = r.WithContext(backend.Fresh(r.Context()))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// keepSession swaps an expired access token for a new pair before the page is
+// built, and saves the pair in the browser. Without saving it, the spent
+// refresh token was all the next request had, and the shopper was signed out
+// an hour after signing in.
+func (s *Site) keepSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/static/") {
+			if access, refresh := shop.SessionTokens(r); access == "" && refresh != "" {
+				if sess, err := s.backend.Refresh(r.Context(), refresh); err == nil {
+					shop.SetSessionCookies(w, sess)
+					r = shop.WithSession(r, sess)
+				}
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

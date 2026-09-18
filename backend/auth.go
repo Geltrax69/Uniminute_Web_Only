@@ -32,7 +32,7 @@ const (
 	// Short access token, long refresh token: a leaked access token stops
 	// working within the hour, and the refresh token rotates on every use.
 	accessLifetime  = time.Hour
-	refreshLifetime = 30 * 24 * time.Hour
+	refreshLifetime = 90 * 24 * time.Hour
 )
 
 // Mailer sends the sign-in code. ponytail: Resend's REST API is one POST, so
@@ -334,13 +334,15 @@ func (a *API) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Deleting and re-issuing in one go is the rotation: the old refresh
-	// token stops working the moment it is spent, so a stolen one is only
-	// good until the real client next refreshes.
+	// A spent token keeps working for one more minute, so requests racing on the
+	// same token all get a pair instead of all but one being signed out.
 	var email string
 	err := a.db.sql.QueryRowContext(r.Context(), `
-		DELETE FROM auth_sessions
+		UPDATE auth_sessions
+		SET rotated_at = COALESCE(rotated_at, now()),
+		    expires_at = LEAST(expires_at, now() + interval '60 seconds')
 		WHERE refresh_hash = $1 AND refresh_expires_at > now()
+		  AND (rotated_at IS NULL OR rotated_at > now() - interval '60 seconds')
 		RETURNING email`, hashCode(in.RefreshToken)).Scan(&email)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusUnauthorized, "session expired — sign in again")
@@ -355,6 +357,8 @@ func (a *API) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// ponytail: housekeeping rides on refresh; a cron job if this table ever grows large
+	a.db.sql.ExecContext(r.Context(), `DELETE FROM auth_sessions WHERE email = $1 AND (rotated_at < now() - interval '1 day' OR refresh_expires_at < now())`, email)
 	writeJSON(w, http.StatusOK, session)
 }
 
