@@ -106,13 +106,20 @@ templ orderDetailBody(d OrderDetailData) {
 // statusPanel is _StatusPanel: the status as a heading, the arrival time while
 // it is live, and Placed → Accepted → On the way → Delivered.
 templ statusPanel(o backend.Order) {
-	{{ reached := stageIndex(o.Stage) }}
 	<div class="rounded bg-surface p-4 shadow-surface">
 		<h2 class="text-section text-text" aria-live="polite">{ statusLabel(o) }</h2>
 		if o.Stage != backend.StageDelivered {
 			<p class="mt-0.5 text-body text-muted">Arriving in about { shop.DeliveryETA }</p>
 		}
-		<div class="mt-4 flex items-start">
+		<div class="mt-4">
+			@statusTrack(o)
+		</div>
+	</div>
+}
+
+templ statusTrack(o backend.Order) {
+	{{ reached := stageIndex(o.Stage) }}
+	<div class="flex items-start" aria-label={ "Order status: " + statusLabel(o) }>
 			for i, step := range orderSteps {
 				if i > 0 {
 					<div class={ "mx-1 mt-[15px] h-0.5 flex-1 " + tpl.When(i <= reached, "bg-strong", "bg-track") }></div>
@@ -124,7 +131,6 @@ templ statusPanel(o backend.Order) {
 					<span class={ "mt-1.5 text-center text-[11px] leading-[1.2] " + tpl.When(i <= reached, "font-semibold text-text", "text-muted") } aria-hidden="true">{ step[0] }</span>
 				</div>
 			}
-		</div>
 	</div>
 }
 

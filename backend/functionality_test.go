@@ -130,7 +130,7 @@ func TestOrderNotificationHonorsPreferences(t *testing.T) {
 	}
 	call(t, h, "PATCH", "/api/preferences", map[string]bool{"orderUpdates": true, "push": false})
 	call(t, h, "POST", "/api/orders", map[string]any{"itemId": item["id"], "units": 1, "requestId": "test-basket-123456", "expectedTotal": 35})
-	if sent.count != mails+1 || push.count() != pushes {
+	if sent.count != mails+2 || push.count() != pushes {
 		t.Fatal("push opt-out should still allow order email")
 	}
 }

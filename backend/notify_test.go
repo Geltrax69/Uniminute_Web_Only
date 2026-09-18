@@ -87,9 +87,9 @@ func notifyAPI(t *testing.T) (http.Handler, *sentMail, *fakeFCMService) {
 	}), sent, fcm
 }
 
-// An order has to reach the seller on both channels: email always, and a
-// browser notification wherever they allowed one.
-func TestOrderNotifiesSellerByEmailAndPush(t *testing.T) {
+// A placed order reaches the seller and buyer by email, with push wherever
+// the account allowed it.
+func TestPlacedOrderNotifiesSellerAndBuyer(t *testing.T) {
 	h, sent, fcm := notifyAPI(t)
 
 	openApprovedStore(t, h, map[string]any{
@@ -114,19 +114,19 @@ func TestOrderNotifiesSellerByEmailAndPush(t *testing.T) {
 		t.Fatalf("place order: want 201, got %d", code)
 	}
 
-	if sent.count != 1 {
-		t.Fatalf("seller should get one email, got %d", sent.count)
+	if sent.count != 2 {
+		t.Fatalf("seller and buyer should each get an email, got %d", sent.count)
 	}
 	if sent.to != DefaultOwner {
 		t.Fatalf("email went to %s", sent.to)
 	}
-	for _, want := range []string{"2 × Straubery", "Farm", "240"} {
+	for _, want := range []string{"order", "2 × Straubery", "Farm", "waiting"} {
 		if !strings.Contains(sent.text, want) {
 			t.Fatalf("email missing %q:\n%s", want, sent.text)
 		}
 	}
-	if fcm.count() != 1 {
-		t.Fatalf("want one push delivery, got %d", fcm.count())
+	if fcm.count() != 2 {
+		t.Fatalf("want seller and buyer push deliveries, got %d", fcm.count())
 	}
 	if fcm.auth != "Bearer stub-access-token" {
 		t.Fatalf("push was not FCM-authorized: %q", fcm.auth)
@@ -147,8 +147,8 @@ func TestEmailStillSendsWithoutPush(t *testing.T) {
 
 	call(t, h, http.MethodPost, "/api/seller/orders",
 		map[string]any{"itemId": item["id"], "units": 1, "expectedTotal": item["price"].(float64)*1 + 15})
-	if sent.count != 1 {
-		t.Fatalf("email should still go out with push off, got %d", sent.count)
+	if sent.count != 2 {
+		t.Fatalf("seller and buyer email should still go out with push off, got %d", sent.count)
 	}
 }
 
@@ -194,7 +194,7 @@ func TestPushConfigExposesOnlyBrowserSettings(t *testing.T) {
 }
 
 func TestRiderCanSubscribeForAssignments(t *testing.T) {
-	h, _, _ := notifyAPI(t)
+	h, sent, _ := notifyAPI(t)
 	admin := adminSignIn(t, h)
 	pin := addRider(t, h, admin, "9876543210")
 	_, login := callAs(t, h, "", http.MethodPost, "/api/delivery/login", map[string]string{
@@ -211,6 +211,11 @@ func TestRiderCanSubscribeForAssignments(t *testing.T) {
 	}
 	if subject != "rider:9876543210" {
 		t.Fatalf("subscription filed under %q", subject)
+	}
+	before := sent.count
+	(&API{db: lastTestDB, mail: &Mailer{}}).notifyOrderLater("rider:9876543210", "Assigned", "Collect it", "/delivery")
+	if sent.count != before {
+		t.Fatal("rider phone identity was incorrectly sent to the email provider")
 	}
 }
 

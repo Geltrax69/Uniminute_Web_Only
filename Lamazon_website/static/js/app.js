@@ -974,10 +974,10 @@ document.addEventListener('alpine:init', () => {
     active: false, title: '',
     init() {
       const guard = (e) => { e.preventDefault(); e.returnValue = ''; };
-      window.lwProcessing = (title) => {
+      window.lwProcessing = (title, protectNavigation = true) => {
         this.active = !!title;
         this.title = title || '';
-        if (title) window.addEventListener('beforeunload', guard);
+        if (title && protectNavigation) window.addEventListener('beforeunload', guard);
         else window.removeEventListener('beforeunload', guard);
       };
       // The server has answered: let its redirect through, keep the overlay up.

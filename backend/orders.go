@@ -252,6 +252,9 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		a.notifyOrderLater(o.StoreOwner, fmt.Sprintf("New order: %d × %s", o.Units, o.ItemTitle),
 			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + charges ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount),
 			"/seller?pane=orders")
+		a.notifyOrderLater(buyer, "Order placed successfully",
+			fmt.Sprintf("Your order %s for %d × %s was sent to %s. We are waiting for the store to accept it.",
+				o.ID, o.Units, o.ItemTitle, o.StoreName), "/orders/"+o.ID)
 	}
 	if single {
 		writeJSON(w, 201, out[0])

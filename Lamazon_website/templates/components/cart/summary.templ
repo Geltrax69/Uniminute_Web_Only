@@ -65,13 +65,10 @@ templ Summary(d Data) {
 		{{ short := shop.CartShortfall(d.Entries) }}
 		if d.SignedIn {
 			<form
-				hx-post="/checkout"
-				hx-swap="none"
-				hx-request={ `{"timeout":25000}` }
+				method="post"
+				action="/checkout"
 				x-data="{ busy: false }"
-				x-on:htmx:before-request="busy = true; lwProcessing('Placing your order…')"
-				x-on:htmx:before-on-load="lwProcessingRelease()"
-				x-on:htmx:after-request="busy = false; if (!$event.detail.xhr.getResponseHeader('HX-Redirect')) lwProcessing('')"
+				x-on:submit="if (busy) { $event.preventDefault(); return }; busy = true; lwProcessing('Placing your order…', false)"
 			>
 				if d.Address != nil {
 					<input type="hidden" name="addressId" value={ d.Address.ID }/>

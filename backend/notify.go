@@ -242,6 +242,7 @@ func (a *API) notifyOrderLater(email, title, body, target string) {
 }
 
 func (a *API) notifyEvent(ctx context.Context, email, title, body, kind, target string) {
+	rider := strings.HasPrefix(email, "rider:")
 	prefs, err := a.preferences(ctx, email)
 	if err != nil {
 		log.Printf("notification preferences: %v", err)
@@ -250,7 +251,9 @@ func (a *API) notifyEvent(ctx context.Context, email, title, body, kind, target 
 	if kind == "order" && !prefs.OrderUpdates || kind == "offer" && !prefs.EmailOffers {
 		return
 	}
-	if a.mail != nil {
+	// Rider subjects are push-only identities (rider:<phone>), not email
+	// addresses. Buyer and seller order events continue over both channels.
+	if a.mail != nil && !rider {
 		if err := a.mail.send(ctx, email, title, body, notifyHTML(title, body)); err != nil {
 			log.Printf("notify %s by email: %v", email, err)
 		}

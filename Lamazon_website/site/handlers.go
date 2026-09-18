@@ -562,7 +562,10 @@ func (s *Site) handleCartPage(w http.ResponseWriter, r *http.Request) {
 	p.Title = "My Cart — Uniminute"
 	d, trimmed := s.cartData(w, r.Context(), shop.ReadCart(r), p)
 	p.CartCount = d.Count()
-	renderOK(w, r, pages.CartPage(pages.CartPageData{Page: p, Cart: d, Trimmed: trimmed}))
+	renderOK(w, r, pages.CartPage(pages.CartPageData{
+		Page: p, Cart: d, Trimmed: trimmed,
+		CheckoutError: strings.TrimSpace(r.URL.Query().Get("checkoutError")),
+	}))
 }
 
 // cartData is Cart.reconcile then the screen's state: every line resolved
@@ -718,7 +721,11 @@ func (s *Site) handleRegisterPage(w http.ResponseWriter, r *http.Request) {
 func (s *Site) handleAccountPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
 	p.Title = "Account — Uniminute"
-	renderOK(w, r, pages.AccountPage(p))
+	d := pages.AccountPageData{Page: p}
+	if p.User != nil {
+		d.Orders, _ = s.backend.MyOrders(backend.Fresh(r.Context()), p.AccessToken)
+	}
+	renderOK(w, r, pages.AccountPage(d))
 }
 
 func (s *Site) handleAddressesPage(w http.ResponseWriter, r *http.Request) {
@@ -1295,9 +1302,9 @@ func (s *Site) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	expected := shop.CartSubtotal(entries) + shop.ChargesTotal(s.charges(r.Context()))
 	result, err := s.backend.Checkout(r.Context(), p.AccessToken, lines, addressID, shop.CheckoutRequestID(r), expected)
 	if err != nil {
-		// The backend's own sentence ("not enough stock for …"), as the app shows it.
-		errorToast(w, apiMessage(err))
-		w.WriteHeader(http.StatusOK)
+		// Checkout is a native form submission so its loading screen cannot be
+		// stranded by an AJAX redirect. The cart renders the recovery inline.
+		http.Redirect(w, r, "/cart?checkoutError="+url.QueryEscape(apiMessage(err)), http.StatusSeeOther)
 		return
 	}
 

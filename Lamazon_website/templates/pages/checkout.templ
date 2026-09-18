@@ -28,7 +28,23 @@ templ placedBody(d PlacedPageData) {
 			@ui.Icon("check", "h-9 w-9")
 		</div>
 		<h1 class="mt-6 text-center text-title text-text">Your order is placed</h1>
-		<p class="mt-3 text-center text-body leading-[1.5] text-muted">We have sent your order to the store. You can follow its progress below.</p>
+		<p class="mt-3 text-center text-body leading-[1.5] text-muted">Order placed successfully. Waiting for the store to receive and accept it.</p>
+		<div x-data="notifyPermission()" class="mt-5 rounded bg-surface p-4 shadow-surface">
+			<div class="flex items-start gap-3">
+				<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime/40 text-strong">
+					@ui.Icon("bell", "h-5 w-5")
+				</span>
+				<div class="min-w-0 flex-1">
+					<p class="text-body font-semibold text-text">Get live order updates</p>
+					<p class="mt-1 text-body text-muted">We send order updates by email. Connect this device for store acceptance, rider pickup, and delivery notifications.</p>
+					<button type="button" x-show="state !== 'granted' && state !== 'unsupported'" x-on:click="ask()" x-bind:disabled="busy" class="mt-3 min-h-touch rounded-full bg-strong px-4 text-label text-white disabled:opacity-60">
+						<span x-text="busy ? 'Connecting…' : 'Turn on push notifications'"></span>
+					</button>
+					<p x-show="state === 'granted' && !error" class="mt-2 text-body font-semibold text-strong">Push notifications are connected.</p>
+					<p x-show="error" x-text="error" class="mt-2 text-body text-danger" role="alert"></p>
+				</div>
+			</div>
+		</div>
 		<div class="mt-7 rounded bg-surface p-5 shadow-surface">
 			<p class="text-body text-muted">Pay on delivery</p>
 			<p class="text-title text-text">₹{ shop.Money(ordersTotal(d.Orders)) }</p>
@@ -50,6 +66,10 @@ templ placedBody(d PlacedPageData) {
 					<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
 				}
 				<p class="text-body text-muted">{ o.StoreName }</p>
+				<div class="mt-4 rounded bg-canvas p-3">
+					<p class="mb-3 text-body font-semibold text-strong">Waiting for the store</p>
+					@statusTrack(o)
+				</div>
 				<div class="my-3 h-px"></div>
 				<a href={ templ.SafeURL("/orders/" + o.ID) } class={ ui.ButtonClass(false) }>
 					<span class="truncate">Track order</span>
