@@ -257,7 +257,11 @@ func paginate(products []backend.Product, pageStr, _ string) ([]backend.Product,
 func (s *Site) handleHome(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
 	// Someone who has never been here starts at sign-up; "Browse the shop" there lets them in.
-	if p.User == nil && !visited(r) && r.Header.Get("HX-Request") == "" {
+	// ?browse=1 is "Browse the shop" on that page: always let it through, even
+	// if the browser dropped the cookie that remembers the visit.
+	if r.URL.Query().Has("browse") {
+		markVisited(w)
+	} else if p.User == nil && !visited(r) && r.Header.Get("HX-Request") == "" {
 		http.Redirect(w, r, "/login?next=%2F", http.StatusSeeOther)
 		return
 	}

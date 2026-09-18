@@ -76,3 +76,22 @@ func TestFirebaseWorkerIsServedAtRootScope(t *testing.T) {
 		t.Fatalf("worker scope header = %q", got)
 	}
 }
+
+// A first visit goes to sign-up, but "Browse the shop" (/?browse=1) must
+// always reach the shop, or a visitor without the cookie loops forever.
+func TestBrowseTheShopNeverLoops(t *testing.T) {
+	h := New("http://127.0.0.1:1") // no API: the page may fail, but must not bounce
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/login") {
+		t.Fatalf("first visit: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/?browse=1", nil))
+	if rec.Code == http.StatusSeeOther {
+		t.Fatalf("browse the shop bounced to %q", rec.Header().Get("Location"))
+	}
+	if !strings.Contains(rec.Header().Get("Set-Cookie"), visitedCookie) {
+		t.Fatal("browse the shop did not remember the visit")
+	}
+}
