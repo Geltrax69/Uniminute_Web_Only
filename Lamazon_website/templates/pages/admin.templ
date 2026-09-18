@@ -909,7 +909,7 @@ templ adminDialog() {
 		</template>
 		<div class="mt-6 flex flex-wrap justify-end gap-2">
 			<button type="button" x-show="dlg.cancel" x-on:click="$refs.dlg.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-text="dlg.cancel"></button>
-			<button type="button" x-show="dlg.action" x-on:click="dlg.run()" x-bind:disabled="dlg.busy || (dlg.ready && !dlg.ready())" class="min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40" x-bind:class="dlg.danger ? 'bg-danger' : 'bg-forest'" x-text="dlg.action"></button>
+			<button type="button" x-show="dlg.action" x-on:click="dlg.run()" x-bind:disabled="!!(dlg.busy || (dlg.ready && !dlg.ready()))" class="min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40" x-bind:class="dlg.danger ? 'bg-danger' : 'bg-forest'" x-text="dlg.action"></button>
 		</div>
 	</dialog>
 }
