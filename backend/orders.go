@@ -30,20 +30,21 @@ import (
 // column list and the Scan cannot drift apart.
 const orderColumns = `id, item_id, item_title, units, amount, delivery_fee, stage, placed_at,
 	store_owner, store_name, receiver_name, receiver_phone, receiver_address,
-	reject_reason, rider_phone, assigned_to`
+	reject_reason, rider_phone, assigned_to, options`
 
 func scanOrder(row interface{ Scan(...any) error }) (Order, error) {
 	var o Order
 	err := row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName,
 		&o.ReceiverPhone, &o.ReceiverAddress, &o.RejectReason, &o.RiderPhone,
-		&o.AssignedTo)
+		&o.AssignedTo, &o.Options)
 	return o, err
 }
 
 type checkoutLine struct {
-	ItemID string `json:"itemId"`
-	Units  int    `json:"units"`
+	ItemID  string  `json:"itemId"`
+	Units   int     `json:"units"`
+	Options Choices `json:"options,omitempty"`
 }
 
 // A legacy single-line request is still an order and includes its delivery fee.
@@ -65,7 +66,7 @@ func (a *API) handlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "please update Uniminute or reload the website before ordering")
 		return
 	}
-	a.placeBasket(w, r, []checkoutLine{{in.ItemID, in.Units}}, in.AddressID, in.ExpectedTotal, true, "")
+	a.placeBasket(w, r, []checkoutLine{{ItemID: in.ItemID, Units: in.Units}}, in.AddressID, in.ExpectedTotal, true, "")
 }
 
 // POST /api/orders/checkout commits every line or none, with one fee per basket.
@@ -99,11 +100,13 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 	}
 	seen := map[string]bool{}
 	for _, line := range lines {
-		if line.ItemID == "" || line.Units < 1 || line.Units > 10000 || seen[line.ItemID] {
+		// The same item may appear once per choice of options (Black and White).
+		k := line.ItemID + "\x00" + line.Options.key()
+		if line.ItemID == "" || line.Units < 1 || line.Units > 10000 || seen[k] {
 			writeError(w, 400, "each item must appear once with a quantity between 1 and 10000")
 			return
 		}
-		seen[line.ItemID] = true
+		seen[k] = true
 	}
 	buyer := a.owner(r)
 	tx, err := a.db.sql.BeginTx(r.Context(), nil)
@@ -175,9 +178,10 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		var title, storeOwner, storeName, status string
 		var price float64
 		var stock, reserved int
-		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status
+		var offeredRaw []byte
+		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status,i.options
    FROM inventory_items i JOIN seller_stores s ON s.owner=i.owner
-   WHERE i.id=$1 FOR UPDATE OF i`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status)
+   WHERE i.id=$1 FOR UPDATE OF i`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status, &offeredRaw)
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, 404, "an item is no longer available")
 			return
@@ -188,6 +192,13 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		}
 		if status != "approved" {
 			writeError(w, 409, "that store is not taking orders")
+			return
+		}
+		var offered []ItemOption
+		_ = json.Unmarshal(offeredRaw, &offered)
+		choices, err := matchChoices(title, offered, line.Options)
+		if err != nil {
+			writeError(w, 400, err.Error())
 			return
 		}
 		if err = tx.QueryRowContext(r.Context(), `SELECT COALESCE(sum(units),0) FROM orders
@@ -208,9 +219,9 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		amount := math.Round((price*float64(line.Units)+fee)*100) / 100
 		o, err := scanOrder(tx.QueryRowContext(r.Context(), `INSERT INTO orders
    (item_id,item_title,units,amount,delivery_fee,stage,buyer_email,store_owner,store_name,
-    receiver_name,receiver_phone,receiver_address)
-   VALUES ($1,$2,$3,$4,$5,'received',$6,$7,$8,$9,$10,$11) RETURNING `+orderColumns,
-			line.ItemID, title, line.Units, amount, fee, buyer, storeOwner, storeName, receiver.Name, receiver.Phone, receiver.Line))
+    receiver_name,receiver_phone,receiver_address,options)
+   VALUES ($1,$2,$3,$4,$5,'received',$6,$7,$8,$9,$10,$11,$12) RETURNING `+orderColumns,
+			line.ItemID, title, line.Units, amount, fee, buyer, storeOwner, storeName, receiver.Name, receiver.Phone, receiver.Line, choices.key()))
 		if err != nil {
 			log.Printf("checkout insert: %v", err)
 			writeError(w, 500, "could not place order")
@@ -298,7 +309,7 @@ func (a *API) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee,
 			&o.Stage, &o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.RejectReason, &o.RiderPhone,
-			&o.AssignedTo, &o.DeliveryCode); err != nil {
+			&o.AssignedTo, &o.Options, &o.DeliveryCode); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -362,7 +373,7 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 	var o Order
 	err = row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
-		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &buyer)
+		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options, &buyer)
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}
@@ -395,7 +406,7 @@ func (a *API) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
 	var o Order
 	err := row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
-		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &buyer)
+		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options, &buyer)
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}

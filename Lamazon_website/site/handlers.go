@@ -934,13 +934,35 @@ func (s *Site) handleCartAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Every option the product has must be picked, from what the shop offers;
+	// the picks become part of the line, so each colour is its own line.
+	var picked []backend.Choice
+	for _, o := range prod.Choices() {
+		if len(o.Values) == 0 {
+			continue
+		}
+		v := r.FormValue("opt." + o.Name)
+		if !slices.Contains(o.Values, v) {
+			errorToast(w, "Choose "+strings.ToLower(o.Name)+" first.")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			return
+		}
+		picked = append(picked, backend.Choice{Name: o.Name, Value: v})
+	}
+	id = shop.LineID(id, picked)
+
 	// Cart.add: take only what the shop still has room for beyond what the
-	// basket already holds, and report what actually went in.
+	// basket already holds — across every choice of this product — and report
+	// what actually went in.
 	lines := shop.ReadCart(r)
+	base, _ := shop.SplitLine(id)
 	have, at := 0, -1
 	for i, l := range lines {
+		if b, _ := shop.SplitLine(l.ID); b == base {
+			have += l.Qty
+		}
 		if l.ID == id {
-			have, at = l.Qty, i
+			at = i
 		}
 	}
 	got := qty
@@ -1267,7 +1289,8 @@ func (s *Site) handleCheckout(w http.ResponseWriter, r *http.Request) {
 
 	var lines []backend.CheckoutLine
 	for _, e := range entries {
-		lines = append(lines, backend.CheckoutLine{ItemID: e.Product.ID, Units: e.Qty})
+		id, picked := shop.SplitLine(e.Product.ID)
+		lines = append(lines, backend.CheckoutLine{ItemID: id, Units: e.Qty, Options: picked})
 	}
 	expected := shop.CartSubtotal(entries) + shop.ChargesTotal(s.charges(r.Context()))
 	result, err := s.backend.Checkout(r.Context(), p.AccessToken, lines, addressID, shop.CheckoutRequestID(r), expected)
@@ -1351,7 +1374,19 @@ func (s *Site) charges(ctx context.Context) []backend.Charge {
 	return cs
 }
 
-func (s *Site) cartProduct(ctx context.Context, id string) (backend.Product, error) {
+// cartProduct is the product a cart line is for. A line id may carry the
+// buyer's choices ("item-44?Colour=..."); the product keeps that full id so
+// the line can be found again.
+func (s *Site) cartProduct(ctx context.Context, lineID string) (backend.Product, error) {
+	id, _ := shop.SplitLine(lineID)
+	p, err := s.offerProduct(ctx, id)
+	if err == nil && lineID != id {
+		p.ID = lineID
+	}
+	return p, err
+}
+
+func (s *Site) offerProduct(ctx context.Context, id string) (backend.Product, error) {
 	base, store, fromVendor := strings.Cut(id, "@")
 	p, err := s.backend.Product(ctx, base)
 	if err != nil || !fromVendor {
@@ -1407,16 +1442,9 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 	var (
 		wg          sync.WaitGroup
 		overviewErr error
-		stores      struct {
-			Items []map[string]any `json:"items"`
-		}
-		orders struct {
-			Items []map[string]any `json:"items"`
-		}
-		riders struct {
-			Items []map[string]any `json:"items"`
-		}
-		items struct {
+		// These three come back as plain JSON arrays; items is wrapped in {"items": …}.
+		stores, orders, riders []map[string]any
+		items                  struct {
 			Items []backend.InventoryItem `json:"items"`
 		}
 		campaigns struct {
@@ -1447,7 +1475,7 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 		}
 		d.Error = apiMessage(overviewErr)
 	}
-	d.Stores, d.Orders, d.Riders = stores.Items, orders.Items, riders.Items
+	d.Stores, d.Orders, d.Riders = stores, orders, riders
 	d.Items, d.Campaigns = items.Items, campaigns.Campaigns
 	for _, c := range cats {
 		if c.Parent == "" {

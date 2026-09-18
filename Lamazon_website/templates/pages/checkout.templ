@@ -46,6 +46,9 @@ templ placedBody(d PlacedPageData) {
 			<div class="mb-3 rounded bg-surface p-4 shadow-surface">
 				<p class="select-all text-body font-bold text-text">Order { shop.OrderRef(o.ID) }</p>
 				<p class="mt-1 text-body text-text">{ shop.Itoa(o.Units) } × { o.ItemTitle }</p>
+				if len(o.Options) > 0 {
+					<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
+				}
 				<p class="text-body text-muted">{ o.StoreName }</p>
 				<div class="my-3 h-px"></div>
 				<a href={ templ.SafeURL("/orders/" + o.ID) } class={ ui.ButtonClass(false) }>

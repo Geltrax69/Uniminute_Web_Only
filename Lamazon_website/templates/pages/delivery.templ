@@ -136,6 +136,9 @@ templ deliveryBody(d DeliveryData) {
 							</span>
 							<div class="min-w-0 flex-1">
 								<p class="text-[13.5px] font-bold text-text">#{ strings.ToUpper(o.ID) } · { strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+								if len(o.Options) > 0 {
+									<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
+								}
 								<p class="mt-0.5 text-[12.5px] text-muted">{ o.StoreName } → { o.ReceiverName }</p>
 								<p class="line-clamp-2 text-[12px] leading-[1.3] text-muted">{ o.ReceiverAddress }</p>
 							</div>
@@ -188,6 +191,9 @@ templ riderOrderCard(o backend.RiderOrder, action string) {
 			<span class="text-[14.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>₹{ shop.Money(o.Amount) }</span>
 		</div>
 		<p class="mt-2 text-[13.5px] font-semibold text-text">{ strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+								if len(o.Options) > 0 {
+									<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
+								}
 		<div class="my-2.5 h-px bg-track"></div>
 		@riderStop("store", "Collect from", o.StoreName, "", o.StoreAddress)
 		<div class="h-3"></div>

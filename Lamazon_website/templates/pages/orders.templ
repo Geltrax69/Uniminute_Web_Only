@@ -57,6 +57,9 @@ templ orderCard(o backend.Order) {
 			<span class="ml-2 shrink-0 rounded-small px-2.5 py-1 text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ statusLabel(o) }</span>
 		</div>
 		<p class="mt-1.5 text-[14px] font-bold text-text">{ strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
+		if len(o.Options) > 0 {
+			<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
+		}
 		<p class="text-[12.5px] text-muted">{ o.StoreName } · { ago(o.PlacedAt) }</p>
 		if o.ReceiverAddress != "" {
 			<p class="mt-1 text-[12px] leading-[1.35] text-muted">{ o.ReceiverAddress }</p>

@@ -134,6 +134,7 @@ type Order struct {
 	Amount      float64    `json:"amount"`
 	DeliveryFee float64    `json:"deliveryFee"`
 	Stage       OrderStage `json:"stage"`
+	Options     Choices    `json:"options"`
 	PlacedAt    time.Time  `json:"placedAt"`
 
 	StoreOwner string `json:"storeOwner,omitempty"`

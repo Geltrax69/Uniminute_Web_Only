@@ -35,13 +35,16 @@ templ BuyBar(p backend.Product) {
 			<p class="hidden flex-1 text-title text-text min-[900px]:block" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</p>
 			<input type="hidden" id="buy-id" name="id" value={ p.ID }/>
 			<input type="hidden" id="buy-qty" name="qty" value="1" x-bind:value="qty"/>
+			for _, name := range optionNames(p) {
+				<input type="hidden" class="buy-opt" name={ "opt." + name } x-bind:value={ "picks[" + jsLit(name) + "] || ''" }/>
+			}
 			<div class="min-w-0 flex-1">
-				<button type="button" class={ ui.ButtonClass(false) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty" hx-swap="none" disabled?={ out }>
-					<span class="truncate">Add to Cart</span>
+				<button type="button" class={ ui.ButtonClass(false) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty,.buy-opt" hx-swap="none" disabled?={ out } x-bind:disabled={ tplWhen(out, "true", "!!missing") }>
+					<span class="truncate" x-text="missing ? 'Choose ' + missing.toLowerCase() : 'Add to Cart'">Add to Cart</span>
 				</button>
 			</div>
 			<div class="ml-2.5 min-w-0 flex-1">
-				<button type="button" class={ ui.ButtonClass(true) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty" hx-vals={ `{"buy": "1"}` } hx-swap="none" disabled?={ out }>
+				<button type="button" class={ ui.ButtonClass(true) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty,.buy-opt" hx-vals={ `{"buy": "1"}` } hx-swap="none" disabled?={ out } x-bind:disabled={ tplWhen(out, "true", "!!missing") }>
 					<span class="truncate">Buy Now</span>
 				</button>
 			</div>
@@ -65,5 +68,16 @@ func BuyData(p backend.Product) string {
 		totals["save"] = append(totals["save"], shop.Money((p.MRP-p.Price)*n))
 	}
 	b, _ := json.Marshal(totals)
-	return "buy(" + capJS + "," + string(b) + "," + jsLit(shop.Money(p.Price)) + ")"
+	return "buy(" + capJS + "," + string(b) + "," + jsLit(shop.Money(p.Price)) + "," + jsLit(optionNames(p)) + ")"
+}
+
+// optionNames are the options a buyer has to pick before adding to cart.
+func optionNames(p backend.Product) []string {
+	names := []string{}
+	for _, o := range p.Choices() {
+		if len(o.Values) > 0 {
+			names = append(names, o.Name)
+		}
+	}
+	return names
 }

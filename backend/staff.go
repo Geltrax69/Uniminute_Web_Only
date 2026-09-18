@@ -877,7 +877,7 @@ func (d *DB) pickRider(ctx context.Context) (string, error) {
 func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 	stage := strings.TrimSpace(r.URL.Query().Get("stage"))
 	rows, err := a.db.sql.QueryContext(r.Context(), `
-		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.placed_at,
+		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.options, o.placed_at,
 		       o.store_name, o.receiver_name, o.receiver_phone,
 		       o.receiver_address, o.rider_phone, o.assigned_to, o.buyer_email
 		FROM orders o
@@ -893,6 +893,7 @@ func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o Order
 		if err := rows.Scan(&o.ID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
+			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
 			&o.ReceiverAddress, &o.RiderPhone, &o.AssignedTo, &o.BuyerEmail); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -972,7 +973,7 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 	phone := a.staffOf(r)
 	rows, err := a.db.sql.QueryContext(r.Context(), `
-		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.placed_at,
+		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.options, o.placed_at,
 		       o.store_name,
 		       -- LEFT JOIN: a store deleted out from under an order in flight
 		       -- still leaves a rider holding it, and a card with no pickup
@@ -998,6 +999,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o Order
 		if err := rows.Scan(&o.ID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
+			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.RiderPhone,
 			&o.AssignedTo); err != nil {
@@ -1026,7 +1028,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 	phone := a.staffOf(r)
 	rows, err := a.db.sql.QueryContext(r.Context(), `
-		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.placed_at,
+		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.options, o.placed_at,
 		       o.store_name,
 		       trim(both ', ' FROM concat_ws(', ', s.location, s.city)),
 		       o.receiver_name, o.receiver_phone, o.receiver_address,
@@ -1049,6 +1051,7 @@ func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o Order
 		if err := rows.Scan(&o.ID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
+			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.DeliveredAt); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())

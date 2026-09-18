@@ -32,6 +32,10 @@ templ Item(e shop.CartEntry) {
 			<div class="ml-3.5 min-w-0 flex-1">
 				<p class="text-[12px] text-muted">{ p.Store }</p>
 				<a href={ templ.SafeURL("/p/" + p.ID) } class="mt-1 line-clamp-3 text-[16px] font-semibold text-text">{ p.Name }</a>
+				{{ _, picked := shop.SplitLine(p.ID) }}
+				if len(picked) > 0 {
+					<p class="mt-1 text-[13px] font-medium text-strong">{ shop.ChoicesText(picked) }</p>
+				}
 				<div class="h-2"></div>
 				if p.Discounted() {
 					<div class="flex flex-wrap items-center gap-x-2 gap-y-1">

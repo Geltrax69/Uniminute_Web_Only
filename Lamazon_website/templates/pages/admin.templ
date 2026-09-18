@@ -392,6 +392,9 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 	<div class="mb-2 rounded bg-white p-3">
 		<div class="flex items-center">
 			<p class="min-w-0 flex-1 truncate text-[13.5px] font-bold text-text">#{ strings.ToUpper(sv(o, "id")) } · { sv(o, "units") } × { sv(o, "itemTitle") }</p>
+			if picked := choicesOf(o); picked != "" {
+				<p class="w-full text-[12.5px] font-medium text-strong">{ picked }</p>
+			}
 			@pill(stage, orderStageColour(stage))
 		</div>
 		<p class="mt-[3px] text-[12px] text-muted">₹{ shop.Money(nv(o, "amount")) } · { sv(o, "storeName") } → { sv(o, "receiverName") } · { sv(o, "receiverPhone") }</p>
@@ -1323,4 +1326,18 @@ templ chargesSection(charges []backend.Charge) {
 			<span class="truncate" x-text="saving ? 'Saving…' : 'Save charges'">Save charges</span>
 		</button>
 	</div>
+}
+
+// choicesOf is an order's picked options as text, read from the API's JSON.
+func choicesOf(o map[string]any) string {
+	list, _ := o["options"].([]any)
+	var picked []backend.Choice
+	for _, raw := range list {
+		if c, ok := raw.(map[string]any); ok {
+			name, _ := c["name"].(string)
+			value, _ := c["value"].(string)
+			picked = append(picked, backend.Choice{Name: name, Value: value})
+		}
+	}
+	return shop.ChoicesText(picked)
 }

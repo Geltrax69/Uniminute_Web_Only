@@ -639,3 +639,6 @@ ON CONFLICT DO NOTHING;
 -- Refresh rotation with a grace minute: a page firing several requests at once
 -- may present the same refresh token more than once before the new pair lands.
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS rotated_at TIMESTAMPTZ;
+
+-- What the buyer picked (Colour: Black, Storage: 256GB), frozen on the order.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '[]'::jsonb;

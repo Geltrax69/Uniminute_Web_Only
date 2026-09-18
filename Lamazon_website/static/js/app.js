@@ -135,9 +135,12 @@ document.addEventListener('alpine:init', () => {
   // ── product quantity (DetailsScreen._qty) ────────────────────────────────
   // cap is the shop's stock (null when untracked). Totals per quantity are
   // formatted by the server, so the page never re-implements money text.
-  Alpine.data('buy', (cap, totals, unit) => ({
+  Alpine.data('buy', (cap, totals, unit, optionNames = []) => ({
     qty: 1,
     unit,
+    picks: {},
+    // The first option still to choose, or '' when the buyer can add to cart.
+    get missing() { return optionNames.find((n) => !this.picks[n]) || ''; },
     get atCap() { return cap !== null && this.qty >= cap; },
     dec() { if (this.qty > 1) this.qty--; },
     inc() { if (!this.atCap && this.qty < 99) this.qty++; },
@@ -1022,6 +1025,8 @@ document.addEventListener('htmx:sendError', () => {
 });
 document.addEventListener('htmx:responseError', (e) => {
   const status = e.detail.xhr.status;
+  // The server already said why, in its own words.
+  if ((e.detail.xhr.getResponseHeader('HX-Trigger') || '').includes('lw:toast')) return;
   if (status === 401) {
     location.href = '/login?expired=1&next=' + encodeURIComponent(location.pathname + location.search);
     return;

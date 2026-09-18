@@ -175,6 +175,7 @@ type Order struct {
 	ID              string     `json:"id"`
 	ItemID          string     `json:"itemId"`
 	ItemTitle       string     `json:"itemTitle"`
+	Options         []Choice   `json:"options"`
 	Units           int        `json:"units"`
 	Amount          float64    `json:"amount"`
 	DeliveryFee     float64    `json:"deliveryFee"`
@@ -446,8 +447,15 @@ func (b *Backend) Checkout(ctx context.Context, token string, lines []CheckoutLi
 }
 
 type CheckoutLine struct {
-	ItemID string `json:"itemId"`
-	Units  int    `json:"units"`
+	ItemID  string   `json:"itemId"`
+	Units   int      `json:"units"`
+	Options []Choice `json:"options,omitempty"`
+}
+
+// Choice is one option the buyer picked, e.g. {Colour, Black}.
+type Choice struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 type CheckoutResult struct {
@@ -526,6 +534,7 @@ func (b *Backend) Get(ctx context.Context, path, token string, out any) error {
 // RiderOrder is one order as the rider panel sees it: both ends of the run,
 // and never the delivery code.
 type RiderOrder struct {
+	Options         []Choice   `json:"options"`
 	ID              string     `json:"id"`
 	Stage           OrderStage `json:"stage"`
 	AssignedTo      string     `json:"assignedTo"`
