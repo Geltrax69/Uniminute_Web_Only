@@ -5,6 +5,8 @@ package shop
 // campaign palettes (campaign_palette.dart) and the home screen's copy.
 
 import (
+	"crypto/sha256"
+	"encoding/base32"
 	"regexp"
 	"strconv"
 	"strings"
@@ -256,18 +258,13 @@ func isHex(s string) bool {
 // DeliveryETA is catalog.dart's deliveryEta, which the app shows as a constant.
 const DeliveryETA = "12 mins"
 
-// OrderRef is orderRef: "#0042" from an id ending in -42, else "#id".
+// OrderRef turns the internal database id into a stable, opaque reference.
+// Sequence numbers reveal order volume and make neighbouring orders guessable;
+// this display value deliberately has no visible relationship to that sequence.
 func OrderRef(id string) string {
-	parts := strings.Split(id, "-")
-	n, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		return "#" + id
-	}
-	s := strconv.Itoa(n)
-	for len(s) < 4 {
-		s = "0" + s
-	}
-	return "#" + s
+	sum := sha256.Sum256([]byte("uniminute-order-reference-v1:" + id))
+	alphabet := base32.NewEncoding("23456789ABCDEFGHJKLMNPQRSTUVWXYZ").WithPadding(base32.NoPadding)
+	return "UM-" + alphabet.EncodeToString(sum[:5])
 }
 
 // TitleCase is Dart's String.title the address label uses ("home" -> "Home").

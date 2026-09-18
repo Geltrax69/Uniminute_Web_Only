@@ -987,7 +987,7 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 	})
 	if phone != "" && stage == string(StageAccepted) {
 		a.notifyOrderLater("rider:"+phone, "Delivery assigned",
-			"Order "+id+" is ready to collect. Open your delivery panel for the pickup details.", "/delivery")
+			"Order "+orderReference(id)+" is ready to collect. Open your delivery panel for the pickup details.", "/delivery")
 	}
 }
 
@@ -1134,7 +1134,7 @@ func (a *API) handleRiderPick(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	a.notifyOrderLater(o.BuyerEmail, "Order "+o.ID+" is on its way",
+	a.notifyOrderLater(o.BuyerEmail, "Order "+orderReference(o.ID)+" is on its way",
 		fmt.Sprintf("A rider picked up your %s from %s.\n\n"+
 			"Have your 4-digit delivery code ready — they need it to close the order.",
 			o.ItemTitle, o.StoreName), "/orders/"+o.ID)
@@ -1224,8 +1224,8 @@ func (a *API) handleRiderDeliver(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.notifyOrderLater(o.BuyerEmail, "Delivered: "+o.ItemTitle,
-		fmt.Sprintf("Order %s from %s has been delivered. Enjoy.", o.ID, o.StoreName), "/orders/"+o.ID)
-	a.notifyOrderLater(o.StoreOwner, "Order "+o.ID+" was delivered",
+		fmt.Sprintf("Order %s from %s has been delivered. Enjoy.", orderReference(o.ID), o.StoreName), "/orders/"+o.ID)
+	a.notifyOrderLater(o.StoreOwner, "Order "+orderReference(o.ID)+" was delivered",
 		fmt.Sprintf("%d × %s reached the customer. ₹%.0f.",
 			o.Units, o.ItemTitle, o.Amount), "/seller?pane=orders")
 	o.BuyerEmail, o.StoreOwner = "", ""

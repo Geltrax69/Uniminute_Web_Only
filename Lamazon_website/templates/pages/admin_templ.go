@@ -1822,14 +1822,14 @@ func adminOrderRow(o map[string]any, riders []map[string]any) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		stage := sv(o, "stage")
 		carrier, assigned := sv(o, "riderPhone"), sv(o, "assignedTo")
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, "<div class=\"mb-2 rounded bg-white p-3\"><div class=\"flex items-center\"><p class=\"min-w-0 flex-1 truncate text-[13.5px] font-bold text-text\">#")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, "<div class=\"mb-2 rounded bg-white p-3\"><div class=\"flex items-center\"><p class=\"min-w-0 flex-1 truncate text-[13.5px] font-bold text-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var78 string
-		templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(strings.ToUpper(sv(o, "id")))
+		templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(shop.OrderRef(sv(o, "id")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 100}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 		if templ_7745c5c3_Err != nil {
@@ -1842,7 +1842,7 @@ func adminOrderRow(o map[string]any, riders []map[string]any) templ.Component {
 		var templ_7745c5c3_Var79 string
 		templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(sv(o, "units"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 125}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 		if templ_7745c5c3_Err != nil {
@@ -1855,7 +1855,7 @@ func adminOrderRow(o map[string]any, riders []map[string]any) templ.Component {
 		var templ_7745c5c3_Var80 string
 		templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(sv(o, "itemTitle"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 151}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/admin.templ`, Line: 394, Col: 148}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 		if templ_7745c5c3_Err != nil {

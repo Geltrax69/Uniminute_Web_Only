@@ -391,7 +391,7 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 	{{ carrier, assigned := sv(o, "riderPhone"), sv(o, "assignedTo") }}
 	<div class="mb-2 rounded bg-white p-3">
 		<div class="flex items-center">
-			<p class="min-w-0 flex-1 truncate text-[13.5px] font-bold text-text">#{ strings.ToUpper(sv(o, "id")) } · { sv(o, "units") } × { sv(o, "itemTitle") }</p>
+			<p class="min-w-0 flex-1 truncate text-[13.5px] font-bold text-text">{ shop.OrderRef(sv(o, "id")) } · { sv(o, "units") } × { sv(o, "itemTitle") }</p>
 			if picked := choicesOf(o); picked != "" {
 				<p class="w-full text-[12.5px] font-medium text-strong">{ picked }</p>
 			}

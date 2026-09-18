@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base32"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +14,16 @@ import (
 	"sort"
 	"strings"
 )
+
+var orderReferenceEncoding = base32.NewEncoding("23456789ABCDEFGHJKLMNPQRSTUVWXYZ").WithPadding(base32.NoPadding)
+
+// orderReference is the customer/staff-facing identifier. Database ids stay
+// internal routing keys; this stable hash prevents sequential order numbers
+// from exposing volume or making the next reference predictable.
+func orderReference(id string) string {
+	sum := sha256.Sum256([]byte("uniminute-order-reference-v1:" + id))
+	return "UM-" + orderReferenceEncoding.EncodeToString(sum[:5])
+}
 
 // The life of an order, and who moves it on:
 //
@@ -252,9 +264,9 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		a.notifyOrderLater(o.StoreOwner, fmt.Sprintf("New order: %d × %s", o.Units, o.ItemTitle),
 			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + charges ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount),
 			"/seller?pane=orders")
-		a.notifyOrderLater(buyer, "Order placed successfully",
+		a.notifyOrderLater(buyer, "Order "+orderReference(o.ID)+" placed successfully",
 			fmt.Sprintf("Your order %s for %d × %s was sent to %s. We are waiting for the store to accept it.",
-				o.ID, o.Units, o.ItemTitle, o.StoreName), "/orders/"+o.ID)
+				orderReference(o.ID), o.Units, o.ItemTitle, o.StoreName), "/orders/"+o.ID)
 	}
 	if single {
 		writeJSON(w, 201, out[0])
@@ -381,14 +393,14 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}
-	a.notifyOrderLater(buyer, "Order "+o.ID+" is confirmed",
+	a.notifyOrderLater(buyer, "Order "+orderReference(o.ID)+" is confirmed",
 		fmt.Sprintf("%s accepted your order of %d × %s.\n\n"+
 			"Your delivery code is %s. Read it out to the rider when they hand "+
 			"the order over — it is what closes the delivery.",
 			o.StoreName, o.Units, o.ItemTitle, code), "/orders/"+o.ID)
 	if o.AssignedTo != "" {
 		a.notifyOrderLater("rider:"+o.AssignedTo, "New delivery assigned",
-			fmt.Sprintf("Collect order %s from %s: %d × %s.", o.ID, o.StoreName, o.Units, o.ItemTitle), "/delivery")
+			fmt.Sprintf("Collect order %s from %s: %d × %s.", orderReference(o.ID), o.StoreName, o.Units, o.ItemTitle), "/delivery")
 	}
 	writeJSON(w, http.StatusOK, o)
 }
@@ -418,7 +430,7 @@ func (a *API) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}
-	a.notifyOrderLater(buyer, "Order "+o.ID+" could not be accepted",
+	a.notifyOrderLater(buyer, "Order "+orderReference(o.ID)+" could not be accepted",
 		fmt.Sprintf("%s could not take your order of %d × %s.\n\nReason: %s",
 			o.StoreName, o.Units, o.ItemTitle, reason), "/orders/"+o.ID)
 	writeJSON(w, http.StatusOK, o)
@@ -511,7 +523,7 @@ func (a *API) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "could not cancel order")
 		return
 	}
-	a.notifyOrderLater(o.StoreOwner, "Order "+o.ID+" was cancelled", "The customer cancelled the order before acceptance.", "/seller?pane=orders")
+	a.notifyOrderLater(o.StoreOwner, "Order "+orderReference(o.ID)+" was cancelled", "The customer cancelled the order before acceptance.", "/seller?pane=orders")
 	o.StoreOwner = ""
 	writeJSON(w, 200, o)
 }
