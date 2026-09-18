@@ -76,6 +76,8 @@ type InventoryItem struct {
 	// shopper can buy is Stock - Reserved, and the seller needs to see the
 	// same arithmetic the shop does.
 	Reserved int `json:"reserved"`
+	// Units already delivered: what has actually sold.
+	Sold int `json:"sold"`
 	// Filled only by the admin listing, which spans every store. The seller's
 	// own list leaves them zero: a seller knows whose shop they are looking at,
 	// and counting orders per row on a screen they refresh constantly is work

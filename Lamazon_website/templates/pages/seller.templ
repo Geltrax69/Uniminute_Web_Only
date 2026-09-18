@@ -259,7 +259,7 @@ templ sellerItemRow(it backend.InventoryItem) {
 			<p class="mt-0.5 truncate text-[12.5px] text-muted">₹{ shop.Money(it.Price) } · { it.Category }</p>
 			<div class="mt-1.5 flex flex-wrap items-center gap-2">
 				<span class="rounded-[10px] px-2 py-[3px] text-[11px] font-bold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .12) + ";color:" + colour) }>{ label }</span>
-				<span class="text-[11.5px] text-muted">{ tpl.When(it.Reserved > 0, strconv.Itoa(it.Available())+" to sell · "+strconv.Itoa(it.Reserved)+" in orders", strconv.Itoa(it.Stock)+" left") }</span>
+				<span class="text-[11.5px] text-muted">{ stockLine(it) }</span>
 				if it.Delisted {
 					<span class="rounded-[10px] bg-track px-2 py-[3px] text-[11px] font-bold text-muted">Hidden</span>
 				}
@@ -472,3 +472,16 @@ func sellerStageColour(s backend.OrderStage) string {
 }
 
 var _ = strings.TrimSpace
+
+// stockLine reads the same for every product: what can still be sold, then
+// what live orders hold, then what has been delivered.
+func stockLine(it backend.InventoryItem) string {
+	parts := []string{strconv.Itoa(it.Available()) + " to sell"}
+	if it.Reserved > 0 {
+		parts = append(parts, strconv.Itoa(it.Reserved)+" in orders")
+	}
+	if it.Sold > 0 {
+		parts = append(parts, strconv.Itoa(it.Sold)+" sold")
+	}
+	return strings.Join(parts, " · ")
+}

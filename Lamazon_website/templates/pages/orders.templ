@@ -19,9 +19,10 @@ import (
 )
 
 type OrdersPageData struct {
-	Page   viewdata.Page
-	Orders []backend.Order
-	Error  string
+	Page    viewdata.Page
+	Orders  []backend.Order
+	Reviews map[string]backend.Review // by order id
+	Error   string
 }
 
 templ OrdersPage(d OrdersPageData) {
@@ -40,7 +41,7 @@ templ ordersBody(d OrdersPageData) {
 			<div class="px-5 pt-1">
 				for _, o := range d.Orders {
 					<div class="mb-3">
-						@orderCard(o)
+						@orderCard(o, d.Reviews)
 					</div>
 				}
 			</div>
@@ -49,7 +50,7 @@ templ ordersBody(d OrdersPageData) {
 	@navigation.BottomNav(d.Page, "")
 }
 
-templ orderCard(o backend.Order) {
+templ orderCard(o backend.Order, reviews map[string]backend.Review) {
 	{{ colour := statusColour(o.Stage) }}
 	<a href={ templ.SafeURL("/orders/" + o.ID) } class="block rounded-[20px] bg-white p-4 hover:bg-[#FCFCFA]">
 		<div class="flex items-center">
@@ -78,6 +79,18 @@ templ orderCard(o backend.Order) {
 			<span class="text-[13px] text-muted">Total</span>
 			<span class="text-[15px] font-extrabold text-text">₹{ shop.Money(o.Amount) }</span>
 		</div>
+		if o.Stage == backend.StageDelivered {
+			if rv, ok := reviews[o.ID]; ok {
+				<p class="mt-2 flex items-center gap-2 text-[12.5px] text-muted">
+					@ui.Stars(max(rv.ItemRating, rv.RiderRating), "text-[15px]")
+					<span>You reviewed this order</span>
+				</p>
+			} else {
+				<p class="mt-2.5 flex items-center justify-center gap-1.5 rounded-[14px] bg-lime/50 py-2.5 text-[13px] font-bold text-strong">
+					<span class="text-[#F2A900]">★</span> Rate this order
+				</p>
+			}
+		}
 	</a>
 }
 

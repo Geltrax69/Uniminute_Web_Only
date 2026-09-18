@@ -38,3 +38,15 @@ func TestChosenPIN(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewRules(t *testing.T) {
+	if validReview(5, 0) != "" || validReview(0, 4) != "" || validReview(3, 3) != "" {
+		t.Fatal("valid ratings refused")
+	}
+	if validReview(0, 0) == "" || validReview(6, 1) == "" || validReview(-1, 2) == "" {
+		t.Fatal("invalid ratings accepted")
+	}
+	if firstName("Lalit Singh") != "Lalit" || firstName("") != "A shopper" {
+		t.Fatal("first name")
+	}
+}

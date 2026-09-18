@@ -642,3 +642,21 @@ ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS rotated_at TIMESTAMPTZ;
 
 -- What the buyer picked (Colour: Black, Storage: 256GB), frozen on the order.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- One review per delivered order: stars (1–5) and words for the product and
+-- for the rider who brought it. Either half may be left out.
+CREATE TABLE IF NOT EXISTS order_reviews (
+ order_id     TEXT PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+ buyer_email  TEXT NOT NULL,
+ item_id      TEXT NOT NULL,
+ item_rating  SMALLINT CHECK (item_rating BETWEEN 1 AND 5),
+ item_text    TEXT NOT NULL DEFAULT '',
+ rider_phone  TEXT NOT NULL DEFAULT '',
+ rider_rating SMALLINT CHECK (rider_rating BETWEEN 1 AND 5),
+ rider_text   TEXT NOT NULL DEFAULT '',
+ created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+ updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_item ON order_reviews (item_id);
+-- When the "please review" nudge went out, so it goes out once.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS review_requested_at TIMESTAMPTZ;

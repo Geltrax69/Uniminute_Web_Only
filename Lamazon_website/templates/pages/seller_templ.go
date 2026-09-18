@@ -1149,9 +1149,9 @@ func sellerItemRow(it backend.InventoryItem) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var52 string
-		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(tpl.When(it.Reserved > 0, strconv.Itoa(it.Available())+" to sell · "+strconv.Itoa(it.Reserved)+" in orders", strconv.Itoa(it.Stock)+" left"))
+		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(stockLine(it))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller.templ`, Line: 262, Col: 186}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller.templ`, Line: 262, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -1735,5 +1735,18 @@ func sellerStageColour(s backend.OrderStage) string {
 }
 
 var _ = strings.TrimSpace
+
+// stockLine reads the same for every product: what can still be sold, then
+// what live orders hold, then what has been delivered.
+func stockLine(it backend.InventoryItem) string {
+	parts := []string{strconv.Itoa(it.Available()) + " to sell"}
+	if it.Reserved > 0 {
+		parts = append(parts, strconv.Itoa(it.Reserved)+" in orders")
+	}
+	if it.Sold > 0 {
+		parts = append(parts, strconv.Itoa(it.Sold)+" sold")
+	}
+	return strings.Join(parts, " · ")
+}
 
 var _ = templruntime.GeneratedTemplate

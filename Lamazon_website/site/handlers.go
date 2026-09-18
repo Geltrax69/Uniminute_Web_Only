@@ -486,10 +486,12 @@ func (s *Site) handleProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	p.Title = prod.Name + " — Uniminute"
 	p.Description = prod.Description
+	reviews, _ := s.backend.ProductReviews(r.Context(), prod.ID)
 	renderOK(w, r, pages.ProductPage(pages.ProductPageData{
 		Page:       p,
 		Product:    prod,
 		Wishlisted: p.Wishlist[prod.ID],
+		Reviews:    reviews,
 	}))
 }
 
@@ -726,6 +728,7 @@ func (s *Site) handleAccountPage(w http.ResponseWriter, r *http.Request) {
 	d := pages.AccountPageData{Page: p}
 	if p.User != nil {
 		d.Orders, _ = s.backend.MyOrders(backend.Fresh(r.Context()), p.AccessToken)
+		d.Reviews, _ = s.backend.MyReviews(backend.Fresh(r.Context()), p.AccessToken)
 	}
 	renderOK(w, r, pages.AccountPage(d))
 }
@@ -793,6 +796,7 @@ func (s *Site) handleOrdersPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d := pages.OrdersPageData{Page: p, Orders: orders}
+	d.Reviews, _ = s.backend.MyReviews(backend.Fresh(r.Context()), p.AccessToken)
 	if err != nil {
 		d.Error = "Could not reach Uniminute — try again in a moment."
 	}
@@ -1474,6 +1478,7 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 		func() { d.Groups, _ = s.backend.CompareGroups(ctx) },
 		func() { d.Policies, _ = s.backend.Policies(ctx) },
 		func() { d.Charges = s.charges(ctx) },
+		func() { _ = s.backend.Get(ctx, "/api/admin/reviews", token, &d.Reviews) },
 		func() { cats, _ = s.backend.Categories(ctx) },
 	} {
 		wg.Add(1)
@@ -1895,7 +1900,13 @@ func (s *Site) handleOrderDetail(w http.ResponseWriter, r *http.Request) {
 	for _, o := range orders {
 		if o.ID == id {
 			p.Title = "Order " + shop.OrderRef(id) + " — Uniminute"
-			renderOK(w, r, pages.OrderDetail(pages.OrderDetailData{Page: p, Order: o}))
+			d := pages.OrderDetailData{Page: p, Order: o}
+			if reviews, err := s.backend.MyReviews(backend.Fresh(r.Context()), p.AccessToken); err == nil {
+				if rv, ok := reviews[id]; ok {
+					d.Review = &rv
+				}
+			}
+			renderOK(w, r, pages.OrderDetail(d))
 			return
 		}
 	}
@@ -2028,4 +2039,28 @@ func childCategories(cats []backend.Category, tab string) []backend.Category {
 		}
 	}
 	return nil
+}
+
+// handleReview saves the buyer's stars and words for a delivered order.
+func (s *Site) handleReview(w http.ResponseWriter, r *http.Request) {
+	p := s.buildPage(r)
+	if !requireAuth(w, r, p) {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	item, _ := strconv.Atoi(r.FormValue("itemRating"))
+	rider, _ := strconv.Atoi(r.FormValue("riderRating"))
+	err := s.backend.SaveReview(r.Context(), p.AccessToken, r.PathValue("id"),
+		item, r.FormValue("itemText"), rider, r.FormValue("riderText"))
+	if err != nil {
+		errorToast(w, apiMessage(err))
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+	// The product page caches reviews like any public read; drop them.
+	s.backend.Forget("")
+	w.WriteHeader(http.StatusNoContent)
 }

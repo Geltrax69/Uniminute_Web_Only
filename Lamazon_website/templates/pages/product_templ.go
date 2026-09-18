@@ -24,6 +24,7 @@ type ProductPageData struct {
 	Page       viewdata.Page
 	Product    backend.Product
 	Wishlisted bool
+	Reviews    backend.ProductReviews
 }
 
 func ProductPage(d ProductPageData) templ.Component {
@@ -83,7 +84,7 @@ func productBody(d ProductPageData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(product.BuyData(d.Product))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/product.templ`, Line: 26, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/product.templ`, Line: 27, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -101,7 +102,7 @@ func productBody(d ProductPageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = product.Info(d.Product).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = product.Info(d.Product, d.Reviews).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

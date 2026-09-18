@@ -91,6 +91,7 @@ templ adminField(name, label, kind, autocomplete, value string, secret bool) {
 type AdminData struct {
 	Page        viewdata.Page
 	Charges     []backend.Charge
+	Reviews     []backend.Review
 	Staff       shop.Staff
 	Tab         string
 	Q           string
@@ -118,7 +119,7 @@ type adminTab struct {
 
 var adminTabs = []adminTab{
 	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
-	{"orders", "Orders", false}, {"products", "Products", false}, {"insights", "Insights", false},
+	{"orders", "Orders", false}, {"reviews", "Reviews", false}, {"products", "Products", false}, {"insights", "Insights", false},
 	{"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
 	{"policies", "Policies", false}, {"charges", "Charges", false}, {"delivery", "Delivery", false},
 	{"people", "People", false},
@@ -300,6 +301,8 @@ templ adminSection(d AdminData) {
 			}
 		case "charges":
 			@chargesSection(d.Charges)
+		case "reviews":
+			@reviewsSection(d.Reviews)
 		case "delivery":
 			<div class="flex items-start">
 				<div class="flex-1">
@@ -933,7 +936,7 @@ func (d AdminData) Counts() map[string]int {
 		"rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
 		"insights": len(lv(d.Insights, "topStores")), "banners": len(d.Campaigns),
 		"categories": len(d.Departments), "policies": len(d.Policies), "compare": len(d.Groups),
-		"charges": len(d.Charges),
+		"charges": len(d.Charges), "reviews": len(d.Reviews),
 		"delivery": len(d.Riders), "people": len(d.people()),
 	}
 }
@@ -1348,4 +1351,88 @@ func choicesOf(o map[string]any) string {
 		}
 	}
 	return shop.ChoicesText(picked)
+}
+
+// reviewsSection: how each rider is rated, then every review, newest first.
+templ reviewsSection(list []backend.Review) {
+	@adminNote("What buyers said after delivery: stars and words for the product, and for the rider who brought it. Buyers are asked ten minutes after an order is delivered.")
+	if len(list) == 0 {
+		@adminEmpty("No reviews yet. They arrive once delivered orders are rated.")
+	} else {
+		if riders := riderScores(list); len(riders) > 0 {
+			<p class="px-1 pb-2 pt-1 text-[13px] font-extrabold text-text">Delivery riders</p>
+			<div class="mb-4 grid gap-2 sm:grid-cols-2">
+				for _, r := range riders {
+					<div class="flex items-center rounded bg-white p-3">
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-[13.5px] font-bold text-text">{ r.name }</p>
+							<p class="text-[12px] text-muted">{ r.phone } · { strconv.Itoa(r.count) } { tpl.When(r.count == 1, "review", "reviews") }</p>
+						</div>
+						@ui.Stars(int(r.avg+0.5), "text-[15px]")
+						<span class="ml-2 text-[14px] font-extrabold text-text">{ strconv.FormatFloat(r.avg, 'f', 1, 64) }</span>
+					</div>
+				}
+			</div>
+		}
+		<p class="px-1 pb-2 text-[13px] font-extrabold text-text">All reviews</p>
+		for _, r := range list {
+			<div class="mb-2 rounded bg-white p-3.5">
+				<div class="flex flex-wrap items-baseline gap-x-2">
+					<p class="min-w-0 flex-1 truncate text-[13.5px] font-bold text-text">{ r.ItemTitle }</p>
+					<span class="text-[11.5px] text-muted">#{ strings.ToUpper(r.OrderID) } · { r.UpdatedAt.Format("2 Jan 2006, 3:04 PM") }</span>
+				</div>
+				<p class="text-[12px] text-muted">{ r.StoreName } · by { tpl.When(r.BuyerName == "", r.BuyerEmail, r.BuyerName+" ("+r.BuyerEmail+")") }</p>
+				if r.ItemRating > 0 {
+					<div class="mt-2 flex items-center gap-2">
+						<span class="w-[64px] shrink-0 text-[12px] font-semibold text-muted">Product</span>
+						@ui.Stars(r.ItemRating, "text-[15px]")
+					</div>
+					if r.ItemText != "" {
+						<p class="ml-[72px] mt-0.5 whitespace-pre-line text-[13px] text-text">{ r.ItemText }</p>
+					}
+				}
+				if r.RiderRating > 0 {
+					<div class="mt-2 flex items-center gap-2">
+						<span class="w-[64px] shrink-0 text-[12px] font-semibold text-muted">Delivery</span>
+						@ui.Stars(r.RiderRating, "text-[15px]")
+						<span class="text-[12px] text-muted">{ tpl.When(r.RiderName == "", r.RiderPhone, r.RiderName+" · "+r.RiderPhone) }</span>
+					</div>
+					if r.RiderText != "" {
+						<p class="ml-[72px] mt-0.5 whitespace-pre-line text-[13px] text-text">{ r.RiderText }</p>
+					}
+				}
+			</div>
+		}
+	}
+}
+
+type riderScore struct {
+	name, phone string
+	avg         float64
+	count       int
+}
+
+// riderScores averages the delivery ratings per rider, best first.
+func riderScores(list []backend.Review) []riderScore {
+	by := map[string]*riderScore{}
+	var order []string
+	for _, r := range list {
+		if r.RiderRating == 0 || r.RiderPhone == "" {
+			continue
+		}
+		s, ok := by[r.RiderPhone]
+		if !ok {
+			s = &riderScore{name: tpl.When(r.RiderName == "", "Rider", r.RiderName), phone: r.RiderPhone}
+			by[r.RiderPhone] = s
+			order = append(order, r.RiderPhone)
+		}
+		s.avg = (s.avg*float64(s.count) + float64(r.RiderRating)) / float64(s.count+1)
+		s.count++
+	}
+	out := make([]riderScore, 0, len(order))
+	for _, p := range order {
+		out = append(out, *by[p])
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].avg > out[j].avg })
+	return out
 }

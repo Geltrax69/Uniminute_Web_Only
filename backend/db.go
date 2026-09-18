@@ -324,6 +324,8 @@ func (d *DB) allItems(ctx context.Context) ([]InventoryItem, error) {
 		                 WHERE o.item_id = i.id
 		                   AND o.stage NOT IN ('delivered','rejected')), 0)::int,
 		       (SELECT count(*) FROM orders o WHERE o.item_id = i.id)::int,
+		       COALESCE((SELECT sum(o.units) FROM orders o
+		                 WHERE o.item_id = i.id AND o.stage = 'delivered'), 0)::int,
 		       s.name, i.owner,
 		       array_to_string(i.image_urls, E'\n')
 		FROM inventory_items i
@@ -341,7 +343,7 @@ func (d *DB) allItems(ctx context.Context) ([]InventoryItem, error) {
 		var options, attributes []byte
 		if err := rows.Scan(&i.ID, &i.Title, &i.Description, &i.Category,
 			&i.Price, &i.MRP, &options, &i.CompareGroup, &attributes,
-			&i.Stock, &i.Delisted, &i.Reserved, &i.Orders, &i.StoreName,
+			&i.Stock, &i.Delisted, &i.Reserved, &i.Orders, &i.Sold, &i.StoreName,
 			&i.Owner, &urls); err != nil {
 			return nil, err
 		}
@@ -368,6 +370,8 @@ func (d *DB) items(ctx context.Context, owner string) ([]InventoryItem, error) {
 		       COALESCE((SELECT sum(o.units) FROM orders o
 		                 WHERE o.item_id = inventory_items.id
 		                   AND o.stage NOT IN ('delivered','rejected')), 0)::int,
+		       COALESCE((SELECT sum(o.units) FROM orders o
+		                 WHERE o.item_id = inventory_items.id AND o.stage = 'delivered'), 0)::int,
 		       array_to_string(image_urls, E'\n')
 		FROM inventory_items WHERE owner = $1 ORDER BY id DESC`, owner)
 	if err != nil {
@@ -382,7 +386,7 @@ func (d *DB) items(ctx context.Context, owner string) ([]InventoryItem, error) {
 		var options, attributes []byte
 		if err := rows.Scan(&i.ID, &i.Title, &i.Description, &i.Category,
 			&i.Price, &i.MRP, &options, &i.CompareGroup, &attributes,
-			&i.Stock, &i.Delisted, &i.Reserved, &urls); err != nil {
+			&i.Stock, &i.Delisted, &i.Reserved, &i.Sold, &urls); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(options, &i.Options); err != nil {

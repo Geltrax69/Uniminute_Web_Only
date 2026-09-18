@@ -15,8 +15,9 @@ import (
 )
 
 type AccountPageData struct {
-	Page   viewdata.Page
-	Orders []backend.Order
+	Page    viewdata.Page
+	Orders  []backend.Order
+	Reviews map[string]backend.Review // by order id
 }
 
 templ AccountPage(d AccountPageData) {
@@ -69,6 +70,22 @@ templ accountBody(d AccountPageData) {
 			<div id="account-order-status" hx-get="/account" hx-trigger="every 15s [document.visibilityState === 'visible']" hx-select="#account-order-status" hx-target="this" hx-swap="outerHTML">
 				@accountOrderMenu(d.Orders[0])
 			</div>
+			if len(d.Orders) > 1 {
+				@profileSection("Order history")
+				for i, o := range d.Orders[1:] {
+					if i < 4 {
+						<div class="mb-2.5">
+							@orderCard(o, d.Reviews)
+						</div>
+					}
+				}
+				if len(d.Orders) > 5 {
+					<a href="/orders" class={ ui.ButtonClass(false) + " w-full" }>
+						<span>See all { shop.Itoa(len(d.Orders)) } orders</span>
+						@ui.Icon("arrow-right", "h-4 w-4")
+					</a>
+				}
+			}
 		}
 		<div class={ tpl.When(len(d.Orders) > 0, "mt-3.5", "mt-3.5 lg:mt-0") }>
 			@menuCard() {

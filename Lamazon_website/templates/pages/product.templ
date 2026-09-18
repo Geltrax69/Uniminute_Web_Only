@@ -16,6 +16,7 @@ type ProductPageData struct {
 	Page       viewdata.Page
 	Product    backend.Product
 	Wishlisted bool
+	Reviews    backend.ProductReviews
 }
 
 templ ProductPage(d ProductPageData) {
@@ -30,7 +31,7 @@ templ productBody(d ProductPageData) {
 					@product.Gallery(d.Product, d.Wishlisted)
 				</div>
 				<div class="min-[900px]:min-w-0 min-[900px]:flex-[5]">
-					@product.Info(d.Product)
+					@product.Info(d.Product, d.Reviews)
 				</div>
 			</div>
 		</main>

@@ -115,6 +115,7 @@ func (s *Site) routes() http.Handler {
 
 	mux.HandleFunc("POST /checkout", s.handleCheckout)
 	mux.HandleFunc("POST /orders/{id}/cancel", s.handleOrderCancel)
+	mux.HandleFunc("POST /orders/{id}/review", s.handleReview)
 
 	// --- static and proxy -------------------------------------------------
 	mux.Handle("GET /static/", http.StripPrefix("/static/", staticFileServer()))

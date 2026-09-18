@@ -628,6 +628,7 @@ type InventoryItem struct {
 	Stock        int               `json:"stock"`
 	Delisted     bool              `json:"delisted"`
 	Reserved     int               `json:"reserved"`
+	Sold         int               `json:"sold"`
 	ImageURLs    []string          `json:"imageUrls"`
 	// Filled only by the admin catalogue, which spans every store.
 	StoreName string `json:"storeName,omitempty"`
@@ -741,4 +742,58 @@ func (b *Backend) Products(ctx context.Context, q, tab, category string) ([]Prod
 	var out []Product
 	err := b.get(ctx, path, "", &out)
 	return out, err
+}
+
+// Review is a buyer's verdict on one delivered order: the product and the rider.
+type Review struct {
+	OrderID     string    `json:"orderId"`
+	ItemID      string    `json:"itemId"`
+	ItemTitle   string    `json:"itemTitle"`
+	StoreName   string    `json:"storeName"`
+	BuyerEmail  string    `json:"buyerEmail"`
+	BuyerName   string    `json:"buyerName"`
+	ItemRating  int       `json:"itemRating"`
+	ItemText    string    `json:"itemText"`
+	RiderPhone  string    `json:"riderPhone"`
+	RiderName   string    `json:"riderName"`
+	RiderRating int       `json:"riderRating"`
+	RiderText   string    `json:"riderText"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+// ProductReviews is what shoppers see: the average and the written reviews.
+type ProductReviews struct {
+	Average float64 `json:"average"`
+	Count   int     `json:"count"`
+	Reviews []struct {
+		Rating int       `json:"rating"`
+		Text   string    `json:"text"`
+		Name   string    `json:"name"`
+		At     time.Time `json:"at"`
+	} `json:"reviews"`
+}
+
+// GET /api/orders/reviews — the signed-in buyer's reviews, by order.
+func (b *Backend) MyReviews(ctx context.Context, token string) (map[string]Review, error) {
+	var list []Review
+	err := b.get(ctx, "/api/orders/reviews", token, &list)
+	out := map[string]Review{}
+	for _, r := range list {
+		out[r.OrderID] = r
+	}
+	return out, err
+}
+
+// GET /api/products/{id}/reviews
+func (b *Backend) ProductReviews(ctx context.Context, id string) (ProductReviews, error) {
+	var out ProductReviews
+	err := b.get(ctx, "/api/products/"+url.PathEscape(id)+"/reviews", "", &out)
+	return out, err
+}
+
+// PUT /api/orders/{id}/review
+func (b *Backend) SaveReview(ctx context.Context, token, orderID string, itemRating int, itemText string, riderRating int, riderText string) error {
+	return b.do(ctx, http.MethodPut, "/api/orders/"+url.PathEscape(orderID)+"/review", token, map[string]any{
+		"itemRating": itemRating, "itemText": itemText, "riderRating": riderRating, "riderText": riderText,
+	}, nil)
 }

@@ -379,3 +379,30 @@ templ Modal(id string, title string, content templ.Component) {
 		</div>
 	</div>
 }
+
+// Stars shows a 0–5 rating as filled and empty stars.
+templ Stars(n int, class string) {
+	<span class={ "inline-flex tracking-[1px] " + class } role="img" aria-label={ strconv.Itoa(n) + " out of 5 stars" }>
+		for i := 1; i <= 5; i++ {
+			<span class={ tpl.When(i <= n, "text-[#F2A900]", "text-[#D9DCD5]") } aria-hidden="true">★</span>
+		}
+	</span>
+}
+
+// StarInput picks 0–5 stars into a hidden field; tapping the chosen star again clears it.
+templ StarInput(name string, value int, label string) {
+	<div x-data={ "{ v: " + strconv.Itoa(value) + " }" } class="flex items-center gap-1" role="radiogroup" aria-label={ label }>
+		<input type="hidden" name={ name } x-bind:value="v" value={ strconv.Itoa(value) }/>
+		for i := 1; i <= 5; i++ {
+			<button
+				type="button"
+				role="radio"
+				x-bind:aria-checked={ "v === " + strconv.Itoa(i) }
+				aria-label={ strconv.Itoa(i) + " star" + tpl.When(i == 1, "", "s") }
+				x-on:click={ "v = (v === " + strconv.Itoa(i) + " ? 0 : " + strconv.Itoa(i) + ")" }
+				class="text-[30px] leading-none transition-transform hover:scale-110"
+				x-bind:class={ "v >= " + strconv.Itoa(i) + " ? 'text-[#F2A900]' : 'text-[#D9DCD5]'" }>★</button>
+		}
+		<span class="ml-2 text-[13px] font-semibold text-muted" x-text="['Tap to rate', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'][v]"></span>
+	</div>
+}
