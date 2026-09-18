@@ -16,6 +16,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"lamazon/website/backend"
+	"lamazon/website/shop"
 	"lamazon/website/templates/components/account"
 	"lamazon/website/templates/components/navigation"
 	"lamazon/website/templates/components/ui"
@@ -96,7 +97,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue("sellerProductForm(" + jsonArg(productFormConfig(d)) + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 40, Col: 112}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 41, Col: 112}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -224,7 +225,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</button></div><p class=\"pb-2 text-[12px] text-muted\" x-show=\"!o.values.length\">Add at least one choice, or this group is dropped.</p><div class=\"flex flex-wrap gap-2\"><template x-for=\"(v, vi) in o.values\" :key=\"v\"><span class=\"flex items-center rounded-[20px] bg-canvas py-1.5 pl-2.5 pr-1.5 text-[12.5px] text-text\"><span class=\"mr-1.5 h-3.5 w-3.5 rounded-full border border-black/10\" x-show=\"o.kind === 'colour'\" x-bind:style=\"`background-color:${v}`\"></span> <span x-text=\"o.kind === 'colour' ? swatchName(v) : v\"></span> <button type=\"button\" x-on:click=\"o.values.splice(vi, 1)\" aria-label=\"Remove choice\" class=\"ml-0.5 flex p-1 text-muted\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</button></div><p class=\"pb-2 text-[12px] text-muted\" x-show=\"!o.values.length\">Add at least one choice, or this group is dropped.</p><div class=\"flex flex-wrap gap-2\"><template x-for=\"(v, vi) in o.values\" :key=\"v\"><span class=\"flex items-center rounded-[20px] bg-canvas py-1.5 pl-2.5 pr-1.5 text-[12.5px] text-text\"><span class=\"mr-1.5 h-3.5 w-3.5 rounded-full border border-black/10\" x-show=\"o.kind === 'colour'\" x-bind:style=\"`background-color:${colourHex(v)}`\"></span> <span x-text=\"o.kind === 'colour' ? swatchName(v) : v\"></span> <button type=\"button\" x-on:click=\"o.values.splice(vi, 1)\" aria-label=\"Remove choice\" class=\"ml-0.5 flex p-1 text-muted\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -232,7 +233,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</button></span></template></div><div class=\"mt-2.5\"><template x-if=\"o.kind === 'colour'\"><div class=\"flex flex-wrap gap-2\"><template x-for=\"sw in swatches.filter(s => !o.values.includes(s.hex))\" :key=\"sw.hex\"><button type=\"button\" x-on:click=\"addValue(o, sw.hex)\" x-bind:aria-label=\"sw.name\" x-bind:title=\"sw.name\" class=\"h-7 w-7 rounded-full border border-black/10\" x-bind:style=\"`background-color:${sw.hex}`\"></button></template></div></template><template x-if=\"o.kind !== 'colour'\"><div class=\"mr-1.5 flex h-[42px] items-center rounded-small bg-[#F4F4F2] pl-3.5 pr-1 focus-within:ring-2 focus-within:ring-strong\"><input type=\"text\" x-model=\"o.entry\" x-on:keydown.enter.prevent=\"addValue(o, o.entry)\" placeholder=\"Add a choice, then Enter\" aria-label=\"Add a choice\" class=\"min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted\"> <button type=\"button\" x-on:click=\"addValue(o, o.entry)\" aria-label=\"Add choice\" class=\"flex h-9 w-9 items-center justify-center text-text\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</button></span></template></div><div class=\"mt-2.5\"><template x-if=\"o.kind === 'colour'\"><div><div class=\"flex flex-wrap gap-2\"><template x-for=\"sw in swatches.filter(s => !o.values.some(v => colourHex(v).toLowerCase() === s.hex.toLowerCase()))\" :key=\"sw.hex\"><button type=\"button\" x-on:click=\"addValue(o, sw.hex)\" x-bind:aria-label=\"sw.name\" x-bind:title=\"sw.name\" class=\"h-7 w-7 rounded-full border border-black/10\" x-bind:style=\"`background-color:${sw.hex}`\"></button></template></div><div class=\"mt-2.5 mr-1.5 flex flex-wrap items-center gap-2\" x-data=\"{ name: '', shade: '#A7C7E7' }\"><p class=\"w-full text-[12px] text-muted\">Not in the list? Name it and pick the shade.</p><label class=\"flex h-[42px] min-w-0 flex-1 items-center rounded-small bg-[#F4F4F2] px-3.5 focus-within:ring-2 focus-within:ring-strong\"><input type=\"text\" x-model=\"name\" maxlength=\"30\" x-on:keydown.enter.prevent=\"if (name.trim()) { addValue(o, name.trim() + '|' + shade); name = '' }\" placeholder=\"Colour name, e.g. Sky Blue\" aria-label=\"Custom colour name\" class=\"min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted\"></label> <input type=\"color\" x-model=\"shade\" aria-label=\"Pick the shade\" title=\"Pick the shade\" class=\"h-[42px] w-[52px] shrink-0 cursor-pointer rounded-small border border-black/10 bg-white p-1\"> <button type=\"button\" x-on:click=\"addValue(o, name.trim() + '|' + shade); name = ''\" x-bind:disabled=\"!name.trim()\" class=\"h-[42px] shrink-0 rounded-small bg-text px-4 text-[13px] font-semibold text-white disabled:opacity-40\">Add</button></div></div></template><template x-if=\"o.kind !== 'colour'\"><div class=\"mr-1.5 flex h-[42px] items-center rounded-small bg-[#F4F4F2] pl-3.5 pr-1 focus-within:ring-2 focus-within:ring-strong\"><input type=\"text\" x-model=\"o.entry\" x-on:keydown.enter.prevent=\"addValue(o, o.entry)\" placeholder=\"Add a choice, then Enter\" aria-label=\"Add a choice\" class=\"min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted\"> <button type=\"button\" x-on:click=\"addValue(o, o.entry)\" aria-label=\"Add choice\" class=\"flex h-9 w-9 items-center justify-center text-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -296,7 +297,7 @@ func productFormConfig(d SellerProductData) map[string]any {
 		"stock": 0, "options": []backend.ItemOption{}, "compareGroup": "",
 		"attributes": map[string]string{}, "imageUrls": []string{},
 		"sections": d.Sections, "deptOf": d.DeptOf, "groups": d.Groups,
-		"presets": optionPresets, "anyPresets": anyPresets, "swatches": swatches,
+		"presets": optionPresets, "anyPresets": anyPresets, "swatches": shop.Swatches,
 	}
 	if it := d.Item; it != nil {
 		c["id"], c["title"], c["description"], c["category"] = it.ID, it.Title, it.Description, it.Category
@@ -362,19 +363,6 @@ var anyPresets = []presetOption{
 	{"Weight", "", []string{"250g", "500g", "1kg"}},
 }
 
-type swatch struct {
-	Name string `json:"name"`
-	Hex  string `json:"hex"`
-}
-
-// swatches is _swatches: named colours rather than a colour wheel.
-var swatches = []swatch{
-	{"Black", "#1A1A1A"}, {"White", "#FFFFFF"}, {"Grey", "#9E9E9E"}, {"Red", "#D32F2F"},
-	{"Pink", "#F06292"}, {"Orange", "#FF8A3D"}, {"Yellow", "#FBC02D"}, {"Green", "#43A047"},
-	{"Blue", "#2F6FED"}, {"Navy", "#1A237E"}, {"Purple", "#9C6ADE"}, {"Brown", "#6D4C41"},
-	{"Beige", "#D7CCC8"}, {"Gold", "#C9A227"},
-}
-
 // moneyField is a rupee amount: ₹ in front, digits only, grouped the Indian
 // way (12,00,000) once the field is left.
 func moneyField(name, label string) templ.Component {
@@ -405,7 +393,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("field-" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 291, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 289, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -418,7 +406,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 292, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 290, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -431,7 +419,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 297, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 295, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -444,7 +432,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 298, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 296, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -457,7 +445,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(name + " = groupRupees(" + name + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 299, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 297, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {

@@ -636,10 +636,14 @@ document.addEventListener('alpine:init', () => {
       if (v && !o.values.includes(v)) o.values.push(v);
       o.entry = '';
     },
-    swatchName(hex) {
+    // A colour value is a preset hex ("#2F6FED") or a custom "Name|#hex". Mirrors shop.ColourParts.
+    swatchName(v) {
+      const [name, hex] = String(v).includes('|') ? String(v).split('|') : ['', v];
+      if (name.trim()) return name.trim();
       const s = this.swatches.find((s) => s.hex.toLowerCase() === String(hex).toLowerCase());
-      return s ? s.name : hex;
+      return s ? s.name : v;
     },
+    colourHex(v) { return String(v).includes('|') ? String(v).split('|')[1] : v; },
     get template() {
       const g = this.groups.find((g) => g.name === this.compareGroup);
       return g ? g.attributes : [];

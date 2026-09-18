@@ -8,7 +8,6 @@ package product
 
 import (
 	"encoding/json"
-	"strings"
 
 	"lamazon/website/backend"
 	"lamazon/website/shop"
@@ -80,9 +79,12 @@ templ optionPicker(opt backend.ItemOption) {
 					class="flex h-8 items-center rounded-lg bg-surface px-3 text-[13px] font-semibold text-text transition-colors"
 					x-bind:class={ "picked === " + jsLit(v) + " ? '!bg-lime' : ''" }>
 					if opt.IsColour() {
-						<span class="-ml-1 mr-2 h-[18px] w-[18px] rounded-full" style={ templ.SafeCSS("background-color:" + swatch(v)) }></span>
+						{{ name, hex := shop.ColourParts(v) }}
+						<span class="-ml-1 mr-2 h-[18px] w-[18px] rounded-full border border-black/10" style={ templ.SafeCSS("background-color:" + hex) }></span>
+						{ name }
+					} else {
+						{ v }
 					}
-					{ v }
 				</button>
 			}
 		</div>
@@ -145,15 +147,6 @@ func priceDiff(diff float64) (string, string) {
 	default:
 		return "Same price", "text-muted"
 	}
-}
-
-// swatch is _swatchColour: the value read as hex, black when it is not.
-func swatch(v string) string {
-	h := strings.TrimPrefix(v, "#")
-	if len(h) != 6 || strings.Trim(strings.ToLower(h), "0123456789abcdef") != "" {
-		return "#000000"
-	}
-	return "#" + h
 }
 
 func jsLit(v any) string {
