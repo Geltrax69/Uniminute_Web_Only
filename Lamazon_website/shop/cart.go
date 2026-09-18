@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"math"
 	"net/http"
 
 	"lamazon/website/backend"
@@ -149,8 +150,7 @@ func (e CartEntry) Cap() (int, bool) {
 	return *e.Product.AvailableStock, true
 }
 
-// CartSubtotal and CartSaved mirror the ChangeNotifier getters of the same
-// name: saved counts only lines with a real discount.
+// CartSubtotal mirrors the ChangeNotifier getter of the same name.
 func CartSubtotal(entries []CartEntry) float64 {
 	t := 0.0
 	for _, e := range entries {
@@ -159,18 +159,14 @@ func CartSubtotal(entries []CartEntry) float64 {
 	return t
 }
 
-func CartSaved(entries []CartEntry) float64 {
+// ChargesTotal is what a basket pays on top of its items; the API charges the same sum.
+func ChargesTotal(cs []backend.Charge) float64 {
 	t := 0.0
-	for _, e := range entries {
-		if e.Product.Discounted() {
-			t += (e.Product.MRP - e.Product.Price) * float64(e.Qty)
-		}
+	for _, c := range cs {
+		t += c.Amount
 	}
-	return t
+	return math.Round(t*100) / 100
 }
-
-// DeliveryFee mirrors checkoutDeliveryFee in backend/orders.go and Cart.shipping.
-const DeliveryFee = 15.0
 
 // ---------- wishlist ----------
 

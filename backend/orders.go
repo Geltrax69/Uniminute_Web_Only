@@ -41,8 +41,6 @@ func scanOrder(row interface{ Scan(...any) error }) (Order, error) {
 	return o, err
 }
 
-const checkoutDeliveryFee = 15.0
-
 type checkoutLine struct {
 	ItemID string `json:"itemId"`
 	Units  int    `json:"units"`
@@ -164,6 +162,12 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		writeError(w, 400, "add a delivery address before ordering")
 		return
 	}
+	charges, err := loadCharges(r.Context(), tx)
+	if err != nil {
+		writeError(w, 500, "could not load charges")
+		return
+	}
+	basketFee := chargesTotal(charges)
 
 	out := make([]Order, 0, len(lines))
 	total := 0.0
@@ -199,7 +203,7 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		// exactly to the basket total, even when different riders carry its lines.
 		fee := 0.0
 		if i == 0 {
-			fee = checkoutDeliveryFee
+			fee = basketFee
 		}
 		amount := math.Round((price*float64(line.Units)+fee)*100) / 100
 		o, err := scanOrder(tx.QueryRowContext(r.Context(), `INSERT INTO orders
@@ -220,7 +224,7 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		writeError(w, 409, "prices have changed — remove and re-add the affected items before ordering")
 		return
 	}
-	response := map[string]any{"orders": out, "amount": total, "deliveryFee": checkoutDeliveryFee}
+	response := map[string]any{"orders": out, "amount": total, "deliveryFee": basketFee, "charges": charges}
 	if requestID != "" {
 		encoded, _ := json.Marshal(response)
 		if _, err = tx.ExecContext(r.Context(), `INSERT INTO checkout_attempts(buyer_email,request_id,fingerprint,response)
@@ -235,7 +239,7 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 	}
 	for _, o := range out {
 		a.notifyOrder(r.Context(), o.StoreOwner, fmt.Sprintf("New order: %d × %s", o.Units, o.ItemTitle),
-			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + delivery ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount))
+			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + charges ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount))
 	}
 	if single {
 		writeJSON(w, 201, out[0])

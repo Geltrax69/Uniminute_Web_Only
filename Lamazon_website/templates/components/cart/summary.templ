@@ -44,26 +44,23 @@ templ PayOnDelivery() {
 
 templ Summary(d Data) {
 	{{ sub := shop.CartSubtotal(d.Entries) }}
-	{{ saved := shop.CartSaved(d.Entries) }}
-	{{ total := sub + shop.DeliveryFee }}
+	{{ total := sub + shop.ChargesTotal(d.Charges) }}
 	<div class="rounded bg-surface px-5 py-[18px] shadow-surface">
 		<h2 class="text-section text-text">Order Summary</h2>
 		<div class="h-3"></div>
 		@summaryRow(subtotalLabel(d.Count()), sub, false)
-		<div class="h-1"></div>
-		@summaryRow("Delivery", shop.DeliveryFee, false)
-		<p class="mt-0.5 flex items-center text-body text-muted">
-			@ui.Icon("clock", "h-[13px] w-[13px] shrink-0")
-			<span class="ml-1.5">Arrives in about { shop.DeliveryETA }</span>
-		</p>
+		for _, c := range d.Charges {
+			<div class="h-1"></div>
+			@summaryRow(c.Name, c.Amount, false)
+			if c.ID == "delivery" {
+				<p class="mt-0.5 flex items-center text-body text-muted">
+					@ui.Icon("clock", "h-[13px] w-[13px] shrink-0")
+					<span class="ml-1.5">Arrives in about { shop.DeliveryETA }</span>
+				</p>
+			}
+		}
 		<div class="my-2.5 h-px"></div>
 		@summaryRow("Total", total, true)
-		if saved > 0 {
-			<p class="mt-1.5 flex items-center text-[12.5px] font-bold text-strong">
-				@ui.Icon("badge-percent", "h-3.5 w-3.5 shrink-0")
-				<span class="ml-1.5">You saved ₹{ shop.Money(saved) } on this order</span>
-			</p>
-		}
 		<div class="h-3.5"></div>
 		{{ short := shop.CartShortfall(d.Entries) }}
 		if d.SignedIn {

@@ -588,7 +588,7 @@ func (s *Site) cartData(w http.ResponseWriter, ctx context.Context, lines []shop
 		}
 		shop.SaveCart(w, kept)
 	}
-	return cart.Data{Entries: entries, Address: p.Address, SignedIn: p.User != nil}, trimmed
+	return cart.Data{Entries: entries, Charges: s.charges(ctx), Address: p.Address, SignedIn: p.User != nil}, trimmed
 }
 
 // The app has no catalogue page with filters: departments are browsed on the
@@ -1268,7 +1268,7 @@ func (s *Site) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	for _, e := range entries {
 		lines = append(lines, backend.CheckoutLine{ItemID: e.Product.ID, Units: e.Qty})
 	}
-	expected := shop.CartSubtotal(entries) + shop.DeliveryFee
+	expected := shop.CartSubtotal(entries) + shop.ChargesTotal(s.charges(r.Context()))
 	result, err := s.backend.Checkout(r.Context(), p.AccessToken, lines, addressID, shop.CheckoutRequestID(r), expected)
 	if err != nil {
 		// The backend's own sentence ("not enough stock for …"), as the app shows it.
@@ -1340,6 +1340,16 @@ func (s *Site) handleOrderCancel(w http.ResponseWriter, r *http.Request) {
 // product bought from another local vendor at that vendor's price — the id
 // CompareScreen puts in the app's cart — so it is the base product with that
 // vendor's store and price, and no stock figure of its own.
+// charges is what every basket pays on top of its items, as the admin set it.
+func (s *Site) charges(ctx context.Context) []backend.Charge {
+	cs, err := s.backend.Charges(ctx)
+	if err != nil {
+		// ponytail: display-only fallback; the API re-checks the total at checkout and refuses a mismatch
+		return []backend.Charge{{ID: "delivery", Name: "Delivery", Amount: 15}}
+	}
+	return cs
+}
+
 func (s *Site) cartProduct(ctx context.Context, id string) (backend.Product, error) {
 	base, store, fromVendor := strings.Cut(id, "@")
 	p, err := s.backend.Product(ctx, base)
@@ -1427,6 +1437,7 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 	}
 	d.Groups, _ = s.backend.CompareGroups(ctx)
 	d.Policies, _ = s.backend.Policies(ctx)
+	d.Charges = s.charges(ctx)
 	cats, _ := s.backend.Categories(ctx)
 	for _, c := range cats {
 		if c.Parent == "" {

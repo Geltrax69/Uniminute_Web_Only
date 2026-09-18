@@ -22,6 +22,7 @@ import (
 
 type Data struct {
 	Entries  []shop.CartEntry
+	Charges  []backend.Charge // Delivery first, then any extra charges
 	Address  *backend.Address // the selected or default address, if any
 	SignedIn bool
 }
@@ -81,7 +82,7 @@ func Body(d Data) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(itemsText(d.Count()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/cart/body.templ`, Line: 39, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/cart/body.templ`, Line: 40, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {

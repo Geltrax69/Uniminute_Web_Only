@@ -14,6 +14,7 @@ import (
 
 type Data struct {
 	Entries  []shop.CartEntry
+	Charges  []backend.Charge // Delivery first, then any extra charges
 	Address  *backend.Address // the selected or default address, if any
 	SignedIn bool
 }

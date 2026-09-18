@@ -315,6 +315,20 @@ func (b *Backend) Categories(ctx context.Context) ([]Category, error) {
 	return out, err
 }
 
+// Charge is one line a basket pays on top of its items (Delivery, packaging, …).
+type Charge struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Amount float64 `json:"amount"`
+}
+
+// GET /api/charges — Delivery first, then whatever an admin added.
+func (b *Backend) Charges(ctx context.Context) ([]Charge, error) {
+	var out []Charge
+	err := b.get(ctx, "/api/charges", "", &out)
+	return out, err
+}
+
 // GET /api/campaigns — enabled banners, in merchandising order.
 func (b *Backend) Campaigns(ctx context.Context) ([]Campaign, error) {
 	var out []Campaign

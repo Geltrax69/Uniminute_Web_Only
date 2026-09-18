@@ -90,6 +90,7 @@ templ adminField(name, label, kind, autocomplete, value string, secret bool) {
 // AdminData is everything the panel reads, and the filters in the address.
 type AdminData struct {
 	Page        viewdata.Page
+	Charges     []backend.Charge
 	Staff       shop.Staff
 	Tab         string
 	Q           string
@@ -119,7 +120,8 @@ var adminTabs = []adminTab{
 	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
 	{"orders", "Orders", false}, {"products", "Products", false}, {"insights", "Insights", false},
 	{"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
-	{"policies", "Policies", false}, {"delivery", "Delivery", false}, {"people", "People", false},
+	{"policies", "Policies", false}, {"charges", "Charges", false}, {"delivery", "Delivery", false},
+	{"people", "People", false},
 }
 
 templ Admin(d AdminData) {
@@ -296,6 +298,8 @@ templ adminSection(d AdminData) {
 					@policyRow(pol)
 				}
 			}
+		case "charges":
+			@chargesSection(d.Charges)
 		case "delivery":
 			<div class="flex items-start">
 				<div class="flex-1">
@@ -918,6 +922,7 @@ func (d AdminData) Counts() map[string]int {
 		"rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
 		"insights": len(lv(d.Insights, "topStores")), "banners": len(d.Campaigns),
 		"categories": len(d.Departments), "policies": len(d.Policies), "compare": len(d.Groups),
+		"charges": len(d.Charges),
 		"delivery": len(d.Riders), "people": len(d.people()),
 	}
 }
@@ -1287,4 +1292,35 @@ func strs(v any) []string {
 		}
 	}
 	return out
+}
+
+// chargesSection edits what every basket pays on top of its items. Delivery
+// always stays (its amount can be anything, even 0); the rest can be added
+// and removed. Saving replaces the whole list at once.
+templ chargesSection(charges []backend.Charge) {
+	@adminNote("Added once to every order, after the items. Shoppers see each line in their Order Summary, and the total they pay includes them. Saving applies to the next order placed.")
+	<div x-data={ "chargesEditor(" + jsonArg(charges) + ")" } class="rounded-featured bg-surface p-4 shadow-surface">
+		<template x-for="(c, i) in rows" :key="c.key">
+			<div class="mb-2.5 flex items-center gap-2">
+				<input type="text" x-model="c.name" x-bind:readonly="c.id === 'delivery'" maxlength="40" placeholder="Charge name, e.g. Packaging" aria-label="Charge name" class="h-11 min-w-0 flex-1 rounded-small bg-canvas px-3 text-[14.5px] text-text outline-none focus:ring-2 focus:ring-strong read-only:text-muted"/>
+				<span class="text-muted">₹</span>
+				<input type="number" x-model.number="c.amount" min="0" max="10000" step="0.5" inputmode="decimal" aria-label="Amount in rupees" class="h-11 w-24 rounded-small bg-canvas px-3 text-right text-[14.5px] font-semibold text-text outline-none focus:ring-2 focus:ring-strong"/>
+				<button type="button" x-show="c.id !== 'delivery'" x-on:click="rows.splice(i, 1)" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/[.06]" aria-label="Remove charge" title="Remove charge">
+					@ui.Icon("trash-2", "h-4 w-4")
+				</button>
+				<span x-show="c.id === 'delivery'" class="w-10 shrink-0"></span>
+			</div>
+		</template>
+		<div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+			<button type="button" x-on:click="add()" x-bind:disabled="rows.length >= 10" class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-strong hover:bg-strong/[.06] disabled:opacity-40">
+				@ui.Icon("plus", "h-4 w-4")
+				<span class="ml-2">Add charge</span>
+			</button>
+			<p class="text-[13px] text-muted">Every order pays <strong class="text-text" x-text="'₹' + total()"></strong> on top of its items</p>
+		</div>
+		<p class="mt-2 text-[12.5px] text-danger" x-show="problem()" x-text="problem()" role="alert"></p>
+		<button type="button" x-on:click="save()" x-bind:disabled="saving || !!problem()" class={ ui.ButtonClass(true) + " mt-3 w-full" }>
+			<span class="truncate" x-text="saving ? 'Saving…' : 'Save charges'">Save charges</span>
+		</button>
+	</div>
 }

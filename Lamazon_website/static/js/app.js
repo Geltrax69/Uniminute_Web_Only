@@ -1034,3 +1034,39 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 });
+
+// Admin: checkout charges (Delivery plus any extras). Mirrors validCharges in backend/charges.go.
+document.addEventListener('alpine:init', () => {
+  Alpine.data('chargesEditor', (initial) => ({
+    rows: (initial || []).map((c, i) => ({ ...c, key: i })),
+    saving: false,
+    add() { this.rows.push({ id: '', name: '', amount: 0, key: Date.now() }); },
+    total() {
+      const t = this.rows.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+      return Math.round(t * 100) / 100;
+    },
+    problem() {
+      const seen = new Set();
+      for (const c of this.rows) {
+        const name = (c.name || '').trim();
+        if (!name) return 'Every charge needs a name.';
+        if (seen.has(name.toLowerCase())) return `Two charges are both called ${name}.`;
+        seen.add(name.toLowerCase());
+        if (!(c.amount >= 0 && c.amount <= 10000)) return `${name}: enter an amount from ₹0 to ₹10,000.`;
+      }
+      return '';
+    },
+    async save() {
+      if (this.saving || this.problem()) return;
+      this.saving = true;
+      try {
+        await sellerCall('PUT', '/staff-api/admin/charges',
+          this.rows.map(({ id, name, amount }) => ({ id, name: name.trim(), amount: Number(amount) })));
+        lwReload('Charges saved. The next order uses them.');
+      } catch (err) {
+        lwToast(err.message, 'error');
+        this.saving = false;
+      }
+    },
+  }));
+});

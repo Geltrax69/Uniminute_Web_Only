@@ -624,3 +624,14 @@ INSERT INTO storefront_campaigns(id,title,subtitle,cta,colour)
 SELECT 'everyday', 'Little joys. Everyday.',
  'Your local favourites, all in one place.', 'Explore the collection', '#F2E8CE'
 FROM first_run ON CONFLICT DO NOTHING;
+
+-- Checkout charges: Delivery is fixed (its amount is editable), anything else
+-- an admin adds is charged on top, once per basket.
+CREATE TABLE IF NOT EXISTS checkout_charges (
+ id TEXT PRIMARY KEY,
+ name TEXT NOT NULL,
+ amount NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
+ position INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO checkout_charges(id,name,amount,position) VALUES ('delivery','Delivery',15,0)
+ON CONFLICT DO NOTHING;
