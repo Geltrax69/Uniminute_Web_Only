@@ -1079,3 +1079,30 @@ window.addEventListener('pageshow', (e) => {
   document.querySelectorAll('.htmx-request').forEach((el) => el.classList.remove('htmx-request'));
   if (window.lwProcessing) lwProcessing('');
 });
+
+// After a save, the server answers HX-Redirect. htmx would push that page on
+// top of the form (List → Edit → List), so Back returned to the form. Instead:
+// going back to the page the form came from steps back to it (and refreshes
+// it), anywhere else replaces the form, so it never stays in history.
+document.addEventListener('htmx:beforeOnLoad', (e) => {
+  const target = e.detail.xhr.getResponseHeader('HX-Redirect');
+  if (!target) return;
+  e.preventDefault();
+  let from = null;
+  try { from = new URL(document.referrer); } catch {}
+  const to = new URL(target, location.href);
+  if (from && from.origin === location.origin && from.pathname + from.search === to.pathname + to.search && history.length > 1) {
+    try { sessionStorage.setItem('lw:refresh-on-back', to.pathname + to.search); } catch {}
+    history.back();
+  } else {
+    location.replace(to.href);
+  }
+});
+
+// The page stepped back to may come from the back/forward cache: reload it so
+// it shows what was just saved.
+window.addEventListener('pageshow', (e) => {
+  let want = null;
+  try { want = sessionStorage.getItem('lw:refresh-on-back'); sessionStorage.removeItem('lw:refresh-on-back'); } catch {}
+  if (want === location.pathname + location.search && e.persisted) location.reload();
+});
