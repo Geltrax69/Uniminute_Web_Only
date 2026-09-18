@@ -9,10 +9,11 @@ import (
 
 // API serves every endpoint off Postgres, with photos in Cloudinary.
 type API struct {
-	db    *DB
-	cloud *Cloudinary // nil when the credentials are unset
-	mail  *Mailer     // nil when unconfigured: codes go to the log
-	push  *Push       // nil without push credentials: email still goes out
+	db                 *DB
+	cloud              *Cloudinary // nil when the credentials are unset
+	mail               *Mailer     // nil when unconfigured: codes go to the log
+	push               *Push       // nil without push credentials: email still goes out
+	asyncNotifications bool        // production writes must not wait on email/FCM
 }
 
 // GET /api/products?tab=&category=&q=

@@ -175,6 +175,45 @@ func TestPushSubscribeAcceptsFirebaseToken(t *testing.T) {
 	}
 }
 
+func TestPushConfigExposesOnlyBrowserSettings(t *testing.T) {
+	h := routes(&API{db: testDB(t), push: &Push{
+		publicKey: "vapid-public",
+		webConfig: map[string]string{
+			"apiKey": "browser-key", "projectId": "uniminute",
+			"messagingSenderId": "123", "appId": "app-123",
+		},
+	}})
+	code, body := call(t, h, http.MethodGet, "/api/push/config", nil)
+	if code != http.StatusOK || body["publicKey"] != "vapid-public" {
+		t.Fatalf("push config: %d %v", code, body)
+	}
+	config := body["firebase"].(map[string]any)
+	if config["projectId"] != "uniminute" || config["privateKey"] != nil {
+		t.Fatalf("unexpected browser config: %v", config)
+	}
+}
+
+func TestRiderCanSubscribeForAssignments(t *testing.T) {
+	h, _, _ := notifyAPI(t)
+	admin := adminSignIn(t, h)
+	pin := addRider(t, h, admin, "9876543210")
+	_, login := callAs(t, h, "", http.MethodPost, "/api/delivery/login", map[string]string{
+		"phone": "9876543210", "pin": pin,
+	})
+	code, body := callAs(t, h, login["token"].(string), http.MethodPost,
+		"/api/delivery/push/subscribe", map[string]string{"token": "rider-fcm-token"})
+	if code != http.StatusNoContent {
+		t.Fatalf("rider subscribe: %d %v", code, body)
+	}
+	var subject string
+	if err := lastTestDB.sql.QueryRow(`SELECT email FROM push_subscriptions WHERE endpoint='fcm:rider-fcm-token'`).Scan(&subject); err != nil {
+		t.Fatal(err)
+	}
+	if subject != "rider:9876543210" {
+		t.Fatalf("subscription filed under %q", subject)
+	}
+}
+
 func TestPushKeyWorksBeforeServerSendCredentials(t *testing.T) {
 	h := routes(&API{
 		db:   testDB(t),

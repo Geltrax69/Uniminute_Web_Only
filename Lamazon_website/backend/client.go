@@ -187,6 +187,8 @@ type Order struct {
 	RejectReason    string     `json:"rejectReason,omitempty"`
 	DeliveryCode    string     `json:"deliveryCode,omitempty"`
 	ReceiverAddress string     `json:"receiverAddress,omitempty"`
+	RiderPhone      string     `json:"riderPhone,omitempty"`
+	AssignedTo      string     `json:"assignedTo,omitempty"`
 }
 
 // LoginStart is POST /api/login's answer: either "this address has a password,

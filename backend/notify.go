@@ -25,18 +25,47 @@ import (
 // Push sends browser notifications through Firebase Cloud Messaging.
 type Push struct {
 	publicKey string
+	webConfig map[string]string
 	fcm       *FCM
 }
 
 func pushFromEnv() *Push {
+	fcm := fcmFromEnv()
+	webConfig := firebaseWebConfig()
+	if webConfig["projectId"] == "" && fcm != nil {
+		webConfig["projectId"] = fcm.projectID
+	}
 	p := &Push{
 		publicKey: os.Getenv("FIREBASE_WEB_PUSH_PUBLIC_KEY"),
-		fcm:       fcmFromEnv(),
+		webConfig: webConfig,
+		fcm:       fcm,
 	}
-	if p.publicKey == "" && p.fcm == nil {
+	if p.publicKey == "" && p.fcm == nil && len(p.webConfig) == 0 {
 		return nil
 	}
 	return p
+}
+
+// firebaseWebConfig is safe to expose: Firebase's browser configuration
+// identifies the project but does not grant server access. Keep it in the
+// environment so staging and production can never accidentally share tokens.
+func firebaseWebConfig() map[string]string {
+	out := map[string]string{}
+	if raw := strings.TrimSpace(os.Getenv("FIREBASE_WEB_CONFIG")); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &out)
+	}
+	for key, env := range map[string]string{
+		"apiKey": "FIREBASE_API_KEY", "authDomain": "FIREBASE_AUTH_DOMAIN",
+		"projectId": "FIREBASE_PROJECT_ID", "storageBucket": "FIREBASE_STORAGE_BUCKET",
+		"messagingSenderId": "FIREBASE_MESSAGING_SENDER_ID", "appId": "FIREBASE_APP_ID",
+	} {
+		if out[key] == "" {
+			if value := strings.TrimSpace(os.Getenv(env)); value != "" {
+				out[key] = value
+			}
+		}
+	}
+	return out
 }
 
 // A subscription is the Firebase Messaging token the browser hands us.
@@ -56,9 +85,35 @@ func (a *API) handlePushKey(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"publicKey": a.push.publicKey})
 }
 
+// GET /api/push/config — the browser needs both its public Firebase app
+// identity and the Web Push certificate before it can mint an FCM token.
+func (a *API) handlePushConfig(w http.ResponseWriter, r *http.Request) {
+	if a.push == nil || a.push.publicKey == "" ||
+		a.push.webConfig["apiKey"] == "" || a.push.webConfig["projectId"] == "" ||
+		a.push.webConfig["messagingSenderId"] == "" || a.push.webConfig["appId"] == "" {
+		writeError(w, http.StatusServiceUnavailable, "browser push is not configured")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"firebase":  a.push.webConfig,
+		"publicKey": a.push.publicKey,
+	})
+}
+
 // POST /api/push/subscribe — one row per browser. The same person on a phone
 // and a laptop gets two, and both are notified.
 func (a *API) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
+	a.savePushSubscription(w, r, a.owner(r))
+}
+
+// Delivery staff have a staff session rather than a shopper session. Store
+// their browser under a namespaced subject so an accepted order can wake the
+// rider who was assigned without exposing their phone number as an account.
+func (a *API) handleRiderPushSubscribe(w http.ResponseWriter, r *http.Request) {
+	a.savePushSubscription(w, r, "rider:"+a.staffOf(r))
+}
+
+func (a *API) savePushSubscription(w http.ResponseWriter, r *http.Request, subject string) {
 	var in subscription
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -75,7 +130,7 @@ func (a *API) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1,$2,$3,$4)
 		ON CONFLICT (endpoint) DO UPDATE SET
 			email = EXCLUDED.email, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
-		in.Endpoint, a.owner(r), "", ""); err != nil {
+		in.Endpoint, subject, "", ""); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -161,12 +216,32 @@ func (a *API) handlePushTest(w http.ResponseWriter, r *http.Request) {
 // Nothing here is fatal. A failed notification must never fail the order that
 // triggered it, so problems are logged and the caller carries on.
 func (a *API) notify(ctx context.Context, email, title, body string) {
-	a.notifyEvent(ctx, email, title, body, "account")
+	a.notifyEvent(ctx, email, title, body, "account", "/account")
 }
 func (a *API) notifyOrder(ctx context.Context, email, title, body string) {
-	a.notifyEvent(ctx, email, title, body, "order")
+	a.notifyEvent(ctx, email, title, body, "order", "/orders")
 }
-func (a *API) notifyEvent(ctx context.Context, email, title, body, kind string) {
+func (a *API) notifyOrderAt(ctx context.Context, email, title, body, target string) {
+	a.notifyEvent(ctx, email, title, body, "order", target)
+}
+
+// notifyOrderLater makes order writes independent of third-party latency. An
+// accepted order is committed before notifications begin, and email/FCM get a
+// bounded background window instead of holding checkout or an action button.
+func (a *API) notifyOrderLater(email, title, body, target string) {
+	run := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		defer cancel()
+		a.notifyOrderAt(ctx, email, title, body, target)
+	}
+	if a.asyncNotifications {
+		go run()
+		return
+	}
+	run()
+}
+
+func (a *API) notifyEvent(ctx context.Context, email, title, body, kind, target string) {
 	prefs, err := a.preferences(ctx, email)
 	if err != nil {
 		log.Printf("notification preferences: %v", err)
@@ -190,7 +265,7 @@ func (a *API) notifyEvent(ctx context.Context, email, title, body, kind string) 
 		return
 	}
 
-	payload, _ := json.Marshal(map[string]string{"title": title, "body": body})
+	payload, _ := json.Marshal(map[string]string{"title": title, "body": body, "url": target})
 	for _, s := range subs {
 		if err := a.push.send(ctx, s, payload); err != nil {
 			log.Printf("notify %s by push: %v", email, err)
@@ -266,7 +341,7 @@ func fcmFromEnv() *FCM {
 	}
 	return &FCM{
 		projectID: in.ProjectID, clientEmail: in.ClientEmail,
-		privateKey: key, http: http.DefaultClient,
+		privateKey: key, http: &http.Client{Timeout: 8 * time.Second},
 		tokenURL:         "https://oauth2.googleapis.com/token",
 		messagingBaseURL: "https://fcm.googleapis.com",
 	}

@@ -78,20 +78,29 @@ nothing installed and works on every phone — and adds a browser notification
 wherever the person allowed one. Neither can fail an order: problems are
 logged and the request carries on.
 
-Web push uses Firebase Cloud Messaging only. The Firebase browser config lives
-in `frontend/web/index.html` and `frontend/web/push/sw.js`; the server needs
-service-account credentials before it can send through FCM.
+Web push uses Firebase Cloud Messaging. The website reads its public browser
+configuration from the API and registers `/firebase-messaging-sw.js`; the
+server uses service-account credentials to send through FCM.
 
 ```
 FIREBASE_CREDENTIALS_JSON                              # service account JSON
 GOOGLE_APPLICATION_CREDENTIALS                         # or path to that JSON
 FIREBASE_WEB_PUSH_PUBLIC_KEY                           # web push certificate public key
+FIREBASE_WEB_CONFIG                                    # Firebase web config JSON
+# Or provide the web config as individual values:
+FIREBASE_API_KEY
+FIREBASE_AUTH_DOMAIN
+FIREBASE_PROJECT_ID
+FIREBASE_STORAGE_BUCKET
+FIREBASE_MESSAGING_SENDER_ID
+FIREBASE_APP_ID
 ```
 
-With only `FIREBASE_WEB_PUSH_PUBLIC_KEY`, browsers can register FCM tokens.
-Test pushes and real order pushes also need `FIREBASE_CREDENTIALS_JSON` or
-`GOOGLE_APPLICATION_CREDENTIALS`; without those, notifications quietly go by
-email only.
+Browser registration needs the public key plus the four required web values
+(`apiKey`, `projectId`, `messagingSenderId`, and `appId`). Test pushes and real
+order pushes also need `FIREBASE_CREDENTIALS_JSON` or
+`GOOGLE_APPLICATION_CREDENTIALS`; without server credentials, notifications
+quietly go by email only.
 
 Worth knowing before relying on it:
 
@@ -117,7 +126,9 @@ Worth knowing before relying on it:
 | POST | `/api/login/verify` | `{"email","code"}` — returns an access + refresh token |
 | POST | `/api/login/refresh` | `{"refreshToken"}` — rotates the pair |
 | GET | `/api/push/key` | web-push public key for Firebase Messaging |
+| GET | `/api/push/config` | public Firebase browser config + web-push key |
 | POST/DELETE | `/api/push/subscribe` | register / drop this browser's FCM token (needs a session) |
+| POST | `/api/delivery/push/subscribe` | register a signed-in rider for assignment alerts |
 | GET | `/api/seller/categories` | categories a seller can list under |
 | POST/GET | `/api/seller/store` | open / read the seller's store |
 | POST | `/api/seller/store/photo` | multipart `file` — store cover, to Cloudinary |
@@ -126,12 +137,17 @@ Worth knowing before relying on it:
 | POST | `/api/seller/items/{id}/photos` | multipart `file` (repeatable) — product photos |
 | DELETE | `/api/seller/items/{id}` | remove a line |
 | GET/POST | `/api/seller/orders` | orders + stage counts / place one |
-| POST | `/api/seller/orders/{id}/accept` | reserve |
-| POST | `/api/seller/orders/{id}/deliver` | hand over — this is what decrements stock |
+| POST | `/api/seller/orders/{id}/accept` | accept, issue delivery code, and assign a rider |
+| POST | `/api/seller/orders/{id}/reject` | reject with a customer-visible reason |
+| POST | `/api/delivery/orders/{id}/pick` | rider confirms collection |
+| POST | `/api/delivery/orders/{id}/deliver` | verify the customer's code and complete delivery |
 
 ## Rules worth knowing
 
-- Accepting an order reserves it; **delivering** is what removes units from stock.
+- The enforced lifecycle is **received → accepted → picked → delivered**;
+  rejection is terminal from received.
+- Accepting generates the customer's four-digit delivery code and assigns the
+  least-loaded active rider. Delivering with that code removes units from stock.
 - Stock floors at zero; a delivery can never drive it negative.
 - Delivering twice returns 409 rather than double-decrementing.
 - A store outside the serviceable area is refused at creation.
@@ -144,7 +160,7 @@ around them:
 - `inventory_items.stock` has `CHECK (stock >= 0)`; updates use `GREATEST(..., 0)`
 - `inventory_items.owner` is a foreign key to `seller_stores`, which is what
   makes "no stock without a store" a 409 instead of an orphan row
-- `orders.stage` is constrained to the three known stages
+- `orders.stage` is constrained to received, accepted, rejected, picked, or delivered
 - Delivering runs the order update and the stock decrement in one transaction
 
 ## Sign-in

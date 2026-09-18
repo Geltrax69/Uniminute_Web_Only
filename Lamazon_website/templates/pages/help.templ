@@ -88,7 +88,18 @@ templ notificationsBody() {
 					</div>
 					<p class="mt-3 text-section text-text">Turn on order updates</p>
 					<p class="mt-1.5 text-body text-muted">Your browser will ask for permission so we can tell you when a shop accepts your order and when the rider is on the way.</p>
-					<button type="button" x-on:click="ask()" class={ ui.ButtonClass(true) + " mt-4 w-full" }>Allow notifications</button>
+					<button type="button" x-on:click="ask()" x-bind:disabled="busy" class={ ui.ButtonClass(true) + " mt-4 w-full" } x-text="busy ? 'Connecting…' : 'Allow notifications'">Allow notifications</button>
+				</div>
+			</template>
+			<template x-if="state === 'granted'">
+				<div class="rounded-featured bg-surface p-5 text-center shadow-surface">
+					<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-lime text-strong">
+						@ui.Icon("bell", "h-6 w-6")
+					</div>
+					<p class="mt-3 text-section text-text">Order notifications are on</p>
+					<p class="mt-1.5 text-body text-muted">We will tell you when the shop accepts or rejects an order, when a rider picks it up, and when delivery is complete.</p>
+					<p x-show="error" x-cloak class="mt-3 text-body text-danger" role="alert" x-text="error"></p>
+					<button x-show="error" x-cloak type="button" x-on:click="ask()" x-bind:disabled="busy" class={ ui.ButtonClass(false) + " mt-4 w-full" }>Reconnect notifications</button>
 				</div>
 			</template>
 			<template x-if="state === 'denied'">

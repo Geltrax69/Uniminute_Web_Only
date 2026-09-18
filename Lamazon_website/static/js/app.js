@@ -1025,9 +1025,11 @@ document.addEventListener('htmx:confirm', (e) => {
 
 // Error and offline: HTMX requests that never reached the server, or failed.
 document.addEventListener('htmx:sendError', () => {
+  if (window.lwProcessing) lwProcessing('');
   lwToast(navigator.onLine ? 'Could not reach Uniminute. Try again in a moment.' : "You're offline. Reconnect and try again.", 'error');
 });
 document.addEventListener('htmx:responseError', (e) => {
+  if (window.lwProcessing) lwProcessing('');
   const status = e.detail.xhr.status;
   // The server already said why, in its own words.
   if ((e.detail.xhr.getResponseHeader('HX-Trigger') || '').includes('lw:toast')) return;
@@ -1041,17 +1043,87 @@ document.addEventListener('htmx:responseError', (e) => {
     : status >= 500 ? 'Uniminute had a problem on its side. Try again in a moment.'
     : "That didn't go through. Try again.", 'error');
 });
+document.addEventListener('htmx:timeout', () => {
+  if (window.lwProcessing) lwProcessing('');
+  lwToast('That is taking too long. Your order may still have been placed—check My Orders before trying again.', 'error');
+});
 
 // Permission required: the browser's notification prompt, asked for on purpose.
 document.addEventListener('alpine:init', () => {
-  Alpine.data('notifyPermission', () => ({
+  Alpine.data('notifyPermission', (subscribeURL = '/api/push/subscribe') => ({
     state: 'Notification' in window ? Notification.permission : 'unsupported',
+    busy: false,
+    error: '',
+    init() {
+      if (this.state === 'granted') this.sync(false);
+    },
     async ask() {
-      this.state = await Notification.requestPermission();
-      if (this.state === 'granted') lwToast('Notifications are on.', 'success');
+      if (this.busy || this.state === 'unsupported') return;
+      this.busy = true;
+      this.error = '';
+      try {
+        this.state = await Notification.requestPermission();
+        if (this.state === 'granted') await this.sync(true);
+      } catch (err) {
+        this.error = err.message || 'Notifications could not be turned on.';
+        lwToast(this.error, 'error');
+      } finally {
+        this.busy = false;
+      }
+    },
+    async sync(announce) {
+      try {
+        await window.lwEnablePush(subscribeURL);
+        if (announce) lwToast('Order notifications are on.', 'success');
+      } catch (err) {
+        this.error = err.message || 'Notifications could not be connected.';
+        if (announce) throw err;
+      }
     },
   }));
 });
+
+let lwMessaging = null;
+window.lwEnablePush = async (subscribeURL = '/api/push/subscribe') => {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    throw new Error('This browser does not support push notifications.');
+  }
+  const cfgRes = await fetch('/api/push/config', { headers: { Accept: 'application/json' } });
+  if (!cfgRes.ok) {
+    throw new Error(cfgRes.status === 503
+      ? 'Push notifications are not configured on this server yet.'
+      : 'Could not load notification settings. Try again.');
+  }
+  const cfg = await cfgRes.json();
+  const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+  const [{ initializeApp, getApps }, { getMessaging, getToken, onMessage, isSupported }] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js'),
+  ]);
+  if (!(await isSupported())) throw new Error('This browser does not support Firebase notifications.');
+  const app = getApps().length ? getApps()[0] : initializeApp(cfg.firebase);
+  const messaging = getMessaging(app);
+  const token = await getToken(messaging, { vapidKey: cfg.publicKey, serviceWorkerRegistration: registration });
+  if (!token) throw new Error('The browser did not create a notification token.');
+  const saved = await fetch(subscribeURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!saved.ok) {
+    let message = 'Could not save notification settings.';
+    try { message = (await saved.json()).error || message; } catch {}
+    throw new Error(message);
+  }
+  if (!lwMessaging) {
+    lwMessaging = messaging;
+    onMessage(messaging, (payload) => {
+      const data = payload?.data || {};
+      lwToast(data.body || data.title || 'Your order has an update.', 'success');
+    });
+  }
+  return token;
+};
 
 // Admin: checkout charges (Delivery plus any extras). Mirrors validCharges in backend/charges.go.
 document.addEventListener('alpine:init', () => {

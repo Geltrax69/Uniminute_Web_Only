@@ -1,6 +1,7 @@
 package site
 
 import (
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -73,6 +74,7 @@ func (s *Site) routes() http.Handler {
 	mux.HandleFunc("GET /admin/policies/{slug}", s.handleAdminPolicy)
 	mux.HandleFunc("GET /admin/stores/{owner}/photos", s.handleAdminStorePhotos)
 	mux.Handle("/staff-api/admin/", staffProxy(s.apiBase, "admin", s.backend))
+	mux.Handle("/staff-api/delivery/", staffProxy(s.apiBase, "rider", s.backend))
 	mux.HandleFunc("GET /delivery", s.handleDelivery)
 	mux.HandleFunc("POST /delivery/login", s.handleDeliveryLogin)
 	mux.HandleFunc("POST /delivery/logout", s.handleDeliveryLogout)
@@ -116,6 +118,7 @@ func (s *Site) routes() http.Handler {
 
 	// --- static and proxy -------------------------------------------------
 	mux.Handle("GET /static/", http.StripPrefix("/static/", staticFileServer()))
+	mux.HandleFunc("GET /firebase-messaging-sw.js", firebaseMessagingWorker)
 
 	// /api/* passes through untouched to the existing backend, with the
 	// session cookie injected as the Bearer token the backend expects.
@@ -123,6 +126,18 @@ func (s *Site) routes() http.Handler {
 
 	mux.HandleFunc("/", s.handleNotFound)
 	return mux
+}
+
+func firebaseMessagingWorker(w http.ResponseWriter, r *http.Request) {
+	data, err := fs.ReadFile(static.Files, "js/firebase-messaging-sw.js")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Service-Worker-Allowed", "/")
+	_, _ = w.Write(data)
 }
 
 func staticFileServer() http.Handler {

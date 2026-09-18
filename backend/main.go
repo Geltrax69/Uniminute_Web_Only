@@ -70,7 +70,7 @@ func main() {
 	// database conn) open forever.
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           routes(&API{db: db, cloud: cloud, mail: mail, push: push}),
+		Handler:           routes(&API{db: db, cloud: cloud, mail: mail, push: push, asyncNotifications: true}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -160,6 +160,7 @@ func routes(s *API) http.Handler {
 
 	// Notifications
 	mux.HandleFunc("GET /api/push/key", s.handlePushKey)
+	mux.HandleFunc("GET /api/push/config", s.handlePushConfig)
 	mux.HandleFunc("POST /api/push/subscribe", s.handlePushSubscribe)
 	mux.HandleFunc("DELETE /api/push/subscribe", s.handlePushUnsubscribe)
 	mux.HandleFunc("POST /api/push/test", s.handlePushTest)
@@ -235,6 +236,7 @@ func routes(s *API) http.Handler {
 
 	// Delivery panel.
 	mux.HandleFunc("POST /api/delivery/login", s.handleRiderLogin)
+	mux.HandleFunc("POST /api/delivery/push/subscribe", s.handleRiderPushSubscribe)
 	mux.HandleFunc("GET /api/delivery/orders", s.handleRiderOrders)
 	mux.HandleFunc("GET /api/delivery/history", s.handleRiderHistory)
 	mux.HandleFunc("POST /api/delivery/orders/{id}/pick", s.handleRiderPick)

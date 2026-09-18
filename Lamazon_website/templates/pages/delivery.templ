@@ -95,7 +95,16 @@ templ deliveryBody(d DeliveryData) {
 				<button type="submit" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">Sign out</button>
 			</form>
 		</div>
-		<div class="mt-3 flex gap-2.5">
+		<div x-data="notifyPermission('/staff-api/delivery/push/subscribe')" x-show="state === 'default' || error" x-cloak class="mt-3 flex items-center gap-3 rounded-featured bg-white p-3.5">
+			<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime" style={ templ.SafeCSS("color:" + riderGreen) }>@ui.Icon("bell", "h-[18px] w-[18px]")</span>
+			<div class="min-w-0 flex-1">
+				<p class="text-[13.5px] font-bold text-text">Get new delivery alerts</p>
+				<p class="text-[12px] text-muted" x-text="error || 'We will notify you when an order is assigned.'"></p>
+			</div>
+			<button type="button" x-on:click="ask()" x-bind:disabled="busy" class="min-h-touch shrink-0 rounded-full px-3 text-label font-bold" style={ templ.SafeCSS("color:" + riderGreen) } x-text="busy ? 'Connecting…' : 'Turn on'"></button>
+		</div>
+		<div id="delivery-orders" hx-get="/delivery" hx-trigger="every 15s [document.visibilityState === 'visible']" hx-select="#delivery-orders" hx-target="this" hx-swap="outerHTML">
+			<div class="mt-3 flex gap-2.5">
 			@riderTile("On this run", strconv.Itoa(len(carrying)), riderGreen)
 			@riderTile("Ready to collect", strconv.Itoa(len(waiting)), "")
 			@riderTile("Delivered", strconv.Itoa(d.Panel.Rider.Delivered), "")
@@ -153,6 +162,7 @@ templ deliveryBody(d DeliveryData) {
 				}
 			</div>
 		</details>
+		</div>
 		// The code is the hand-over: four digits, typed like a code.
 		<dialog x-ref="deliver" class="w-[min(400px,90vw)] rounded-[20px] bg-white p-0 text-text backdrop:bg-black/40">
 			<form method="post" x-bind:action="`/delivery/orders/${delivering}/deliver`" class="px-6 pb-4 pt-6">

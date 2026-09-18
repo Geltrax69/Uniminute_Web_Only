@@ -81,6 +81,14 @@ templ sellerDashboardBody(d SellerDashboardData) {
 				</div>
 			</section>
 			<section class="lg:min-w-0" aria-label="Orders and inventory">
+				<div x-data="notifyPermission()" x-show="state === 'default' || error" x-cloak class="mb-3 flex items-center gap-3 rounded-featured bg-white p-3.5">
+					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime text-strong">@ui.Icon("bell", "h-[18px] w-[18px]")</span>
+					<div class="min-w-0 flex-1">
+						<p class="text-[13.5px] font-bold text-text">Do not miss a new order</p>
+						<p class="text-[12px] text-muted" x-text="error || 'Get a push alert as soon as a customer places one.'"></p>
+					</div>
+					<button type="button" x-on:click="ask()" x-bind:disabled="busy" class="min-h-touch shrink-0 rounded-full px-3 text-label font-bold text-strong" x-text="busy ? 'Connecting…' : 'Turn on'"></button>
+				</div>
 				<div class="mt-[22px] flex items-center gap-3 lg:mt-0">
 					<div class="flex flex-1 rounded-[26px] bg-white p-1" role="tablist">
 						<button type="button" role="tab" x-on:click="pane = 'orders'" x-bind:aria-selected="pane === 'orders'" x-bind:class="pane === 'orders' ? 'bg-strong text-white shadow-surface' : 'text-muted hover:bg-strong/[.06] hover:text-text'" class="flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold transition-colors duration-150 motion-reduce:transition-none">Orders ({ strconv.Itoa(len(d.Orders)) })</button>
@@ -94,7 +102,7 @@ templ sellerDashboardBody(d SellerDashboardData) {
 					}
 				</div>
 				<div class="h-3.5"></div>
-				<div x-show="pane === 'orders'" { cloakUnless(pane == "orders")... }>
+				<div id="seller-orders" x-show="pane === 'orders'" { cloakUnless(pane == "orders")... } hx-get="/seller?pane=orders" hx-trigger="every 15s [document.visibilityState === 'visible']" hx-select="#seller-orders" hx-target="this" hx-swap="outerHTML">
 					{{ received := countStage(d.Orders, backend.StageReceived) }}
 					<div class="flex gap-2.5">
 						@statTile("Received", strconv.Itoa(received), tpl.When(received > 0, "#9A5B12", ""))
@@ -205,6 +213,11 @@ templ sellerOrderRow(o backend.Order) {
 			if o.RejectReason != "" {
 				<p class="mt-1 text-[11.5px] text-danger">Rejected: { o.RejectReason }</p>
 			}
+			if o.Stage == backend.StageAccepted {
+				<p class="mt-1 text-[11.5px] font-medium text-strong">{ riderStatus(o, false) }</p>
+			} else if o.Stage == backend.StagePicked {
+				<p class="mt-1 text-[11.5px] font-medium text-[#2F6FED]">{ riderStatus(o, true) }</p>
+			}
 		</div>
 		if o.Stage == backend.StageReceived {
 			<div class="ml-2 flex flex-col items-center">
@@ -213,6 +226,20 @@ templ sellerOrderRow(o backend.Order) {
 			</div>
 		}
 	</div>
+}
+
+func riderStatus(o backend.Order, picked bool) string {
+	phone := o.AssignedTo
+	if picked && o.RiderPhone != "" {
+		phone = o.RiderPhone
+	}
+	if phone == "" {
+		return tpl.When(picked, "Picked up by a delivery rider", "Ready for a delivery rider")
+	}
+	if len(phone) > 4 {
+		phone = phone[len(phone)-4:]
+	}
+	return tpl.When(picked, "Picked up by rider •••• "+phone, "Assigned to rider •••• "+phone+" · ready for pickup")
 }
 
 // sellerItemRow is _ItemRow: tap to edit; quick stock, hide and delete beside.

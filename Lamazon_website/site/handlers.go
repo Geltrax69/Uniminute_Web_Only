@@ -1900,6 +1900,9 @@ func (s *Site) handleHelpPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleNotificationsPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
+	if !requireAuth(w, r, p) {
+		return
+	}
 	p.Title = "Notifications — Uniminute"
 	renderOK(w, r, pages.NotificationsPage(p))
 }

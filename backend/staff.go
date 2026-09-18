@@ -985,6 +985,10 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{
 		"id": id, "assignedTo": phone, "stage": stage,
 	})
+	if phone != "" && stage == string(StageAccepted) {
+		a.notifyOrderLater("rider:"+phone, "Delivery assigned",
+			"Order "+id+" is ready to collect. Open your delivery panel for the pickup details.", "/delivery")
+	}
 }
 
 // ---- delivery panel ------------------------------------------------------
@@ -1130,10 +1134,10 @@ func (a *API) handleRiderPick(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	a.notifyOrder(r.Context(), o.BuyerEmail, "Order "+o.ID+" is on its way",
+	a.notifyOrderLater(o.BuyerEmail, "Order "+o.ID+" is on its way",
 		fmt.Sprintf("A rider picked up your %s from %s.\n\n"+
 			"Have your 4-digit delivery code ready — they need it to close the order.",
-			o.ItemTitle, o.StoreName))
+			o.ItemTitle, o.StoreName), "/orders/"+o.ID)
 	o.BuyerEmail = ""
 	writeJSON(w, http.StatusOK, o)
 }
@@ -1219,11 +1223,11 @@ func (a *API) handleRiderDeliver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.notifyOrder(r.Context(), o.BuyerEmail, "Delivered: "+o.ItemTitle,
-		fmt.Sprintf("Order %s from %s has been delivered. Enjoy.", o.ID, o.StoreName))
-	a.notifyOrder(r.Context(), o.StoreOwner, "Order "+o.ID+" was delivered",
+	a.notifyOrderLater(o.BuyerEmail, "Delivered: "+o.ItemTitle,
+		fmt.Sprintf("Order %s from %s has been delivered. Enjoy.", o.ID, o.StoreName), "/orders/"+o.ID)
+	a.notifyOrderLater(o.StoreOwner, "Order "+o.ID+" was delivered",
 		fmt.Sprintf("%d × %s reached the customer. ₹%.0f.",
-			o.Units, o.ItemTitle, o.Amount))
+			o.Units, o.ItemTitle, o.Amount), "/seller?pane=orders")
 	o.BuyerEmail, o.StoreOwner = "", ""
 	writeJSON(w, http.StatusOK, o)
 }

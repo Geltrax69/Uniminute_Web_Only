@@ -64,3 +64,15 @@ func TestBackendDown(t *testing.T) {
 		t.Error("a plain error is not an outage")
 	}
 }
+
+func TestFirebaseWorkerIsServedAtRootScope(t *testing.T) {
+	h := New("http://127.0.0.1:1")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/firebase-messaging-sw.js", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "onBackgroundMessage") {
+		t.Fatalf("worker: %d %q", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Service-Worker-Allowed"); got != "/" {
+		t.Fatalf("worker scope header = %q", got)
+	}
+}

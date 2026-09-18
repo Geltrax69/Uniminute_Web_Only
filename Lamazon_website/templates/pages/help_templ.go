@@ -308,7 +308,7 @@ func notificationsBody() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<button type=\"button\" x-on:click=\"ask()\" class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<button type=\"button\" x-on:click=\"ask()\" x-bind:disabled=\"busy\" class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -321,7 +321,37 @@ func notificationsBody() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\">Allow notifications</button></div></template><template x-if=\"state === 'denied'\"><div class=\"rounded-featured bg-[#FDF0D5] p-5 text-center\" role=\"alert\"><p class=\"flex items-center justify-center gap-2 text-section text-[#6B4600]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" x-text=\"busy ? 'Connecting…' : 'Allow notifications'\">Allow notifications</button></div></template><template x-if=\"state === 'granted'\"><div class=\"rounded-featured bg-surface p-5 text-center shadow-surface\"><div class=\"mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-lime text-strong\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = ui.Icon("bell", "h-6 w-6").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div><p class=\"mt-3 text-section text-text\">Order notifications are on</p><p class=\"mt-1.5 text-body text-muted\">We will tell you when the shop accepts or rejects an order, when a rider picks it up, and when delivery is complete.</p><p x-show=\"error\" x-cloak class=\"mt-3 text-body text-danger\" role=\"alert\" x-text=\"error\"></p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 = []any{ui.ButtonClass(false) + " mt-4 w-full"}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var12...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<button x-show=\"error\" x-cloak type=\"button\" x-on:click=\"ask()\" x-bind:disabled=\"busy\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var12).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/help.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\">Reconnect notifications</button></div></template><template x-if=\"state === 'denied'\"><div class=\"rounded-featured bg-[#FDF0D5] p-5 text-center\" role=\"alert\"><p class=\"flex items-center justify-center gap-2 text-section text-[#6B4600]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -329,7 +359,7 @@ func notificationsBody() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "Notifications are blocked</p><p class=\"mt-1.5 text-body text-[#6B4600]\">Allow them for this site in your browser settings (the lock icon next to the address bar), then reload this page.</p></div></template></div><div class=\"flex flex-1 flex-col items-center justify-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "Notifications are blocked</p><p class=\"mt-1.5 text-body text-[#6B4600]\">Allow them for this site in your browser settings (the lock icon next to the address bar), then reload this page.</p></div></template></div><div class=\"flex flex-1 flex-col items-center justify-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -337,7 +367,7 @@ func notificationsBody() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<p class=\"mt-3 text-[15px] text-muted\">No notifications yet</p></div></main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<p class=\"mt-3 text-[15px] text-muted\">No notifications yet</p></div></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
