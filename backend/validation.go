@@ -55,12 +55,20 @@ func validateAddress(in *Address) error {
 	return nil
 }
 
+// plainLines turns CRLF and lone CR line breaks into "\n". Browsers send a
+// textarea's line breaks as CRLF in multipart forms, and a bare "\r" would
+// otherwise be refused as an unsupported character.
+func plainLines(s string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
+}
+
 // maxItemTitle fits a full marketplace-style name (brand, model, key specs).
 // Mirrored in the seller form (seller-product.templ) so it is never a surprise.
 const maxItemTitle = 250
 
 func (a *API) validateItem(ctx context.Context, in *InventoryItem) error {
-	in.Title = strings.TrimSpace(in.Title)
+	in.Title = strings.TrimSpace(plainLines(in.Title))
+	in.Description = plainLines(in.Description)
 	in.Category = strings.TrimSpace(in.Category)
 	if err := textLimit(in.Title, "title", maxItemTitle, true); err != nil {
 		return err

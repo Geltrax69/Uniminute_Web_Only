@@ -22,3 +22,16 @@ func TestChargeRules(t *testing.T) {
 		t.Errorf("total %v, want 25", got)
 	}
 }
+
+// A pasted, multi-line description arrives with CRLF line breaks from a
+// multipart form, and must be accepted with plain "\n" breaks.
+func TestDescriptionLineBreaks(t *testing.T) {
+	in := "DESIGNED TO DELIGHT — iPhone 17.\r\nSMOOTHER. BRIGHTER. 15.93 cm (6.3″)\rDone’s"
+	got := plainLines(in)
+	if got != "DESIGNED TO DELIGHT — iPhone 17.\nSMOOTHER. BRIGHTER. 15.93 cm (6.3″)\nDone’s" {
+		t.Fatalf("got %q", got)
+	}
+	if err := textLimit(got, "description", 5000, false); err != nil {
+		t.Fatal(err)
+	}
+}
