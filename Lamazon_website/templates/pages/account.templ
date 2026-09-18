@@ -18,6 +18,7 @@ type AccountPageData struct {
 	Page    viewdata.Page
 	Orders  []backend.Order
 	Reviews map[string]backend.Review // by order id
+	Unread  int                       // notifications not yet seen
 }
 
 templ AccountPage(d AccountPageData) {
@@ -70,22 +71,6 @@ templ accountBody(d AccountPageData) {
 			<div id="account-order-status" hx-get="/account" hx-trigger="every 15s [document.visibilityState === 'visible']" hx-select="#account-order-status" hx-target="this" hx-swap="outerHTML">
 				@accountOrderMenu(d.Orders[0])
 			</div>
-			if len(d.Orders) > 1 {
-				@profileSection("Order history")
-				for i, o := range d.Orders[1:] {
-					if i < 4 {
-						<div class="mb-2.5">
-							@orderCard(o, d.Reviews)
-						</div>
-					}
-				}
-				if len(d.Orders) > 5 {
-					<a href="/orders" class={ ui.ButtonClass(false) + " w-full" }>
-						<span>See all { shop.Itoa(len(d.Orders)) } orders</span>
-						@ui.Icon("arrow-right", "h-4 w-4")
-					</a>
-				}
-			}
 		}
 		<div class={ tpl.When(len(d.Orders) > 0, "mt-3.5", "mt-3.5 lg:mt-0") }>
 			@menuCard() {
@@ -94,11 +79,13 @@ templ accountBody(d AccountPageData) {
 		</div>
 		@profileSection("Your information")
 		@menuCard() {
+			@menuRow("package", tpl.When(len(d.Orders) > 0, "Order history ("+shop.Itoa(len(d.Orders))+")", "Order history"), "/orders", false)
+			@menuDivider()
 			@menuRow("book-open", "Address book", "/addresses", false)
 			@menuDivider()
 			@menuRow("heart", "Saved items", "/saved", false)
 			@menuDivider()
-			@menuRow("bell", "Notifications", "/notifications", false)
+			@menuRow("bell", tpl.When(d.Unread > 0, "Notifications · "+shop.Itoa(d.Unread)+" new", "Notifications"), "/notifications", false)
 		}
 		@profileSection("Other information")
 		@menuCard() {

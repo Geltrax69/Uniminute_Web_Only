@@ -797,3 +797,31 @@ func (b *Backend) SaveReview(ctx context.Context, token, orderID string, itemRat
 		"itemRating": itemRating, "itemText": itemText, "riderRating": riderRating, "riderText": riderText,
 	}, nil)
 }
+
+// Notification is one entry in the in-app inbox.
+type Notification struct {
+	ID        int64      `json:"id"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	Target    string     `json:"target"`
+	CreatedAt time.Time  `json:"createdAt"`
+	ReadAt    *time.Time `json:"readAt"`
+}
+
+// Inbox is the latest notifications and how many are unread.
+type Inbox struct {
+	Unread int            `json:"unread"`
+	Items  []Notification `json:"items"`
+}
+
+// GET /api/notifications
+func (b *Backend) Notifications(ctx context.Context, token string) (Inbox, error) {
+	var out Inbox
+	err := b.get(Fresh(ctx), "/api/notifications", token, &out)
+	return out, err
+}
+
+// POST /api/notifications/read
+func (b *Backend) MarkNotificationsRead(ctx context.Context, token string) error {
+	return b.do(ctx, http.MethodPost, "/api/notifications/read", token, nil, nil)
+}

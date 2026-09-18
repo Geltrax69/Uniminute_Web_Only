@@ -130,6 +130,8 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("GET /api/charges", s.handleCharges)
 	mux.HandleFunc("GET /api/products/{id}/reviews", s.handleProductReviews)
 	mux.HandleFunc("GET /api/orders/reviews", s.handleMyReviews)
+	mux.HandleFunc("GET /api/notifications", s.handleNotifications)
+	mux.HandleFunc("POST /api/notifications/read", s.handleNotificationsRead)
 	mux.HandleFunc("PUT /api/orders/{id}/review", s.handleSaveReview)
 	mux.HandleFunc("GET /api/categories", s.handleCategories)
 	mux.HandleFunc("GET /api/campaigns", s.handleCampaigns)
@@ -273,6 +275,7 @@ func needsSession(r *http.Request) bool {
 		strings.HasPrefix(r.URL.Path, "/api/orders") ||
 		r.URL.Path == "/api/me" ||
 		r.URL.Path == "/api/preferences" ||
+		strings.HasPrefix(r.URL.Path, "/api/notifications") ||
 		strings.HasPrefix(r.URL.Path, "/api/addresses") ||
 		r.URL.Path == "/api/push/subscribe" ||
 		r.URL.Path == "/api/push/test"

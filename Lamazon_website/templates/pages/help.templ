@@ -6,6 +6,7 @@ package pages
 // the honest screen, exactly as the app shows it.
 
 import (
+	"strings"
 	"lamazon/website/backend"
 	"lamazon/website/templates/components/navigation"
 	"lamazon/website/templates/components/ui"
@@ -73,11 +74,11 @@ templ helpBody(policies []backend.Policy) {
 	</main>
 }
 
-templ NotificationsPage(p viewdata.Page) {
-	@layouts.Base(p.Title, p.Description, "", withTopBar(p, notificationsBody()))
+templ NotificationsPage(p viewdata.Page, inbox backend.Inbox) {
+	@layouts.Base(p.Title, p.Description, "", withTopBar(p, notificationsBody(inbox)))
 }
 
-templ notificationsBody() {
+templ notificationsBody(inbox backend.Inbox) {
 	<main id="main" class="mx-auto flex min-h-[100dvh] w-full max-w-readable flex-col">
 		@navigation.ScreenHeader("Notifications")
 		<div x-data="notifyPermission()" class="mx-4 mt-3">
@@ -112,9 +113,35 @@ templ notificationsBody() {
 				</div>
 			</template>
 		</div>
-		<div class="flex flex-1 flex-col items-center justify-center">
-			@ui.Icon("bell-off", "h-11 w-11 text-[#9E9E9E]")
-			<p class="mt-3 text-[15px] text-muted">No notifications yet</p>
-		</div>
+		if len(inbox.Items) == 0 {
+			<div class="flex flex-1 flex-col items-center justify-center">
+				@ui.Icon("bell-off", "h-11 w-11 text-[#9E9E9E]")
+				<p class="mt-3 text-[15px] text-muted">No notifications yet</p>
+				<p class="mt-1 text-[13px] text-muted">Order updates and review requests will show up here.</p>
+			</div>
+		} else {
+			<div class="mx-4 mt-3 overflow-hidden rounded bg-surface shadow-surface">
+				for i, n := range inbox.Items {
+					if i > 0 {
+						<div class="mx-4 h-px bg-track"></div>
+					}
+					<a href={ templ.SafeURL(tpl.When(n.Target == "", "/account", n.Target)) } class={ "flex gap-3 px-4 py-3.5 hover:bg-strong/[.04] " + tpl.When(n.ReadAt == nil, "bg-lime/[.18]", "") }>
+						<span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lime/40 text-strong">
+							@ui.Icon(tpl.When(strings.Contains(strings.ToLower(n.Title), "review"), "star", "bell"), "h-[18px] w-[18px]")
+						</span>
+						<span class="min-w-0 flex-1">
+							<span class="flex items-center gap-2">
+								<span class="min-w-0 flex-1 truncate text-[14.5px] font-bold text-text">{ n.Title }</span>
+								if n.ReadAt == nil {
+									<span class="h-2 w-2 shrink-0 rounded-full bg-strong" aria-label="New"></span>
+								}
+							</span>
+							<span class="mt-0.5 line-clamp-3 block whitespace-pre-line text-[13px] leading-[1.4] text-muted">{ n.Body }</span>
+							<span class="mt-1 block text-[11.5px] text-muted">{ ago(n.CreatedAt) }</span>
+						</span>
+					</a>
+				}
+			</div>
+		}
 	</main>
 }

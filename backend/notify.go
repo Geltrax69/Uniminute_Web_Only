@@ -243,6 +243,14 @@ func (a *API) notifyOrderLater(email, title, body, target string) {
 
 func (a *API) notifyEvent(ctx context.Context, email, title, body, kind, target string) {
 	rider := strings.HasPrefix(email, "rider:")
+	// The inbox keeps everything, even when email and push are switched off.
+	if !rider {
+		if _, err := a.db.sql.ExecContext(ctx,
+			`INSERT INTO notifications (email, title, body, target) VALUES ($1,$2,$3,$4)`,
+			email, title, body, target); err != nil {
+			log.Printf("notification inbox %s: %v", email, err)
+		}
+	}
 	prefs, err := a.preferences(ctx, email)
 	if err != nil {
 		log.Printf("notification preferences: %v", err)

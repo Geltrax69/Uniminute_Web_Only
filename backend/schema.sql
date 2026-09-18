@@ -660,3 +660,16 @@ CREATE TABLE IF NOT EXISTS order_reviews (
 CREATE INDEX IF NOT EXISTS idx_reviews_item ON order_reviews (item_id);
 -- When the "please review" nudge went out, so it goes out once.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS review_requested_at TIMESTAMPTZ;
+
+-- The in-app inbox: every notification a shopper or seller was sent, kept
+-- whether or not email or push delivered it.
+CREATE TABLE IF NOT EXISTS notifications (
+ id         BIGSERIAL PRIMARY KEY,
+ email      TEXT NOT NULL,
+ title      TEXT NOT NULL,
+ body       TEXT NOT NULL DEFAULT '',
+ target     TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ read_at    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_email ON notifications (email, created_at DESC);

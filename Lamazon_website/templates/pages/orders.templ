@@ -31,7 +31,7 @@ templ OrdersPage(d OrdersPageData) {
 
 templ ordersBody(d OrdersPageData) {
 	<main id="main" class="mx-auto w-full max-w-[700px] pb-[calc(108px+env(safe-area-inset-bottom))]">
-		@navigation.ScreenHeader("My Orders")
+		@navigation.ScreenHeader("Order history")
 		if len(d.Orders) == 0 {
 			<div class="pt-20 text-center">
 				@ui.Icon("package", "mx-auto h-11 w-11 text-[#9E9E9E]")

@@ -729,6 +729,9 @@ func (s *Site) handleAccountPage(w http.ResponseWriter, r *http.Request) {
 	if p.User != nil {
 		d.Orders, _ = s.backend.MyOrders(backend.Fresh(r.Context()), p.AccessToken)
 		d.Reviews, _ = s.backend.MyReviews(backend.Fresh(r.Context()), p.AccessToken)
+		if inbox, err := s.backend.Notifications(r.Context(), p.AccessToken); err == nil {
+			d.Unread = inbox.Unread
+		}
 	}
 	renderOK(w, r, pages.AccountPage(d))
 }
@@ -785,7 +788,7 @@ func (s *Site) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Site) handleOrdersPage(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
-	p.Title = "My Orders — Uniminute"
+	p.Title = "Order history — Uniminute"
 	if !requireAuth(w, r, p) {
 		return
 	}
@@ -1926,7 +1929,12 @@ func (s *Site) handleNotificationsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Title = "Notifications — Uniminute"
-	renderOK(w, r, pages.NotificationsPage(p))
+	inbox, _ := s.backend.Notifications(r.Context(), p.AccessToken)
+	renderOK(w, r, pages.NotificationsPage(p, inbox))
+	// Shown now, so read: the next visit shows them without the "new" mark.
+	if inbox.Unread > 0 {
+		_ = s.backend.MarkNotificationsRead(r.Context(), p.AccessToken)
+	}
 }
 
 // handleProfileSetupPage is ProfileSetupScreen.
