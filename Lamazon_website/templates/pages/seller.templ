@@ -83,11 +83,11 @@ templ sellerDashboardBody(d SellerDashboardData) {
 			<section class="lg:min-w-0" aria-label="Orders and inventory">
 				<div class="mt-[22px] flex items-center gap-3 lg:mt-0">
 					<div class="flex flex-1 rounded-[26px] bg-white p-1" role="tablist">
-						<button type="button" role="tab" x-on:click="pane = 'orders'" x-bind:aria-selected="pane === 'orders'" x-bind:class="pane === 'orders' ? 'bg-strong text-white' : 'text-muted'" class={ "flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold " + tpl.When(pane == "orders", "bg-strong text-white", "text-muted") }>Orders ({ strconv.Itoa(len(d.Orders)) })</button>
-						<button type="button" role="tab" x-on:click="pane = 'inventory'" x-bind:aria-selected="pane === 'inventory'" x-bind:class="pane === 'inventory' ? 'bg-strong text-white' : 'text-muted'" class={ "flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold " + tpl.When(pane == "inventory", "bg-strong text-white", "text-muted") }>Inventory ({ strconv.Itoa(len(d.Items)) })</button>
+						<button type="button" role="tab" x-on:click="pane = 'orders'" x-bind:aria-selected="pane === 'orders'" x-bind:class="pane === 'orders' ? 'bg-strong text-white shadow-surface' : 'text-muted hover:bg-strong/[.06] hover:text-text'" class="flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold transition-colors duration-150 motion-reduce:transition-none">Orders ({ strconv.Itoa(len(d.Orders)) })</button>
+						<button type="button" role="tab" x-on:click="pane = 'inventory'" x-bind:aria-selected="pane === 'inventory'" x-bind:class="pane === 'inventory' ? 'bg-strong text-white shadow-surface' : 'text-muted hover:bg-strong/[.06] hover:text-text'" class="flex-1 rounded-[22px] py-[11px] text-[13.5px] font-bold transition-colors duration-150 motion-reduce:transition-none">Inventory ({ strconv.Itoa(len(d.Items)) })</button>
 					</div>
 					if d.Store.Approved() {
-						<a href="/seller/products/new" class="hidden h-12 shrink-0 items-center rounded-[26px] bg-strong px-5 text-white shadow-surface hover:brightness-110 lg:flex">
+						<a href="/seller/products/new" class="hidden h-12 shrink-0 items-center rounded-[26px] bg-lime px-5 text-strong shadow-surface hover:brightness-105 lg:flex">
 							@ui.Icon("plus", "h-[18px] w-[18px]")
 							<span class="ml-2 text-[14px] font-bold">Add product</span>
 						</a>
