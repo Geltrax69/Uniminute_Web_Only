@@ -191,12 +191,10 @@ type Order struct {
 	AssignedTo      string     `json:"assignedTo,omitempty"`
 }
 
-// LoginStart is POST /api/login's answer: either "this address has a password,
-// ask for it" or "a code is on its way".
+// LoginStart is POST /api/login's answer: a code is on its way.
 type LoginStart struct {
-	Email         string `json:"email"`
-	NeedsPassword bool   `json:"needsPassword"`
-	ExpiresAt     string `json:"expiresAt"`
+	Email     string `json:"email"`
+	ExpiresAt string `json:"expiresAt"`
 	// Set only by a server running with the code switched off.
 	Token        string `json:"token,omitempty"`
 	RefreshToken string `json:"refreshToken,omitempty"`
@@ -385,6 +383,14 @@ func (b *Backend) PasswordLogin(ctx context.Context, email, password string) (Se
 	var out Session
 	err := b.do(ctx, http.MethodPost, "/api/login/password", "",
 		map[string]string{"email": email, "password": password}, &out)
+	return out, err
+}
+
+// POST /api/login/reset — a mailed code and a new password.
+func (b *Backend) ResetPassword(ctx context.Context, email, code, password string) (Session, error) {
+	var out Session
+	err := b.do(ctx, http.MethodPost, "/api/login/reset", "",
+		map[string]string{"email": email, "code": code, "password": password}, &out)
 	return out, err
 }
 

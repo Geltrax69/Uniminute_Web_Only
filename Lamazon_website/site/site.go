@@ -104,6 +104,8 @@ func (s *Site) routes() http.Handler {
 	mux.HandleFunc("POST /login/start", s.handleLoginStart)
 	mux.HandleFunc("POST /login/verify", s.handleLoginVerify)
 	mux.HandleFunc("POST /login/password", s.handleLoginPassword)
+	mux.HandleFunc("POST /login/reset", s.handleLoginReset)
+	mux.HandleFunc("POST /login/step", s.handleLoginStep)
 	mux.HandleFunc("POST /logout", s.handleLogout)
 
 	mux.HandleFunc("POST /account/profile", s.handleProfileUpdate)

@@ -267,3 +267,35 @@ func TestExpiredAccessTokenIsRefused(t *testing.T) {
 		t.Fatalf("refresh after access expiry: want 200, got %d", code)
 	}
 }
+
+// Forgot password: a code always goes out (even with a password set), and a
+// code plus a new password resets it and signs in.
+func TestPasswordReset(t *testing.T) {
+	h, sent := mailAPI(t)
+	const email = "forgetful@lpu.in"
+
+	call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email})
+	if code, _ := call(t, h, http.MethodPost, "/api/login/reset",
+		map[string]string{"email": email, "code": codeFor(t, sent), "password": "short"}); code != http.StatusBadRequest {
+		t.Fatalf("short password: want 400, got %d", code)
+	}
+	code, body := call(t, h, http.MethodPost, "/api/login/reset",
+		map[string]string{"email": email, "code": codeFor(t, sent), "password": "newpass123"})
+	if code != http.StatusOK || body["token"] == nil {
+		t.Fatalf("reset: want 200 with a token, got %d (%v)", code, body["error"])
+	}
+	if code, _ := call(t, h, http.MethodPost, "/api/login/password",
+		map[string]string{"email": email, "password": "newpass123"}); code != http.StatusOK {
+		t.Fatalf("new password: want 200, got %d", code)
+	}
+
+	// With a password set, asking to sign in still mails a code.
+	testDBOf(t).sql.Exec(`UPDATE login_codes SET sent_at = now() - interval '2 minutes' WHERE email=$1`, email)
+	before := sent.count
+	if code, body := call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email}); code != http.StatusOK || body["needsPassword"] != nil {
+		t.Fatalf("login with a password set: got %d %v", code, body)
+	}
+	if sent.count != before+1 {
+		t.Fatal("no code mailed to an address with a password")
+	}
+}

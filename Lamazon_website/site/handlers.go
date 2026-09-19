@@ -1091,9 +1091,18 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 	}
 	email := strings.TrimSpace(r.FormValue("email"))
 	next := localPath(r.FormValue("next"))
-	d := pages.LoginPageData{Next: next, Email: email, Step: "email"}
+	// "Forgot password?" sends the same code, then asks for a new password too.
+	sendTo := tpl.When(r.FormValue("mode") == "reset", "reset", "code")
+	d := pages.LoginPageData{Next: next, Email: email, Step: loginStep(r.FormValue("from"))}
 
 	result, err := s.backend.StartLogin(r.Context(), email)
+	var apiErr *backend.APIError
+	if errors.As(err, &apiErr) && apiErr.Status == http.StatusTooManyRequests {
+		// A code went out moments ago and is still good: ask for it.
+		d.Step, d.Error = sendTo, loginError(err, "")
+		renderOK(w, r, pages.LoginCard(d))
+		return
+	}
 	if err != nil {
 		d.Error = loginError(err, "Could not reach the server, so no code went out. Try again, or use Browse the shop to look around.")
 		renderOK(w, r, pages.LoginCard(d))
@@ -1108,8 +1117,49 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 	if result.Email != "" {
 		d.Email = result.Email
 	}
-	d.Step = tpl.When(result.NeedsPassword, "password", "code")
+	d.Step = sendTo
 	renderOK(w, r, pages.LoginCard(d))
+}
+
+// handleLoginStep switches the card without calling the backend: "Use
+// password instead" and "Use a different email".
+func (s *Site) handleLoginStep(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	step := tpl.When(r.FormValue("step") == "password", "password", "email")
+	renderOK(w, r, pages.LoginCard(pages.LoginPageData{
+		Email: strings.TrimSpace(r.FormValue("email")), Step: step, Next: localPath(r.FormValue("next")),
+	}))
+}
+
+// loginStep is a step name from the form, or "email" for anything else.
+func loginStep(s string) string {
+	switch s {
+	case "code", "password", "reset":
+		return s
+	}
+	return "email"
+}
+
+func (s *Site) handleLoginReset(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	email := r.FormValue("email")
+	next := localPath(r.FormValue("next"))
+
+	sess, err := s.backend.ResetPassword(r.Context(), email,
+		strings.TrimSpace(r.FormValue("code")), r.FormValue("password"))
+	if err != nil {
+		d := pages.LoginPageData{Email: email, Step: "reset", Next: next, Error: loginError(err, offlineMessage)}
+		renderOK(w, r, pages.LoginCard(d))
+		return
+	}
+	shop.SetSessionCookies(w, sess)
+	redirect(w, r, s.afterSignIn(r.Context(), sess.Token, next))
 }
 
 func (s *Site) handleLoginVerify(w http.ResponseWriter, r *http.Request) {

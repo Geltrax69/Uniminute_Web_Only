@@ -40,6 +40,26 @@
       ],
       "port": 8767,
       "url": "http://localhost:8767"
+    },
+    {
+      "name": "lamazon-api-nomail",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "set -a && . ./.env && set +a && unset RESEND_API_KEY && cd backend && PORT=8081 go run ."
+      ],
+      "port": 8081,
+      "url": "http://localhost:8081"
+    },
+    {
+      "name": "lamazon-website-local",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd Lamazon_website && ~/go/bin/templ generate && npm run build && API_BASE=http://localhost:8081 PORT=8101 go run ./cmd/server"
+      ],
+      "port": 8101,
+      "url": "http://localhost:8101"
     }
   ]
 }

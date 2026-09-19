@@ -151,7 +151,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Password", "Optional — set one to skip the emailed code").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = account.Section("Password", "Optional — lets you sign in without waiting for a code").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

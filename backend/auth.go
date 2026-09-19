@@ -142,20 +142,8 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// An address with a password is asked for it instead. That is the whole
-	// difference: no code is minted, nothing is emailed, and the app shows a
-	// password field because the answer said to.
-	var hasPassword bool
-	a.db.sql.QueryRowContext(r.Context(),
-		`SELECT pass_hash <> '' FROM users WHERE email = $1`, email).
-		Scan(&hasPassword)
-	if hasPassword {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"email":         email,
-			"needsPassword": true,
-		})
-		return
-	}
+	// A code goes out even when the address has a password: the code is the
+	// default, and the app offers the password as the other way in.
 
 	code, err := sixDigits()
 	if err != nil {
@@ -211,7 +199,15 @@ func (a *API) handleVerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(in.Email))
-	code := strings.TrimSpace(in.Code)
+	if a.consumeCode(w, r, email, in.Code) {
+		a.issueSession(w, r, email)
+	}
+}
+
+// consumeCode checks a mailed code and burns it. On false it has already
+// written the error.
+func (a *API) consumeCode(w http.ResponseWriter, r *http.Request, email, code string) bool {
+	code = strings.TrimSpace(code)
 
 	// Counting the attempt in the same statement that reads the code is what
 	// makes the limit hold when someone scripts the guesses.
@@ -223,24 +219,63 @@ func (a *API) handleVerifyCode(w http.ResponseWriter, r *http.Request) {
 		RETURNING code_hash, attempts`, email, maxAttempts).Scan(&want, &attempts)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusUnauthorized, "that code has expired — ask for a new one")
-		return
+		return false
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return false
 	}
 	if subtle.ConstantTimeCompare([]byte(hashCode(code)), []byte(want)) != 1 {
 		writeError(w, http.StatusUnauthorized,
 			fmt.Sprintf("wrong code — %d attempts left", maxAttempts-attempts))
-		return
+		return false
 	}
 
 	// Correct: burn the code so it cannot be replayed, then issue the session.
 	if _, err := a.db.sql.ExecContext(r.Context(),
 		`DELETE FROM login_codes WHERE email = $1`, email); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return false
+	}
+	return true
+}
+
+// POST /api/login/reset — a mailed code plus a new password: sets the
+// password and signs in. The code is the proof, same as signing in with one.
+func (a *API) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email    string `json:"email"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
+	email := strings.ToLower(strings.TrimSpace(in.Email))
+	// Checked before the code, so a short password does not burn it.
+	if len(in.Password) < minPasswordLength {
+		writeError(w, http.StatusBadRequest, "a password needs at least 8 characters")
+		return
+	}
+	hash, err := hashPassword(in.Password)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !a.consumeCode(w, r, email, in.Code) {
+		return
+	}
+	if _, err := a.db.upsertUser(r.Context(), email); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := a.db.sql.ExecContext(r.Context(),
+		`UPDATE users SET pass_hash = $2 WHERE email = $1`, email, hash); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	a.clearPasswordAttempts(r.Context(), "shopper", email)
 	a.issueSession(w, r, email)
 }
 

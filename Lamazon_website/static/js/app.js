@@ -155,26 +155,34 @@ document.addEventListener('alpine:init', () => {
   // right, and the line under it says why it will not.
   Alpine.data('login', (step, email, error) => ({
     value: step === 'email' ? email : '',
+    password: '', // the new one, on the reset step
     busy: false,
     error,
     get valid() {
       const v = this.value.trim();
       if (step === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
       if (step === 'code') return /^\d{6}$/.test(v);
+      if (step === 'reset') return /^\d{6}$/.test(v) && this.password.length >= 8;
       return this.value.length > 0;
     },
     get helper() {
       if (this.error) return this.error;
-      if (this.value.trim() && !this.valid) {
+      const v = this.value.trim();
+      if (v && !this.valid) {
+        if (step === 'reset' && /^\d{6}$/.test(v)) {
+          return this.password ? 'A password needs at least 8 characters.' : 'Now choose a new password.';
+        }
         return {
           email: 'That is not an email address yet.',
           code: 'Enter the six digits from your email.',
+          reset: 'Enter the six digits from your email.',
           password: 'Enter your password to sign in.',
         }[step];
       }
       return {
-        email: 'We only use your email for order updates and receipts.',
+        email: 'We will email you a code to sign in.',
         code: `We sent a code to ${email}. It expires in 10 minutes.`,
+        reset: `We sent a code to ${email}. Enter it and a new password.`,
         password: `Signing in as ${email}.`,
       }[step];
     },
