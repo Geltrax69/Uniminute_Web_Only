@@ -56,7 +56,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd Lamazon_website && ~/go/bin/templ generate && npm run build && API_BASE=http://localhost:8081 PORT=8101 go run ./cmd/server"
+        "cd Lamazon_website/templates && ~/go/bin/templ generate && cd .. && npm run build && API_BASE=http://localhost:8081 PORT=8101 go run ./cmd/server"
       ],
       "port": 8101,
       "url": "http://localhost:8101"

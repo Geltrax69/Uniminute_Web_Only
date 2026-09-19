@@ -180,9 +180,9 @@ document.addEventListener('alpine:init', () => {
         }[step];
       }
       return {
-        email: 'We will email you a code to sign in.',
+        email: 'New here? We will email you a code to get started.',
         code: `We sent a code to ${email}. It expires in 10 minutes.`,
-        reset: `We sent a code to ${email}. Enter it and a new password.`,
+        reset: `We sent a password reset code to ${email}. Enter it and a new password.`,
         password: `Signing in as ${email}.`,
       }[step];
     },

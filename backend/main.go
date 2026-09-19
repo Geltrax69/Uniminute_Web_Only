@@ -153,6 +153,7 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("POST /api/login", s.handleLogin)
 	mux.HandleFunc("POST /api/login/verify", s.handleVerifyCode)
 	mux.HandleFunc("POST /api/login/password", s.handlePasswordLogin)
+	mux.HandleFunc("POST /api/login/forgot", s.handleForgotPassword)
 	mux.HandleFunc("POST /api/login/reset", s.handleResetPassword)
 	mux.HandleFunc("POST /api/login/refresh", s.handleRefresh)
 

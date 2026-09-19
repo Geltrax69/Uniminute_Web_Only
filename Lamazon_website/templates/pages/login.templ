@@ -18,7 +18,8 @@ import (
 type LoginPageData struct {
 	Next              string // where to go afterwards; always a local path
 	Email             string
-	Step              string // "email" | "code" | "password"
+	Step              string // "email" | "code" | "password" | "reset"
+	HasPassword       bool   // on the code step: offer the password back
 	Error             string
 	Notice            string // shown above the card, e.g. an expired session
 	Backdrop          []string
@@ -66,8 +67,9 @@ templ loginPage(d LoginPageData) {
 }
 
 // LoginCard is the sign-in card, and the answer to every step's post.
-// Email first, then a mailed code by default; the password and "forgot
-// password" are links under the button.
+// Email first. A new address gets a code (and sets a password on the
+// details page after); an address with a password is asked for it, with a
+// code and "forgot password" as links under the button.
 templ LoginCard(d LoginPageData) {
 	{{ st := loginSteps[d.Step] }}
 	<div
@@ -88,6 +90,9 @@ templ LoginCard(d LoginPageData) {
 			if d.Step != "email" {
 				<input type="hidden" name="email" value={ d.Email }/>
 			}
+			if d.HasPassword {
+				<input type="hidden" name="hasPassword" value="1"/>
+			}
 			@loginInput("login-field", st, tpl.When(d.Step == "email", d.Email, ""), "value")
 			if d.Step == "reset" {
 				<div class="mt-2.5">
@@ -103,11 +108,13 @@ templ LoginCard(d LoginPageData) {
 			<div class="mt-1 flex flex-wrap items-center justify-center">
 				switch d.Step {
 					case "code":
-						@loginLink("Use password instead", "/login/step", `{"step":"password"}`)
+						if d.HasPassword {
+							@loginLink("Use password instead", "/login/step", `{"step":"password"}`)
+						}
 						@loginLink("Use a different email", "/login/step", `{"step":"email"}`)
 					case "password":
 						@loginLink("Forgot password?", "/login/start", `{"mode":"reset"}`)
-						@loginLink("Email me a code instead", "/login/start", `{}`)
+						@loginLink("Email me a code instead", "/login/start", `{"mode":"code"}`)
 					case "reset":
 						@loginLink("Back to password", "/login/step", `{"step":"password"}`)
 				}
@@ -191,11 +198,11 @@ type loginStepText struct {
 }
 
 // loginSteps is what each step's field and button say. "reset" asks for the
-// code here and a new password in its second field ("newPassword").
+// reset code here and a new password in its second field ("newPassword").
 var loginSteps = map[string]loginStepText{
 	"email":       {"/login/start", "email", "email", "email", "mail", "Email address", "Enter email address", "Continue"},
 	"code":        {"/login/verify", "code", "text", "one-time-code", "key-round", "Verification code", "Enter the 6-digit code", "Verify code"},
 	"password":    {"/login/password", "password", "password", "current-password", "lock", "Password", "Enter password", "Sign in"},
-	"reset":       {"/login/reset", "code", "text", "one-time-code", "key-round", "Verification code", "Enter the 6-digit code", "Set password and sign in"},
+	"reset":       {"/login/reset", "code", "text", "one-time-code", "key-round", "Reset code", "Enter the 6-digit reset code", "Set password and sign in"},
 	"newPassword": {"", "password", "password", "new-password", "lock", "New password", "At least 8 characters", ""},
 }

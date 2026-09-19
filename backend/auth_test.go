@@ -268,19 +268,44 @@ func TestExpiredAccessTokenIsRefused(t *testing.T) {
 	}
 }
 
-// Forgot password: a code always goes out (even with a password set), and a
-// code plus a new password resets it and signs in.
+// Forgot password has its own code and email: a sign-in code cannot reset a
+// password, a reset code cannot sign in, and once a password is set the
+// email step asks for it instead of mailing a code.
 func TestPasswordReset(t *testing.T) {
 	h, sent := mailAPI(t)
 	const email = "forgetful@lpu.in"
+	db := testDBOf(t)
+	cool := func() {
+		db.sql.Exec(`UPDATE login_codes SET sent_at = now() - interval '2 minutes' WHERE email=$1`, email)
+	}
 
+	// A sign-in code is refused by reset.
 	call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email})
 	if code, _ := call(t, h, http.MethodPost, "/api/login/reset",
-		map[string]string{"email": email, "code": codeFor(t, sent), "password": "short"}); code != http.StatusBadRequest {
+		map[string]string{"email": email, "code": codeFor(t, sent), "password": "newpass123"}); code != http.StatusUnauthorized {
+		t.Fatalf("sign-in code used for reset: want 401, got %d", code)
+	}
+
+	cool()
+	if code, body := call(t, h, http.MethodPost, "/api/login/forgot", map[string]string{"email": email}); code != http.StatusOK {
+		t.Fatalf("forgot: want 200, got %d (%v)", code, body["error"])
+	}
+	if !strings.Contains(sent.text, "reset code") {
+		t.Fatalf("reset email should say so: %q", sent.text)
+	}
+	secret := codeFor(t, sent)
+	if code, _ := call(t, h, http.MethodPost, "/api/login/reset",
+		map[string]string{"email": email, "code": secret, "password": "short"}); code != http.StatusBadRequest {
 		t.Fatalf("short password: want 400, got %d", code)
 	}
+	// A reset code does not sign in on its own. (That try counts, so the
+	// reset below has one fewer left — still plenty.)
+	if code, _ := call(t, h, http.MethodPost, "/api/login/verify",
+		map[string]string{"email": email, "code": secret}); code != http.StatusUnauthorized {
+		t.Fatalf("reset code used to sign in: want 401, got %d", code)
+	}
 	code, body := call(t, h, http.MethodPost, "/api/login/reset",
-		map[string]string{"email": email, "code": codeFor(t, sent), "password": "newpass123"})
+		map[string]string{"email": email, "code": secret, "password": "newpass123"})
 	if code != http.StatusOK || body["token"] == nil {
 		t.Fatalf("reset: want 200 with a token, got %d (%v)", code, body["error"])
 	}
@@ -289,13 +314,12 @@ func TestPasswordReset(t *testing.T) {
 		t.Fatalf("new password: want 200, got %d", code)
 	}
 
-	// With a password set, asking to sign in still mails a code.
-	testDBOf(t).sql.Exec(`UPDATE login_codes SET sent_at = now() - interval '2 minutes' WHERE email=$1`, email)
+	// With a password set: asked for it, no mail. Asking for a code still works.
 	before := sent.count
-	if code, body := call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email}); code != http.StatusOK || body["needsPassword"] != nil {
-		t.Fatalf("login with a password set: got %d %v", code, body)
+	if _, body := call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email}); body["needsPassword"] != true || sent.count != before {
+		t.Fatalf("login with a password set: want needsPassword and no mail, got %v", body)
 	}
-	if sent.count != before+1 {
-		t.Fatal("no code mailed to an address with a password")
+	if code, _ := call(t, h, http.MethodPost, "/api/login", map[string]any{"email": email, "code": true}); code != http.StatusOK || sent.count != before+1 {
+		t.Fatalf("code instead: got %d, mails %d", code, sent.count-before)
 	}
 }

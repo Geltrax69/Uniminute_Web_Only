@@ -1091,11 +1091,19 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 	}
 	email := strings.TrimSpace(r.FormValue("email"))
 	next := localPath(r.FormValue("next"))
-	// "Forgot password?" sends the same code, then asks for a new password too.
-	sendTo := tpl.When(r.FormValue("mode") == "reset", "reset", "code")
-	d := pages.LoginPageData{Next: next, Email: email, Step: loginStep(r.FormValue("from"))}
+	// mode is "" from the email step, "code" for "Email me a code instead"
+	// and "reset" for "Forgot password?" (a separate reset code).
+	mode := r.FormValue("mode")
+	sendTo := tpl.When(mode == "reset", "reset", "code")
+	d := pages.LoginPageData{Next: next, Email: email, Step: loginStep(r.FormValue("from")), HasPassword: mode != ""}
 
-	result, err := s.backend.StartLogin(r.Context(), email)
+	var result backend.LoginStart
+	var err error
+	if mode == "reset" {
+		err = s.backend.ForgotPassword(r.Context(), email)
+	} else {
+		result, err = s.backend.StartLogin(r.Context(), email, mode == "code")
+	}
 	var apiErr *backend.APIError
 	if errors.As(err, &apiErr) && apiErr.Status == http.StatusTooManyRequests {
 		// A code went out moments ago and is still good: ask for it.
@@ -1114,6 +1122,9 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 		redirect(w, r, s.afterSignIn(r.Context(), result.Token, next))
 		return
 	}
+	if result.NeedsPassword {
+		sendTo = "password"
+	}
 	if result.Email != "" {
 		d.Email = result.Email
 	}
@@ -1122,7 +1133,7 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleLoginStep switches the card without calling the backend: "Use
-// password instead" and "Use a different email".
+// password instead", "Back to password" and "Use a different email".
 func (s *Site) handleLoginStep(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -1130,7 +1141,7 @@ func (s *Site) handleLoginStep(w http.ResponseWriter, r *http.Request) {
 	}
 	step := tpl.When(r.FormValue("step") == "password", "password", "email")
 	renderOK(w, r, pages.LoginCard(pages.LoginPageData{
-		Email: strings.TrimSpace(r.FormValue("email")), Step: step, Next: localPath(r.FormValue("next")),
+		Email: strings.TrimSpace(r.FormValue("email")), Step: step, Next: localPath(r.FormValue("next")), HasPassword: step == "password",
 	}))
 }
 
@@ -1173,7 +1184,7 @@ func (s *Site) handleLoginVerify(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := s.backend.VerifyCode(r.Context(), email, code)
 	if err != nil {
-		d := pages.LoginPageData{Email: email, Step: "code", Next: next, Error: loginError(err, offlineMessage)}
+		d := pages.LoginPageData{Email: email, Step: "code", Next: next, Error: loginError(err, offlineMessage), HasPassword: r.FormValue("hasPassword") != ""}
 		renderOK(w, r, pages.LoginCard(d))
 		return
 	}

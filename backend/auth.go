@@ -65,6 +65,13 @@ func (m *Mailer) sendCode(ctx context.Context, to, code string) error {
 		codeHTML(code))
 }
 
+func (m *Mailer) sendResetCode(ctx context.Context, to, code string) error {
+	return m.send(ctx, to, code+" is your Uniminute password reset code",
+		"Your Uniminute password reset code is "+code+
+			"\n\nIt expires in 10 minutes. If you did not ask to reset your password, ignore this email — your password has not changed.",
+		resetHTML(code))
+}
+
 // send is one email. The plain-text part is what some clients show and what
 // every client can fall back to, so it is never skipped; the HTML is the
 // version most people actually see. Pass an empty html for text-only.
@@ -114,10 +121,13 @@ func hashCode(code string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// POST /api/login — mails a fresh code to the address.
+// POST /api/login — mails a fresh sign-in code, unless the address has a
+// password: then it says so and the app asks which they want. {"code": true}
+// is "email me a code instead".
 func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email string `json:"email"`
+		Code  bool   `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -142,9 +152,41 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A code goes out even when the address has a password: the code is the
-	// default, and the app offers the password as the other way in.
+	var hasPassword bool
+	a.db.sql.QueryRowContext(r.Context(),
+		`SELECT pass_hash <> '' FROM users WHERE email = $1`, email).
+		Scan(&hasPassword)
+	if hasPassword && !in.Code {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"email":         email,
+			"needsPassword": true,
+		})
+		return
+	}
+	a.mailCode(w, r, email, "login")
+}
 
+// POST /api/login/forgot — mails a password-reset code, a different code in
+// a different email from the sign-in one.
+func (a *API) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(in.Email))
+	if !emailPattern.MatchString(email) {
+		writeError(w, http.StatusBadRequest, "enter a valid email address")
+		return
+	}
+	a.mailCode(w, r, email, "reset")
+}
+
+// mailCode mints a code for purpose ("login" or "reset"), stores its hash and
+// emails it.
+func (a *API) mailCode(w http.ResponseWriter, r *http.Request, email, purpose string) {
 	code, err := sixDigits()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -155,16 +197,16 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// changes nothing means a code went out moments ago.
 	var expires time.Time
 	err = a.db.sql.QueryRowContext(r.Context(), `
-		INSERT INTO login_codes (email, code_hash, expires_at, sent_at)
-		VALUES ($1, $2, now() + $3::interval, now())
+		INSERT INTO login_codes (email, code_hash, expires_at, sent_at, purpose)
+		VALUES ($1, $2, now() + $3::interval, now(), $5)
 		ON CONFLICT (email) DO UPDATE SET
 			code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at,
-			sent_at = now(), attempts = 0
+			sent_at = now(), attempts = 0, purpose = EXCLUDED.purpose
 		WHERE login_codes.sent_at < now() - $4::interval
 		RETURNING expires_at`,
 		email, hashCode(code),
 		fmt.Sprintf("%d seconds", int(codeLifetime.Seconds())),
-		fmt.Sprintf("%d seconds", int(codeCooldown.Seconds()))).Scan(&expires)
+		fmt.Sprintf("%d seconds", int(codeCooldown.Seconds())), purpose).Scan(&expires)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusTooManyRequests,
 			"a code was just sent — check your inbox, or try again in a minute")
@@ -175,10 +217,14 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	send := (*Mailer).sendCode
+	if purpose == "reset" {
+		send = (*Mailer).sendResetCode
+	}
 	if a.mail == nil {
 		// Unconfigured is a working local setup, not an error.
-		log.Printf("no mailer: sign-in code for %s is %s", email, code)
-	} else if err := a.mail.sendCode(r.Context(), email, code); err != nil {
+		log.Printf("no mailer: %s code for %s is %s", purpose, email, code)
+	} else if err := send(a.mail, r.Context(), email, code); err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
@@ -199,14 +245,14 @@ func (a *API) handleVerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(in.Email))
-	if a.consumeCode(w, r, email, in.Code) {
+	if a.consumeCode(w, r, email, in.Code, "login") {
 		a.issueSession(w, r, email)
 	}
 }
 
-// consumeCode checks a mailed code and burns it. On false it has already
-// written the error.
-func (a *API) consumeCode(w http.ResponseWriter, r *http.Request, email, code string) bool {
+// consumeCode checks a mailed code of that purpose and burns it. On false it
+// has already written the error.
+func (a *API) consumeCode(w http.ResponseWriter, r *http.Request, email, code, purpose string) bool {
 	code = strings.TrimSpace(code)
 
 	// Counting the attempt in the same statement that reads the code is what
@@ -215,8 +261,8 @@ func (a *API) consumeCode(w http.ResponseWriter, r *http.Request, email, code st
 	var attempts int
 	err := a.db.sql.QueryRowContext(r.Context(), `
 		UPDATE login_codes SET attempts = attempts + 1
-		WHERE email = $1 AND expires_at > now() AND attempts < $2
-		RETURNING code_hash, attempts`, email, maxAttempts).Scan(&want, &attempts)
+		WHERE email = $1 AND expires_at > now() AND attempts < $2 AND purpose = $3
+		RETURNING code_hash, attempts`, email, maxAttempts, purpose).Scan(&want, &attempts)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusUnauthorized, "that code has expired — ask for a new one")
 		return false
@@ -240,8 +286,8 @@ func (a *API) consumeCode(w http.ResponseWriter, r *http.Request, email, code st
 	return true
 }
 
-// POST /api/login/reset — a mailed code plus a new password: sets the
-// password and signs in. The code is the proof, same as signing in with one.
+// POST /api/login/reset — a reset code from /api/login/forgot plus a new
+// password: sets the password and signs in.
 func (a *API) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email    string `json:"email"`
@@ -263,7 +309,7 @@ func (a *API) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !a.consumeCode(w, r, email, in.Code) {
+	if !a.consumeCode(w, r, email, in.Code, "reset") {
 		return
 	}
 	if _, err := a.db.upsertUser(r.Context(), email); err != nil {

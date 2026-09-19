@@ -68,6 +68,19 @@ func codeHTML(code string) string {
 		"If you did not ask to sign in, ignore this email — nobody can get in without the code.")
 }
 
+func resetHTML(code string) string {
+	body := fmt.Sprintf(`
+    <p style="margin:0 0 16px 0;">Use this code to set a new password:</p>
+    <div style="background:#F1F1EF;border-radius:12px;padding:16px;
+                text-align:center;font-size:30px;letter-spacing:7px;
+                font-weight:700;color:#1A1A1A;">%s</div>
+    <p style="margin:16px 0 0 0;">It expires in 10 minutes and can be used
+       once.</p>`, html.EscapeString(code))
+	return emailHTML("Reset your password",
+		body,
+		"If you did not ask to reset your password, ignore this email — your password has not changed.")
+}
+
 // notifyHTML is the shell every other notification uses: a heading and the
 // same body text the plain-text part carries, so the two never disagree.
 func notifyHTML(title, text string) string {

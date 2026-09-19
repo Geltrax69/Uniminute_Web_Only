@@ -136,6 +136,11 @@ ALTER TABLE seller_stores
 ALTER TABLE inventory_items
     ADD COLUMN IF NOT EXISTS image_urls TEXT[] NOT NULL DEFAULT '{}';
 
+-- 'login' or 'reset': a password-reset code cannot sign anyone in, and a
+-- sign-in code cannot change a password.
+ALTER TABLE login_codes
+    ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'login';
+
 -- Postgres hands out ids, not the clock: two requests in the same microsecond
 -- used to generate the same primary key and one of them lost.
 CREATE SEQUENCE IF NOT EXISTS inventory_item_ids;
