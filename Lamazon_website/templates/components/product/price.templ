@@ -13,12 +13,12 @@ templ Price(p backend.Product) {
 	<div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
 		<span class="text-[28px] font-extrabold leading-[34px] text-text" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</span>
 		if p.Discounted() {
-			<span class="text-[16px] text-muted line-through" x-text="'MRP ₹' + t('mrp')">MRP ₹{ shop.Money(p.MRP) }</span>
-			@DiscountBadge(p.DiscountPercent())
+			<span class="text-[16px] text-muted line-through" x-show="discountPercent > 0" x-text="'MRP ₹' + t('mrp')">MRP ₹{ shop.Money(p.MRP) }</span>
+			<span class="rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-extrabold tracking-[0.3px] text-text shadow-badge" x-show="discountPercent > 0" x-text="discountPercent + '% OFF'">{ itoa(p.DiscountPercent()) }% OFF</span>
 		}
 	</div>
 	if p.Discounted() {
-		<p class="mt-2 text-body font-semibold text-strong" x-text="'You save ₹' + t('save')">You save ₹{ shop.Money(p.MRP - p.Price) }</p>
+		<p class="mt-2 text-body font-semibold text-strong" x-show="discountPercent > 0" x-text="'You save ₹' + t('save')">You save ₹{ shop.Money(p.MRP - p.Price) }</p>
 	}
 }
 

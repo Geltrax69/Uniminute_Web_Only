@@ -207,7 +207,7 @@ templ departmentTile(name, image string, atlas int, selected, isAll bool) {
 						@ui.Icon("layout-grid", "h-6 w-6")
 					</span>
 				} else if image != "" {
-					<img src={ templ.URL(image) } alt="" loading="lazy" class="h-full w-full object-contain"/>
+					<img src={ templ.URL(shop.CatalogueImage(image, 160)) } alt="" loading="lazy" class="h-full w-full object-cover"/>
 				} else {
 					<span class="h-full w-full" style={ templ.SafeCSS(shop.AtlasStyle(atlas)) }></span>
 				}
@@ -360,7 +360,7 @@ templ categorySection(title, dept string, cats []backend.Category, seeAll string
 // it sells, else the season-coloured plate with the shelf's glyph.
 templ categoryVisual(c backend.Category, dept string, d HomeData) {
 	if c.ImageURL != "" {
-		<img src={ templ.URL(c.ImageURL) } alt="" loading="lazy" class="h-full w-full object-contain"/>
+		<img src={ templ.URL(shop.CatalogueImage(c.ImageURL, 300)) } alt="" loading="lazy" class="h-full w-full object-cover"/>
 	} else if face := d.Faces[c.Name]; face != "" {
 		<img src={ templ.URL(shop.Thumb(face)) } alt="" loading="lazy" class="h-full w-full object-cover"/>
 	} else {

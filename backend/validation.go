@@ -94,6 +94,9 @@ func (a *API) validateItem(ctx context.Context, in *InventoryItem) error {
 			return fmt.Errorf("choose an existing category")
 		}
 	}
+	if err := validateVariantPrices(in); err != nil {
+		return err
+	}
 	return nil
 }
 func isFinitePrice(n float64) bool {

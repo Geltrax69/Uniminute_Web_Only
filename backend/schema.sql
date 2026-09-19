@@ -335,6 +335,8 @@ CREATE INDEX IF NOT EXISTS idx_categories_parent
 -- swatches instead of spelling "Maroon".
 ALTER TABLE inventory_items
     ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE inventory_items
+    ADD COLUMN IF NOT EXISTS variant_prices JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- The Food menu, three deep: the department, its sections, and what sits in
 -- each. Seeded only when Food has nothing under it yet, so an admin who
@@ -678,3 +680,50 @@ CREATE TABLE IF NOT EXISTS notifications (
  read_at    TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_email ON notifications (email, created_at DESC);
+
+-- Generated studio category photography. Fill only missing artwork; an
+-- administrator's existing or later choice always takes precedence.
+UPDATE catalog_categories AS c
+SET image_url = art.url
+FROM (VALUES
+    ('Arts & Crafts', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849410/Lamazon/Categories/Stationery_Games/Arts_Crafts.webp'),
+    ('Atta, Rice & Dal', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849401/Lamazon/Categories/Grocery_Kitchen/Atta_Rice_Dal.webp'),
+    ('Bags & School Needs', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849410/Lamazon/Categories/Stationery_Games/Bags_School_Needs.webp'),
+    ('Bakery & Biscuits', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849404/Lamazon/Categories/Grocery_Kitchen/Bakery_Biscuits.webp'),
+    ('Bath & Body', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849399/Lamazon/Categories/Beauty/Bath_Body.webp'),
+    ('Beauty', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849117/Lamazon/Categories/Beauty/Beauty.webp'),
+    ('Beauty & Cosmetics', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849399/Lamazon/Categories/Beauty/Beauty_Cosmetics.webp'),
+    ('Books & Magazines', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849408/Lamazon/Categories/Stationery_Games/Books_Magazines.webp'),
+    ('Chips & Namkeen', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849404/Lamazon/Categories/Snacks_Drinks/Chips_Namkeen.webp'),
+    ('Dairy, Bread & Eggs', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849401/Lamazon/Categories/Grocery_Kitchen/Dairy_Bread_Eggs.webp'),
+    ('Drinks & Juices', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849406/Lamazon/Categories/Snacks_Drinks/Drinks_Juices.webp'),
+    ('Dry Fruits & Cereals', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849404/Lamazon/Categories/Grocery_Kitchen/Dry_Fruits_Cereals.webp'),
+    ('Electronics', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849099/Lamazon/Categories/Electronics/Electronics.webp'),
+    ('Feminine Hygiene', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849398/Lamazon/Categories/Beauty/Feminine_Hygiene.webp'),
+    ('Files & Office Needs', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849410/Lamazon/Categories/Stationery_Games/Files_Office_Needs.webp'),
+    ('Food', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849117/Lamazon/Categories/Food/Food.webp'),
+    ('Gift Wraps & Bags', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849410/Lamazon/Categories/Stationery_Games/Gift_Wraps_Bags.webp'),
+    ('Gifts', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849118/Lamazon/Categories/Gifts/Gifts.webp'),
+    ('Glue & Tape', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849408/Lamazon/Categories/Stationery_Games/Glue_Tape.webp'),
+    ('Grocery & Kitchen', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849118/Lamazon/Categories/Grocery_Kitchen/Grocery_Kitchen.webp'),
+    ('Hair', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849399/Lamazon/Categories/Beauty/Hair.webp'),
+    ('Home & Lifestyle', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849402/Lamazon/Categories/Household_Essentials/Home_Lifestyle.webp'),
+    ('Household Essentials', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849118/Lamazon/Categories/Household_Essentials/Household_Essentials.webp'),
+    ('Ice Creams & More', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849406/Lamazon/Categories/Snacks_Drinks/Ice_Creams_More.webp'),
+    ('Instant Food', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849406/Lamazon/Categories/Snacks_Drinks/Instant_Food.webp'),
+    ('Kitchenware & Appliances', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849404/Lamazon/Categories/Grocery_Kitchen/Kitchenware_Appliances.webp'),
+    ('Notebooks & Diaries', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849408/Lamazon/Categories/Stationery_Games/Notebooks_Diaries.webp'),
+    ('Oil, Ghee & Masala', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849401/Lamazon/Categories/Grocery_Kitchen/Oil_Ghee_Masala.webp'),
+    ('Pens & Pencils', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849408/Lamazon/Categories/Stationery_Games/Pens_Pencils.webp'),
+    ('Sauces & Spreads', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849406/Lamazon/Categories/Snacks_Drinks/Sauces_Spreads.webp'),
+    ('Shoe Polish & Brush', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849413/Lamazon/Categories/Stationery_Games/Shoe_Polish_Brush.webp'),
+    ('Skin & Face', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849399/Lamazon/Categories/Beauty/Skin_Face.webp'),
+    ('Snacks & Drinks', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849118/Lamazon/Categories/Snacks_Drinks/Snacks_Drinks.webp'),
+    ('Sports & Gym', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849411/Lamazon/Categories/Stationery_Games/Sports_Gym.webp'),
+    ('Stationery & Games', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849118/Lamazon/Categories/Stationery_Games/Stationery_Games.webp'),
+    ('Sweets & Chocolates', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849404/Lamazon/Categories/Snacks_Drinks/Sweets_Chocolates.webp'),
+    ('Tea, Coffee & Milk Drinks', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849406/Lamazon/Categories/Snacks_Drinks/Tea_Coffee_Milk_Drinks.webp'),
+    ('Toys & Games', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849408/Lamazon/Categories/Stationery_Games/Toys_Games.webp'),
+    ('Vegetables & Fruits', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849401/Lamazon/Categories/Grocery_Kitchen/Vegetables_Fruits.webp')
+) AS art(name, url)
+WHERE c.name = art.name AND c.image_url = '';

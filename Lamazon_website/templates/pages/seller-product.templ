@@ -87,6 +87,7 @@ templ sellerProductBody(d SellerProductData) {
 						@moneyField("price", "Selling price in rupees")
 					</div>
 				</div>
+				<p class="mt-2 text-[12.5px] text-muted">If you add options below, price each combination there. The lowest becomes the starting price shown in search.</p>
 				<template x-if="discount">
 					<p class="mt-2.5 flex items-center text-[12px]" x-bind:class="discount.bad ? 'font-semibold text-warning' : 'font-medium text-muted'">
 						<span class="flex" x-bind:class="discount.bad ? 'text-warning' : 'text-[#1B7F3B]'">
@@ -163,6 +164,22 @@ templ sellerProductBody(d SellerProductData) {
 					</template>
 					<button type="button" x-on:click="addCustom()" class="rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text">+ Something else</button>
 				</div>
+				<div class="mt-5" x-show="variantRows.length" x-cloak>
+					@account.Section("Price by combination", "Set what buyers pay for each exact choice")
+					<p class="mb-2 text-[12.5px] text-muted" x-text="`${variantRows.length} combinations · the lowest price appears on product cards`"></p>
+					<div class="max-h-[400px] space-y-2 overflow-y-auto rounded bg-white p-3">
+						<template x-for="row in variantRows" :key="row.key">
+							<label class="flex min-h-[52px] flex-wrap items-center justify-between gap-2 border-b border-track py-2 last:border-0">
+								<span class="min-w-0 flex-1 text-[13px] font-semibold text-text" x-text="row.label"></span>
+								<span class="flex items-center rounded-small bg-canvas px-2.5 focus-within:ring-2 focus-within:ring-strong">
+									<span class="text-muted">₹</span>
+									<input type="text" inputmode="decimal" x-model="variantPriceInputs[row.key]" x-on:blur="variantPriceInputs[row.key] = groupRupees(variantPriceInputs[row.key] || '')" class="w-[100px] bg-transparent px-1.5 py-2 text-right text-[13px] font-semibold text-text outline-none" placeholder="Price" x-bind:aria-label="`Price for ${row.label}`"/>
+								</span>
+							</label>
+						</template>
+					</div>
+				</div>
+				<p class="mt-2 text-[12.5px] text-warning" x-show="variantCount > 100" x-cloak>Too many combinations. Reduce the choices to 100 or fewer.</p>
 				if len(d.Groups) > 0 {
 					<div class="mt-[22px]">
 						@account.Section("Compare with", "Optional — puts this beside similar products")
@@ -211,7 +228,7 @@ func leafCount(sections []CategorySection) int {
 func productFormConfig(d SellerProductData) map[string]any {
 	c := map[string]any{
 		"id": "", "title": "", "description": "", "category": "", "price": 0.0, "mrp": 0.0,
-		"stock": 0, "options": []backend.ItemOption{}, "compareGroup": "",
+		"stock": 0, "options": []backend.ItemOption{}, "variantPrices": []backend.VariantPrice{}, "compareGroup": "",
 		"attributes": map[string]string{}, "imageUrls": []string{},
 		"sections": d.Sections, "deptOf": d.DeptOf, "groups": d.Groups,
 		"presets": optionPresets, "anyPresets": anyPresets, "swatches": shop.Swatches,
@@ -222,6 +239,7 @@ func productFormConfig(d SellerProductData) map[string]any {
 		if it.Options != nil {
 			c["options"] = it.Options
 		}
+		if it.VariantPrices != nil { c["variantPrices"] = it.VariantPrices }
 		if it.Attributes != nil {
 			c["attributes"] = it.Attributes
 		}

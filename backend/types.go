@@ -16,8 +16,9 @@ type Product struct {
 	MRP float64 `json:"mrp,omitempty"`
 	// What the shopper picks before buying — size, colour, whatever this shop
 	// sells by. Empty for the seeded catalogue and for anything sold one way.
-	Options  []ItemOption `json:"options,omitempty"`
-	ImageURL string       `json:"imageUrl"`
+	Options       []ItemOption   `json:"options,omitempty"`
+	VariantPrices []VariantPrice `json:"variantPrices,omitempty"`
+	ImageURL      string         `json:"imageUrl"`
 	// Every photo, in upload order. A seller's item can carry several; the
 	// seeded rows have one. imageUrl stays the cover so old callers still work.
 	ImageURLs   []string `json:"imageUrls"`
@@ -62,7 +63,8 @@ type InventoryItem struct {
 	MRP         float64 `json:"mrp"` // 0 when the seller is not running a discount
 	// What the buyer chooses before ordering. Empty for most things — a
 	// samosa has no size — so it stays out of the JSON when there is none.
-	Options []ItemOption `json:"options,omitempty"`
+	Options       []ItemOption   `json:"options,omitempty"`
+	VariantPrices []VariantPrice `json:"variantPrices,omitempty"`
 	// Which products this one can be lined up against, and what it says for
 	// that group's fields. Empty for anything not worth comparing.
 	CompareGroup string            `json:"compareGroup"`
@@ -96,6 +98,12 @@ type ItemOption struct {
 	Name   string   `json:"name"`
 	Kind   string   `json:"kind"`
 	Values []string `json:"values"`
+}
+
+// VariantPrice is the selling price for one exact choice from every option group.
+type VariantPrice struct {
+	Choices Choices `json:"choices"`
+	Price   float64 `json:"price"`
 }
 
 // LowStockAt is the threshold below which an item is flagged for restocking.

@@ -189,7 +189,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></div><template x-if=\"discount\"><p class=\"mt-2.5 flex items-center text-[12px]\" x-bind:class=\"discount.bad ? 'font-semibold text-warning' : 'font-medium text-muted'\"><span class=\"flex\" x-bind:class=\"discount.bad ? 'text-warning' : 'text-[#1B7F3B]'\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></div><p class=\"mt-2 text-[12.5px] text-muted\">If you add options below, price each combination there. The lowest becomes the starting price shown in search.</p><template x-if=\"discount\"><p class=\"mt-2.5 flex items-center text-[12px]\" x-bind:class=\"discount.bad ? 'font-semibold text-warning' : 'font-medium text-muted'\"><span class=\"flex\" x-bind:class=\"discount.bad ? 'text-warning' : 'text-[#1B7F3B]'\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -241,12 +241,20 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</button></div></template></div></div></template><div class=\"flex flex-wrap gap-2\"><template x-for=\"p in unusedPresets\" :key=\"p.name\"><button type=\"button\" x-on:click=\"addPreset(p)\" x-text=\"`+ ${p.name}`\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template><button type=\"button\" x-on:click=\"addCustom()\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\">+ Something else</button></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</button></div></template></div></div></template><div class=\"flex flex-wrap gap-2\"><template x-for=\"p in unusedPresets\" :key=\"p.name\"><button type=\"button\" x-on:click=\"addPreset(p)\" x-text=\"`+ ${p.name}`\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template><button type=\"button\" x-on:click=\"addCustom()\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\">+ Something else</button></div><div class=\"mt-5\" x-show=\"variantRows.length\" x-cloak>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = account.Section("Price by combination", "Set what buyers pay for each exact choice").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"mb-2 text-[12.5px] text-muted\" x-text=\"`${variantRows.length} combinations · the lowest price appears on product cards`\"></p><div class=\"max-h-[400px] space-y-2 overflow-y-auto rounded bg-white p-3\"><template x-for=\"row in variantRows\" :key=\"row.key\"><label class=\"flex min-h-[52px] flex-wrap items-center justify-between gap-2 border-b border-track py-2 last:border-0\"><span class=\"min-w-0 flex-1 text-[13px] font-semibold text-text\" x-text=\"row.label\"></span> <span class=\"flex items-center rounded-small bg-canvas px-2.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-muted\">₹</span> <input type=\"text\" inputmode=\"decimal\" x-model=\"variantPriceInputs[row.key]\" x-on:blur=\"variantPriceInputs[row.key] = groupRupees(variantPriceInputs[row.key] || '')\" class=\"w-[100px] bg-transparent px-1.5 py-2 text-right text-[13px] font-semibold text-text outline-none\" placeholder=\"Price\" x-bind:aria-label=\"`Price for ${row.label}`\"></span></label></template></div></div><p class=\"mt-2 text-[12.5px] text-warning\" x-show=\"variantCount > 100\" x-cloak>Too many combinations. Reduce the choices to 100 or fewer.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if len(d.Groups) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"mt-[22px]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"mt-[22px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -254,7 +262,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"flex flex-wrap gap-2\"><template x-for=\"g in groups\" :key=\"g.name\"><button type=\"button\" x-on:click=\"compareGroup = compareGroup === g.name ? '' : g.name\" x-text=\"compareGroup === g.name ? `✓ ${g.name}` : g.name\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template></div><template x-if=\"template.length\"><div class=\"mt-3 rounded bg-white px-3.5 pb-3.5 pt-3\"><p class=\"text-[12.5px] text-muted\" x-text=\"`What buyers compare ${compareGroup} on`\"></p><p class=\"mt-2 flex items-start text-[12px] leading-[1.35] text-[#B4531F]\" x-show=\"unwinnable.length\"><span class=\"mt-0.5 flex\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex flex-wrap gap-2\"><template x-for=\"g in groups\" :key=\"g.name\"><button type=\"button\" x-on:click=\"compareGroup = compareGroup === g.name ? '' : g.name\" x-text=\"compareGroup === g.name ? `✓ ${g.name}` : g.name\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template></div><template x-if=\"template.length\"><div class=\"mt-3 rounded bg-white px-3.5 pb-3.5 pt-3\"><p class=\"text-[12.5px] text-muted\" x-text=\"`What buyers compare ${compareGroup} on`\"></p><p class=\"mt-2 flex items-start text-[12px] leading-[1.35] text-[#B4531F]\" x-show=\"unwinnable.length\"><span class=\"mt-0.5 flex\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -262,12 +270,12 @@ func sellerProductBody(d SellerProductData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <span class=\"ml-1.5\" x-text=\"unwinnable.length === 1 ? `Fill in ${unwinnable[0]} — buyers rank on it, and a blank never wins.` : `Fill in ${unwinnable.join(', ')} — buyers rank on these, and a blank never wins.`\"></span></p><div class=\"h-2.5\"></div><template x-for=\"f in template\" :key=\"f.name\"><div class=\"mb-2 flex items-center\"><span class=\"w-[110px] shrink-0 text-[13px] font-semibold text-text\" x-text=\"f.name\"></span><div class=\"flex h-[38px] min-w-0 flex-1 items-center rounded-[11px] bg-[#F4F4F2] px-3 focus-within:ring-2 focus-within:ring-strong\"><input type=\"text\" x-model=\"attrs[f.name]\" placeholder=\"—\" x-bind:aria-label=\"f.name\" class=\"min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none\"> <span class=\"ml-1 text-[13px] text-muted\" x-text=\"f.unit\"></span></div></div></template></div></template></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</span> <span class=\"ml-1.5\" x-text=\"unwinnable.length === 1 ? `Fill in ${unwinnable[0]} — buyers rank on it, and a blank never wins.` : `Fill in ${unwinnable.join(', ')} — buyers rank on these, and a blank never wins.`\"></span></p><div class=\"h-2.5\"></div><template x-for=\"f in template\" :key=\"f.name\"><div class=\"mb-2 flex items-center\"><span class=\"w-[110px] shrink-0 text-[13px] font-semibold text-text\" x-text=\"f.name\"></span><div class=\"flex h-[38px] min-w-0 flex-1 items-center rounded-[11px] bg-[#F4F4F2] px-3 focus-within:ring-2 focus-within:ring-strong\"><input type=\"text\" x-model=\"attrs[f.name]\" placeholder=\"—\" x-bind:aria-label=\"f.name\" class=\"min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none\"> <span class=\"ml-1 text-[13px] text-muted\" x-text=\"f.unit\"></span></div></div></template></div></template></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -275,7 +283,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</form></main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</form></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -294,7 +302,7 @@ func leafCount(sections []CategorySection) int {
 func productFormConfig(d SellerProductData) map[string]any {
 	c := map[string]any{
 		"id": "", "title": "", "description": "", "category": "", "price": 0.0, "mrp": 0.0,
-		"stock": 0, "options": []backend.ItemOption{}, "compareGroup": "",
+		"stock": 0, "options": []backend.ItemOption{}, "variantPrices": []backend.VariantPrice{}, "compareGroup": "",
 		"attributes": map[string]string{}, "imageUrls": []string{},
 		"sections": d.Sections, "deptOf": d.DeptOf, "groups": d.Groups,
 		"presets": optionPresets, "anyPresets": anyPresets, "swatches": shop.Swatches,
@@ -304,6 +312,9 @@ func productFormConfig(d SellerProductData) map[string]any {
 		c["price"], c["mrp"], c["stock"], c["compareGroup"] = it.Price, it.MRP, it.Stock, it.CompareGroup
 		if it.Options != nil {
 			c["options"] = it.Options
+		}
+		if it.VariantPrices != nil {
+			c["variantPrices"] = it.VariantPrices
 		}
 		if it.Attributes != nil {
 			c["attributes"] = it.Attributes
@@ -386,72 +397,72 @@ func moneyField(name, label string) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<label class=\"flex h-[52px] items-center rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[16px] font-semibold text-muted\" aria-hidden=\"true\">₹</span> <input id=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<label class=\"flex h-[52px] items-center rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[16px] font-semibold text-muted\" aria-hidden=\"true\">₹</span> <input id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("field-" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 289, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 307, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" name=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" name=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 290, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 308, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" type=\"text\" inputmode=\"decimal\" autocomplete=\"off\" placeholder=\"0\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" type=\"text\" inputmode=\"decimal\" autocomplete=\"off\" placeholder=\"0\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 295, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 313, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" x-model=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" x-model=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 296, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 314, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" x-on:blur=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" x-on:blur=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(name + " = groupRupees(" + name + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 297, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 315, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" class=\"ml-2 h-full min-w-0 flex-1 bg-transparent text-[16px] font-semibold tabular-nums text-text outline-none placeholder:font-normal placeholder:text-[#9A9A9A]\"></label>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\" class=\"ml-2 h-full min-w-0 flex-1 bg-transparent text-[16px] font-semibold tabular-nums text-text outline-none placeholder:font-normal placeholder:text-[#9A9A9A]\"></label>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

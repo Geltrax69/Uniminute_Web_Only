@@ -190,10 +190,10 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		var title, storeOwner, storeName, status string
 		var price float64
 		var stock, reserved int
-		var offeredRaw []byte
-		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status,i.options
+		var offeredRaw, variantsRaw []byte
+		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status,i.options,i.variant_prices
    FROM inventory_items i JOIN seller_stores s ON s.owner=i.owner
-   WHERE i.id=$1 FOR UPDATE OF i`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status, &offeredRaw)
+   WHERE i.id=$1 FOR UPDATE OF i`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status, &offeredRaw, &variantsRaw)
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, 404, "an item is no longer available")
 			return
@@ -211,6 +211,16 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		choices, err := matchChoices(title, offered, line.Options)
 		if err != nil {
 			writeError(w, 400, err.Error())
+			return
+		}
+		var variants []VariantPrice
+		if err := json.Unmarshal(variantsRaw, &variants); err != nil {
+			writeError(w, 500, "could not read combination prices")
+			return
+		}
+		price, err = priceForChoices(price, variants, choices)
+		if err != nil {
+			writeError(w, 409, err.Error())
 			return
 		}
 		if err = tx.QueryRowContext(r.Context(), `SELECT COALESCE(sum(units),0) FROM orders

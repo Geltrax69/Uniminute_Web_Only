@@ -268,23 +268,18 @@ func BuyBar(p backend.Product) templ.Component {
 	})
 }
 
-// BuyData declares the page's Alpine buy state: the stock cap, and the
-// money text for every quantity the stepper can reach.
+// BuyData declares the page's Alpine buy state with the exact variant matrix.
 func BuyData(p backend.Product) string {
-	limit, capJS := 99, "null"
+	capJS := "null"
 	if p.AvailableStock != nil {
 		capJS = itoa(*p.AvailableStock)
-		limit = min(limit, max(*p.AvailableStock, 1))
 	}
-	totals := map[string][]string{}
-	for q := 1; q <= limit; q++ {
-		n := float64(q)
-		totals["price"] = append(totals["price"], shop.Money(p.Price*n))
-		totals["mrp"] = append(totals["mrp"], shop.Money(p.MRP*n))
-		totals["save"] = append(totals["save"], shop.Money((p.MRP-p.Price)*n))
+	variants := p.VariantPrices
+	if variants == nil {
+		variants = []backend.VariantPrice{}
 	}
-	b, _ := json.Marshal(totals)
-	return "buy(" + capJS + "," + string(b) + "," + jsLit(shop.Money(p.Price)) + "," + jsLit(optionNames(p)) + ")"
+	b, _ := json.Marshal(variants)
+	return "buy(" + capJS + "," + jsLit(p.Price) + "," + jsLit(p.MRP) + "," + string(b) + "," + jsLit(optionNames(p)) + ")"
 }
 
 // optionNames are the options a buyer has to pick before adding to cart.

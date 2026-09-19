@@ -47,6 +47,9 @@ func (c Choices) key() string {
 func matchChoices(title string, offered []ItemOption, picked Choices) (Choices, error) {
 	got := map[string]string{}
 	for _, c := range picked {
+		if _, exists := got[c.Name]; exists {
+			return nil, fmt.Errorf("choose each option only once")
+		}
 		got[c.Name] = c.Value
 	}
 	out := Choices{}

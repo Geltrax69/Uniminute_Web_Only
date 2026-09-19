@@ -224,11 +224,11 @@ func (a *API) handleAddItem(w http.ResponseWriter, r *http.Request) {
 	// The id comes from the sequence, so concurrent adds cannot collide.
 	err = a.db.sql.QueryRowContext(r.Context(), `
 		INSERT INTO inventory_items
-			(owner, title, description, category, price, mrp, options,
+			(owner, title, description, category, price, mrp, options, variant_prices,
 			 compare_group, attributes, stock, image_urls)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::text[]) RETURNING id`,
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::text[]) RETURNING id`,
 		a.owner(r), in.Title, in.Description, in.Category, in.Price, in.MRP,
-		optionsJSON(in.Options), strings.TrimSpace(in.CompareGroup),
+		optionsJSON(in.Options), variantPricesJSON(in.VariantPrices), strings.TrimSpace(in.CompareGroup),
 		attributesJSON(in.Attributes), in.Stock, in.ImageURLs).
 		Scan(&in.ID)
 	// The foreign key is what enforces "no stock without a store".
@@ -353,23 +353,23 @@ func (a *API) handleUpdateItem(w http.ResponseWriter, r *http.Request) {
 
 	var it InventoryItem
 	var urls string
-	var options, attributes []byte
+	var options, variants, attributes []byte
 	// The owner is in the WHERE clause, not just the read: without it a seller
 	// could reprice somebody else's stock by guessing an id.
 	err := a.db.sql.QueryRowContext(r.Context(), `
 		UPDATE inventory_items
 		SET title = $2, description = $3, category = $4, price = $5,
-		    mrp = $6, options = $7, compare_group = $8, attributes = $9,
-		    stock = $10
-		WHERE id = $1 AND owner = $11
-		RETURNING id, title, description, category, price, mrp, options,
+		    mrp = $6, options = $7, variant_prices = $8, compare_group = $9, attributes = $10,
+		    stock = $11
+		WHERE id = $1 AND owner = $12
+		RETURNING id, title, description, category, price, mrp, options, variant_prices,
 		          compare_group, attributes, stock, delisted,
 		          array_to_string(image_urls, E'\n')`,
 		r.PathValue("id"), in.Title, in.Description, in.Category, in.Price,
-		in.MRP, optionsJSON(in.Options), strings.TrimSpace(in.CompareGroup),
+		in.MRP, optionsJSON(in.Options), variantPricesJSON(in.VariantPrices), strings.TrimSpace(in.CompareGroup),
 		attributesJSON(in.Attributes), in.Stock, a.owner(r)).
 		Scan(&it.ID, &it.Title, &it.Description, &it.Category, &it.Price,
-			&it.MRP, &options, &it.CompareGroup, &attributes, &it.Stock,
+			&it.MRP, &options, &variants, &it.CompareGroup, &attributes, &it.Stock,
 			&it.Delisted, &urls)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no item with id "+r.PathValue("id"))
@@ -381,6 +381,10 @@ func (a *API) handleUpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(options, &it.Options); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not save or load store data — try again")
+		return
+	}
+	if err := json.Unmarshal(variants, &it.VariantPrices); err != nil {
+		writeError(w, 500, "could not load combination prices")
 		return
 	}
 	if err := json.Unmarshal(attributes, &it.Attributes); err != nil {

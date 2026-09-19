@@ -171,6 +171,7 @@ const productQuery = `
 		       -- what tells the app to show a plain price.
 		       0::numeric AS mrp,
 		       '[]'::jsonb AS options,
+		       '[]'::jsonb AS variant_prices,
 		       p.image_url, p.store,
 		       p.description, p.image_url AS photos, NULL::int AS available_stock
 		FROM products p
@@ -181,7 +182,7 @@ const productQuery = `
 		       -- a department: the moment a menu had sections, every dish got
 		       -- a tab of its own that no tab bar showed.
 		       COALESCE(t.root, NULLIF(i.category, ''), 'Food'),
-		       i.price, i.mrp, i.options,
+		       i.price, i.mrp, i.options, i.variant_prices,
 		       COALESCE(i.image_urls[1], ''), s.name, i.description,
 		       -- every photo, not just the cover: the details gallery shows
 		       -- all of them, and dropping them here lost the rest silently.
@@ -194,7 +195,7 @@ const productQuery = `
 		-- real to its owner and to the admin, and to nobody else.
 		WHERE i.stock > 0 AND s.status = 'approved' AND NOT i.delisted
 	)
-	SELECT p.id, p.name, p.category, p.tab, p.price, p.mrp, p.options,
+	SELECT p.id, p.name, p.category, p.tab, p.price, p.mrp, p.options, p.variant_prices,
 	       p.image_url, p.store, p.description, p.photos,
 	       COALESCE((SELECT json_agg(json_build_object('store', o.store, 'price', o.price)
 	                                 ORDER BY o.store)
@@ -222,10 +223,10 @@ func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 	out := make([]Product, 0)
 	for rows.Next() {
 		var p Product
-		var offers, options []byte
+		var offers, options, variants []byte
 		var photos string
 		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Tab, &p.Price,
-			&p.MRP, &options, &p.ImageURL, &p.Store, &p.Description, &photos,
+			&p.MRP, &options, &variants, &p.ImageURL, &p.Store, &p.Description, &photos,
 			&offers, &p.AvailableStock); err != nil {
 			return nil, err
 		}
@@ -234,6 +235,9 @@ func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 			return nil, err
 		}
 		if err := json.Unmarshal(options, &p.Options); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(variants, &p.VariantPrices); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -319,7 +323,7 @@ func (d *DB) store(ctx context.Context, owner string) (SellerStore, error) {
 func (d *DB) allItems(ctx context.Context) ([]InventoryItem, error) {
 	rows, err := d.sql.QueryContext(ctx, `
 		SELECT i.id, i.title, i.description, i.category, i.price, i.mrp,
-		       i.options, i.compare_group, i.attributes, i.stock, i.delisted,
+		       i.options, i.variant_prices, i.compare_group, i.attributes, i.stock, i.delisted,
 		       COALESCE((SELECT sum(o.units) FROM orders o
 		                 WHERE o.item_id = i.id
 		                   AND o.stage NOT IN ('delivered','rejected')), 0)::int,
@@ -340,14 +344,17 @@ func (d *DB) allItems(ctx context.Context) ([]InventoryItem, error) {
 	for rows.Next() {
 		var i InventoryItem
 		var urls string
-		var options, attributes []byte
+		var options, variants, attributes []byte
 		if err := rows.Scan(&i.ID, &i.Title, &i.Description, &i.Category,
-			&i.Price, &i.MRP, &options, &i.CompareGroup, &attributes,
+			&i.Price, &i.MRP, &options, &variants, &i.CompareGroup, &attributes,
 			&i.Stock, &i.Delisted, &i.Reserved, &i.Orders, &i.Sold, &i.StoreName,
 			&i.Owner, &urls); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(options, &i.Options); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(variants, &i.VariantPrices); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(attributes, &i.Attributes); err != nil {
@@ -362,7 +369,7 @@ func (d *DB) allItems(ctx context.Context) ([]InventoryItem, error) {
 
 func (d *DB) items(ctx context.Context, owner string) ([]InventoryItem, error) {
 	rows, err := d.sql.QueryContext(ctx, `
-		SELECT id, title, description, category, price, mrp, options,
+		SELECT id, title, description, category, price, mrp, options, variant_prices,
 		       compare_group, attributes, stock, delisted,
 		       -- Units already spoken for by live orders. The shop shows
 		       -- stock minus this, so without it a seller reading "1 left"
@@ -383,13 +390,16 @@ func (d *DB) items(ctx context.Context, owner string) ([]InventoryItem, error) {
 	for rows.Next() {
 		var i InventoryItem
 		var urls string
-		var options, attributes []byte
+		var options, variants, attributes []byte
 		if err := rows.Scan(&i.ID, &i.Title, &i.Description, &i.Category,
-			&i.Price, &i.MRP, &options, &i.CompareGroup, &attributes,
+			&i.Price, &i.MRP, &options, &variants, &i.CompareGroup, &attributes,
 			&i.Stock, &i.Delisted, &i.Reserved, &i.Sold, &urls); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(options, &i.Options); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(variants, &i.VariantPrices); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(attributes, &i.Attributes); err != nil {

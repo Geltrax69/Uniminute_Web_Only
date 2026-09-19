@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -1461,8 +1462,15 @@ func (s *Site) charges(ctx context.Context) []backend.Charge {
 // buyer's choices ("item-44?Colour=..."); the product keeps that full id so
 // the line can be found again.
 func (s *Site) cartProduct(ctx context.Context, lineID string) (backend.Product, error) {
-	id, _ := shop.SplitLine(lineID)
+	id, picked := shop.SplitLine(lineID)
 	p, err := s.offerProduct(ctx, id)
+	if err == nil {
+		if price, ok := p.PriceFor(picked); ok {
+			p.Price = price
+		} else {
+			return p, fmt.Errorf("option combination unavailable")
+		}
+	}
 	if err == nil && lineID != id {
 		p.ID = lineID
 	}
@@ -1478,6 +1486,7 @@ func (s *Site) offerProduct(ctx context.Context, id string) (backend.Product, er
 	for _, o := range p.Offers {
 		if o.Store == store {
 			p.ID, p.Store, p.Price, p.MRP = id, store, o.Price, 0
+			p.VariantPrices = nil
 			p.AvailableStock, p.Offers = nil, nil
 			return p, nil
 		}

@@ -135,18 +135,24 @@ document.addEventListener('alpine:init', () => {
   // ── product quantity (DetailsScreen._qty) ────────────────────────────────
   // cap is the shop's stock (null when untracked). Totals per quantity are
   // formatted by the server, so the page never re-implements money text.
-  Alpine.data('buy', (cap, totals, unit, optionNames = []) => ({
+  Alpine.data('buy', (cap, basePrice, mrp, variants = [], optionNames = []) => ({
     qty: 1,
-    unit,
     picks: {},
+    get selectedPrice() {
+      if (!variants.length) return basePrice;
+      const match = variants.find((v) => v.choices.every((c) => this.picks[c.name] === c.value));
+      return match ? Number(match.price) : basePrice;
+    },
+    get unit() { return this.selectedPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 }); },
+    get discountPercent() { return mrp > this.selectedPrice ? Math.round((mrp - this.selectedPrice) / mrp * 100) : 0; },
     // The first option still to choose, or '' when the buyer can add to cart.
     get missing() { return optionNames.find((n) => !this.picks[n]) || ''; },
     get atCap() { return cap !== null && this.qty >= cap; },
     dec() { if (this.qty > 1) this.qty--; },
     inc() { if (!this.atCap && this.qty < 99) this.qty++; },
     t(key) {
-      const list = totals[key];
-      return list[Math.min(this.qty, list.length) - 1];
+      const amount = key === 'mrp' ? mrp : key === 'save' ? mrp - this.selectedPrice : this.selectedPrice;
+      return (amount * this.qty).toLocaleString('en-IN', { maximumFractionDigits: 2 });
     },
   }));
 
@@ -596,6 +602,7 @@ document.addEventListener('alpine:init', () => {
     stock: cfg.id ? String(cfg.stock) : '',
     shots: cfg.imageUrls.map((url) => ({ url })),
     options: cfg.options.map((o) => ({ name: o.name, kind: o.kind || '', values: [...(o.values || [])], entry: '' })),
+    variantPriceInputs: Object.fromEntries((cfg.variantPrices || []).map((v) => [JSON.stringify(v.choices), Number(v.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })])),
     attrs: { ...cfg.attributes },
     section: '',
     busy: false,
@@ -603,6 +610,10 @@ document.addEventListener('alpine:init', () => {
     init() {
       if (!this.category && this.sections.length) this.category = this.sections[0].leaves[0];
       this.section = this.sectionOf(this.category) || (this.sections[0] ? this.sections[0].name : '');
+      // Existing single-price listings retain their price when the matrix is first edited.
+      if (this.id && !(cfg.variantPrices || []).length) {
+        for (const row of this.variantRows) this.variantPriceInputs[row.key] = this.price;
+      }
     },
     sectionOf(c) {
       const s = this.sections.find((s) => s.leaves.includes(c));
@@ -620,18 +631,35 @@ document.addEventListener('alpine:init', () => {
       return rupees(v) === '' || Number.isNaN(n) ? v : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
     },
     get stockValue() { const t = this.stock.trim(); return /^\d+$/.test(t) ? Number(t) : NaN; },
+    get variantRows() {
+      const groups = this.liveOptions();
+      if (!groups.length) return [];
+      let rows = [{ choices: [] }];
+      for (const group of groups) {
+        rows = rows.flatMap((row) => group.values.map((value) => ({ choices: [...row.choices, { name: group.name, value }] })));
+        if (rows.length > 100) return [];
+      }
+      return rows.map((row) => ({ ...row, key: JSON.stringify(row.choices), label: row.choices.map((c) => `${c.name}: ${c.name.toLowerCase() === 'colour' ? this.swatchName(c.value) : c.value}`).join(' · ') }));
+    },
+    get variantCount() { return this.liveOptions().reduce((n, o) => n * o.values.length, 1); },
+    liveVariantPrices() {
+      return this.variantRows.map((row) => ({ choices: row.choices, price: Number(rupees(this.variantPriceInputs[row.key] || '')) }));
+    },
     get blocker() {
       if (!this.shots.length) return 'Add at least one photo';
       if (!this.title.trim()) return 'Give the product a title';
       if ([...this.title.trim()].length > 250) return 'Shorten the title to 250 characters or fewer';
-      if (!(this.priceValue > 0)) return 'Set a price above ₹0';
+      if (this.liveOptions().length && this.variantCount > 100) return 'Use at most 100 option combinations';
+      if (this.variantRows.some((row) => !(Number(rupees(this.variantPriceInputs[row.key] || '')) > 0))) return 'Set a price for every option combination';
+      if (!this.variantRows.length && !(this.priceValue > 0)) return 'Set a price above ₹0';
+      if (this.mrpValue > 0 && this.liveVariantPrices().some((v) => v.price > this.mrpValue)) return 'MRP cannot be below a combination price';
       if (Number.isNaN(this.mrpValue)) return 'MRP must be a number, or left blank';
-      if (this.mrpValue > 0 && this.mrpValue < this.priceValue) return 'MRP cannot be below the selling price';
+      if (!this.variantRows.length && this.mrpValue > 0 && this.mrpValue < this.priceValue) return 'MRP cannot be below the selling price';
       if (!(this.stockValue >= 0)) return 'Enter how many units you have';
       return null;
     },
     get discount() {
-      const mrp = this.mrpValue || 0, price = this.priceValue || 0;
+      const mrp = this.mrpValue || 0, price = this.variantRows.length ? Math.min(...this.liveVariantPrices().map((v) => v.price || Infinity)) : (this.priceValue || 0);
       if (mrp <= 0 || price <= 0) return null;
       if (mrp < price) return { bad: true, text: 'MRP is below your selling price — buyers would see a markup, not a discount.' };
       if (mrp === price) return { bad: false, text: 'Same as the selling price, so no discount is shown.' };
@@ -686,15 +714,17 @@ document.addEventListener('alpine:init', () => {
       this.saving = true;
       const fields = {
         title: this.title.trim(), description: this.description.trim(), category: this.category,
-        price: this.priceValue, mrp: this.mrpValue, compareGroup: this.compareGroup, stock: this.stockValue,
+        price: this.variantRows.length ? Math.min(...this.liveVariantPrices().map((v) => v.price)) : this.priceValue,
+        mrp: this.mrpValue, compareGroup: this.compareGroup, stock: this.stockValue,
       };
       try {
         if (this.id) {
-          await sellerCall('PATCH', `/api/seller/items/${this.id}`, { ...fields, options: this.liveOptions(), attributes: this.liveAttrs() });
+          await sellerCall('PATCH', `/api/seller/items/${this.id}`, { ...fields, options: this.liveOptions(), variantPrices: this.liveVariantPrices(), attributes: this.liveAttrs() });
         } else {
           const body = new FormData();
           for (const [k, v] of Object.entries(fields)) body.set(k, v);
           body.set('options', JSON.stringify(this.liveOptions()));
+          body.set('variantPrices', JSON.stringify(this.liveVariantPrices()));
           body.set('attributes', JSON.stringify(this.liveAttrs()));
           this.shots.forEach((s) => s.file && body.append('file', s.file));
           await sellerCall('POST', '/api/seller/items', body);

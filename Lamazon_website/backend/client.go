@@ -52,20 +52,57 @@ type Offer struct {
 }
 
 type Product struct {
-	AvailableStock *int         `json:"availableStock,omitempty"`
-	ID             string       `json:"id"`
-	Name           string       `json:"name"`
-	Category       string       `json:"category"`
-	Tab            string       `json:"tab"`
-	Price          float64      `json:"price"`
-	MRP            float64      `json:"mrp,omitempty"`
-	Options        []ItemOption `json:"options,omitempty"`
-	ImageURL       string       `json:"imageUrl"`
-	ImageURLs      []string     `json:"imageUrls"`
-	Store          string       `json:"store"`
-	Description    string       `json:"description"`
-	Offers         []Offer      `json:"offers,omitempty"`
-	CompareGroup   string       `json:"compareGroup,omitempty"`
+	AvailableStock *int           `json:"availableStock,omitempty"`
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	Category       string         `json:"category"`
+	Tab            string         `json:"tab"`
+	Price          float64        `json:"price"`
+	MRP            float64        `json:"mrp,omitempty"`
+	Options        []ItemOption   `json:"options,omitempty"`
+	VariantPrices  []VariantPrice `json:"variantPrices,omitempty"`
+	ImageURL       string         `json:"imageUrl"`
+	ImageURLs      []string       `json:"imageUrls"`
+	Store          string         `json:"store"`
+	Description    string         `json:"description"`
+	Offers         []Offer        `json:"offers,omitempty"`
+	CompareGroup   string         `json:"compareGroup,omitempty"`
+}
+
+type VariantPrice struct {
+	Choices []Choice `json:"choices"`
+	Price   float64  `json:"price"`
+}
+
+// PriceFor returns the server-supplied price for an exact option combination.
+// Legacy listings without a matrix keep their original single price.
+func (p Product) PriceFor(picked []Choice) (float64, bool) {
+	if len(p.VariantPrices) == 0 {
+		return p.Price, true
+	}
+	for _, v := range p.VariantPrices {
+		if len(v.Choices) != len(picked) {
+			continue
+		}
+		match := true
+		for _, c := range v.Choices {
+			found := false
+			for _, p := range picked {
+				if p.Name == c.Name && p.Value == c.Value {
+					found = true
+					break
+				}
+			}
+			if !found {
+				match = false
+				break
+			}
+		}
+		if match {
+			return v.Price, true
+		}
+	}
+	return 0, false
 }
 
 // Discounted mirrors Product.discounted: an MRP equal to the price is a sale
@@ -630,20 +667,21 @@ func (s SellerStore) Approved() bool { return s.Status == "" || s.Status == "app
 
 // InventoryItem is one line of the seller's stock.
 type InventoryItem struct {
-	ID           string            `json:"id"`
-	Title        string            `json:"title"`
-	Description  string            `json:"description"`
-	Category     string            `json:"category"`
-	Price        float64           `json:"price"`
-	MRP          float64           `json:"mrp"`
-	Options      []ItemOption      `json:"options"`
-	CompareGroup string            `json:"compareGroup"`
-	Attributes   map[string]string `json:"attributes"`
-	Stock        int               `json:"stock"`
-	Delisted     bool              `json:"delisted"`
-	Reserved     int               `json:"reserved"`
-	Sold         int               `json:"sold"`
-	ImageURLs    []string          `json:"imageUrls"`
+	ID            string            `json:"id"`
+	Title         string            `json:"title"`
+	Description   string            `json:"description"`
+	Category      string            `json:"category"`
+	Price         float64           `json:"price"`
+	MRP           float64           `json:"mrp"`
+	Options       []ItemOption      `json:"options"`
+	VariantPrices []VariantPrice    `json:"variantPrices,omitempty"`
+	CompareGroup  string            `json:"compareGroup"`
+	Attributes    map[string]string `json:"attributes"`
+	Stock         int               `json:"stock"`
+	Delisted      bool              `json:"delisted"`
+	Reserved      int               `json:"reserved"`
+	Sold          int               `json:"sold"`
+	ImageURLs     []string          `json:"imageUrls"`
 	// Filled only by the admin catalogue, which spans every store.
 	StoreName string `json:"storeName,omitempty"`
 	Owner     string `json:"owner,omitempty"`

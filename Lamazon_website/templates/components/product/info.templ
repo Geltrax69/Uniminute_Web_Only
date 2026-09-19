@@ -21,7 +21,7 @@ templ Info(p backend.Product, rv backend.ProductReviews) {
 		<p class="text-[14px] font-semibold text-strong">{ p.Store }</p>
 		<h1 class="mt-2 text-title text-text">{ p.Name }</h1>
 		@Price(p)
-		<p class="mt-2 text-body text-muted" x-text="qty === 1 ? 'From: ₹' + unit : qty + ' × ₹' + unit">From: ₹{ shop.Money(p.Price) }</p>
+		<p class="mt-2 text-body text-muted" x-text="qty === 1 ? (missing ? 'From ₹' : '₹') + unit + (missing ? '' : ' each') : qty + ' × ₹' + unit">From ₹{ shop.Money(p.Price) }</p>
 		<p class="mt-3 text-body font-semibold text-strong">{ availability(p) }</p>
 		if rv.Count > 0 {
 			<a href="#reviews" class="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">
