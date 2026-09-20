@@ -727,3 +727,38 @@ FROM (VALUES
     ('Vegetables & Fruits', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789849401/Lamazon/Categories/Grocery_Kitchen/Vegetables_Fruits.webp')
 ) AS art(name, url)
 WHERE c.name = art.name AND c.image_url = '';
+
+-- Refresh the original Electronics and Food tile photos with the matching
+-- studio set. The old URL guard preserves any photo changed by an admin.
+UPDATE catalog_categories AS c
+SET image_url = art.new_url
+FROM (VALUES
+    ('Electronics', 'Mobile Accessories', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787712636/Lamazon/Categories/Electronics/Mobile_Accessories.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890559/Lamazon/Categories/Electronics/Mobile_Accessories_Studio_2026.webp'),
+    ('Electronics', 'Chargers & Cables', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713659/Lamazon/Categories/Electronics/Chargers_Cables.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890590/Lamazon/Categories/Electronics/Chargers_Cables_Studio_2026.webp'),
+    ('Electronics', 'Earphones', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713696/Lamazon/Categories/Electronics/Earphones.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890616/Lamazon/Categories/Electronics/Earphones_Studio_2026.webp'),
+    ('Electronics', 'Smart Gadgets', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713741/Lamazon/Categories/Electronics/Smart_Gadgets.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890648/Lamazon/Categories/Electronics/Smart_Gadgets_Studio_2026.webp'),
+    ('Electronics', 'Batteries', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713766/Lamazon/Categories/Electronics/Batteries.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890692/Lamazon/Categories/Electronics/Batteries_Studio_2026.webp'),
+    ('Electronics', 'Laptops', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713784/Lamazon/Categories/Electronics/Laptops.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890722/Lamazon/Categories/Electronics/Laptops_Studio_2026.webp'),
+    ('Electronics', 'Mobile', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789727829/Lamazon/Categories/Electronics/Mobile.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890751/Lamazon/Categories/Electronics/Mobile_Studio_2026.webp'),
+    ('Food', 'Burger', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1786551136/Lamazon/Categories/Food/Burger.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890776/Lamazon/Categories/Food/Burger_Studio_2026.webp'),
+    ('Food', 'Fries', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713827/Lamazon/Categories/Food/Fries.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890809/Lamazon/Categories/Food/Fries_Studio_2026.webp'),
+    ('Food', 'Sandwich', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713849/Lamazon/Categories/Food/Sandwich.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890863/Lamazon/Categories/Food/Sandwich_Studio_2026.webp'),
+    ('Food', 'Wraps', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713873/Lamazon/Categories/Food/Wraps.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890900/Lamazon/Categories/Food/Wraps_Studio_2026.webp'),
+    ('Food', 'Pasta', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713924/Lamazon/Categories/Food/Pasta.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890902/Lamazon/Categories/Food/Pasta_Studio_2026.webp'),
+    ('Food', 'Beverages', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713964/Lamazon/Categories/Food/Beverages.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890904/Lamazon/Categories/Food/Beverages_Studio_2026.webp'),
+    ('Food', 'Cold Coffee', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787713999/Lamazon/Categories/Food/Cold_Coffee.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890906/Lamazon/Categories/Food/Cold_Coffee_Studio_2026.webp'),
+    ('Food', 'Frappes', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714036/Lamazon/Categories/Food/Frappes.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890925/Lamazon/Categories/Food/Frappes_Studio_2026.webp'),
+    ('Food', 'Herbal Tea', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714069/Lamazon/Categories/Food/Herbal_Tea.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890927/Lamazon/Categories/Food/Herbal_Tea_Studio_2026.webp'),
+    ('Food', 'Milk Shakes', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714048/Lamazon/Categories/Food/Milk_Shakes.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890929/Lamazon/Categories/Food/Milk_Shakes_Studio_2026.webp'),
+    ('Food', 'Mocktails', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714092/Lamazon/Categories/Food/Mojitos.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890933/Lamazon/Categories/Food/Mocktails_Studio_2026.webp'),
+    ('Food', 'Lassi', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714117/Lamazon/Categories/Food/Lassi.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890937/Lamazon/Categories/Food/Lassi_Studio_2026.webp'),
+    ('Food', 'Breakfast', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714167/Lamazon/Categories/Food/Breakfast.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890939/Lamazon/Categories/Food/Breakfast_Studio_2026.webp'),
+    ('Food', 'Combo meals', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714195/Lamazon/Categories/Food/Combo_meals.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890941/Lamazon/Categories/Food/Combo_meals_Studio_2026.webp'),
+    ('Food', 'Rice', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714221/Lamazon/Categories/Food/Rice.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890943/Lamazon/Categories/Food/Rice_Studio_2026.webp'),
+    ('Food', 'Main Course', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714271/Lamazon/Categories/Food/Main_Course.png', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890945/Lamazon/Categories/Food/Main_Course_Studio_2026.webp'),
+    ('Food', 'Paneer Dishes', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714303/Lamazon/Categories/Food/Paneer_Dishes.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890947/Lamazon/Categories/Food/Paneer_Dishes_Studio_2026.webp'),
+    ('Food', 'Breads', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1787714368/Lamazon/Categories/Food/Breads.jpg', 'https://res.cloudinary.com/dq3da5bkb/image/upload/v1789890949/Lamazon/Categories/Food/Breads_Studio_2026.webp')
+) AS art(department, name, old_url, new_url)
+WHERE c.parent = art.department
+  AND c.name = art.name
+  AND (c.image_url = art.old_url OR c.image_url = '');
