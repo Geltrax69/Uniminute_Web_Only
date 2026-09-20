@@ -95,3 +95,29 @@ func TestBrowseTheShopNeverLoops(t *testing.T) {
 		t.Fatal("browse the shop did not remember the visit")
 	}
 }
+
+// A listing whose options are priced per combination opens on its starting
+// price. It used to 404: the page asks for a price with nothing picked yet,
+// and only an exact combination had one.
+func TestProductPageOpensWithOptionsUnpicked(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/products/item-46" {
+			w.Write([]byte(`{"id":"item-46","name":"Donner DMK25","price":6027,"mrp":14000,
+				"options":[{"name":"MODEL","values":["N-25","N-32"]}],
+				"variantPrices":[{"choices":[{"name":"MODEL","value":"N-25"}],"price":6027},
+				                 {"choices":[{"name":"MODEL","value":"N-32"}],"price":11570}]}`))
+			return
+		}
+		w.Write([]byte(`[]`))
+	}))
+	defer api.Close()
+
+	rec := httptest.NewRecorder()
+	New(api.URL).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/p/item-46", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Donner DMK25") {
+		t.Fatalf("product page: %d, body has product = %v", rec.Code, strings.Contains(rec.Body.String(), "Donner DMK25"))
+	}
+	if !strings.Contains(rec.Body.String(), "6,027") {
+		t.Error("page did not open on the starting price")
+	}
+}
