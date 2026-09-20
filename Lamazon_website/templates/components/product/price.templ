@@ -11,10 +11,10 @@ import (
 
 templ Price(p backend.Product) {
 	<div class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-		<span class="text-[30px] font-semibold leading-[36px] tabular-nums tracking-[-0.8px] text-text md:text-[34px] md:leading-[40px]" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</span>
+		<span class="display-price text-[34px] leading-[40px] text-text md:text-[38px] md:leading-[44px]" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</span>
 		if p.Discounted() {
-			<span class="text-[16px] text-muted line-through" x-show="discountPercent > 0" x-text="'MRP ₹' + t('mrp')">MRP ₹{ shop.Money(p.MRP) }</span>
-			<span class="rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-extrabold tracking-[0.3px] text-text shadow-badge" x-show="discountPercent > 0" x-text="discountPercent + '% OFF'">{ itoa(p.DiscountPercent()) }% OFF</span>
+			<span class="numeric-meta text-[16px] text-muted line-through" x-show="discountPercent > 0" x-text="'MRP ₹' + t('mrp')">MRP ₹{ shop.Money(p.MRP) }</span>
+			<span class="numeric-meta rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-semibold text-text shadow-badge" x-show="discountPercent > 0" x-text="discountPercent + '% OFF'">{ itoa(p.DiscountPercent()) }% OFF</span>
 		}
 	</div>
 	if p.Discounted() {

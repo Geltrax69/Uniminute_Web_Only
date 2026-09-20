@@ -50,7 +50,7 @@ templ placedBody(d PlacedPageData) {
 		</div>
 		<div class="mt-7 rounded bg-surface p-5 shadow-surface">
 			<p class="text-body text-muted">Pay on delivery</p>
-			<p class="text-title text-text">₹{ shop.Money(ordersTotal(d.Orders)) }</p>
+			<p class="display-price text-[30px] text-text">₹{ shop.Money(ordersTotal(d.Orders)) }</p>
 			<div class="h-3"></div>
 			if len(d.Orders) > 0 {
 				<p class="text-body text-text">{ d.Orders[0].ReceiverAddress }</p>

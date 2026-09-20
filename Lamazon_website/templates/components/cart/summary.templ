@@ -91,9 +91,9 @@ templ Summary(d Data) {
 }
 
 templ summaryRow(label string, value float64, bold bool) {
-	<div class={ "flex items-center justify-between " + tplWhen(bold, "text-[15px] font-extrabold text-text", "text-[13px] font-medium text-muted") }>
+	<div class={ "flex items-center justify-between " + tplWhen(bold, "text-[15px] font-semibold text-text", "text-[13px] font-medium text-muted") }>
 		<span class="min-w-0 flex-1">{ label }</span>
-		<span class="ml-3 text-right">₹{ shop.Money(value) }</span>
+		<span class={ "ml-3 text-right " + tplWhen(bold, "display-price text-[27px]", "numeric-meta text-[14px]") }>₹{ shop.Money(value) }</span>
 	</div>
 }
 

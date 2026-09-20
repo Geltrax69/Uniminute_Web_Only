@@ -77,7 +77,7 @@ templ orderCard(o backend.Order, reviews map[string]backend.Review) {
 		<div class="my-2.5 h-px bg-track"></div>
 		<div class="flex items-center justify-between">
 			<span class="text-[13px] text-muted">Total</span>
-			<span class="text-[15px] font-extrabold text-text">₹{ shop.Money(o.Amount) }</span>
+			<span class="price-figure text-[18px] text-text">₹{ shop.Money(o.Amount) }</span>
 		</div>
 		if o.Stage == backend.StageDelivered {
 			if rv, ok := reviews[o.ID]; ok {

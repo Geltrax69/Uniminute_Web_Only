@@ -402,7 +402,7 @@ func serviceHeader(p viewdata.Page) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"rounded-featured px-4 pb-[15px] pt-4 shadow-raised\" style=\"background-image:linear-gradient(to bottom right,var(--season-ground),var(--season-ground-shade))\"><div class=\"h-1\"></div><h1 class=\"flex items-center gap-2 text-[22px] font-semibold leading-[28px] tracking-[-0.7px]\" style=\"color:var(--season-ink)\"><img src=\"/static/images/logo.png\" alt=\"\" class=\"h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5\"> Uniminute</h1><div class=\"h-0.5\"></div><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"rounded-featured px-4 pb-[15px] pt-4 shadow-raised\" style=\"background-image:linear-gradient(to bottom right,var(--season-ground),var(--season-ground-shade))\"><div class=\"h-1\"></div><h1 class=\"brand-wordmark flex items-center gap-2.5\" style=\"color:var(--season-ink)\"><img src=\"/static/images/logo.png\" alt=\"\" class=\"h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5\"> Uniminute</h1><div class=\"h-0.5\"></div><a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -423,14 +423,14 @@ func serviceHeader(p viewdata.Page) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</span> <span class=\"ml-[5px] min-w-0 truncate text-[13.5px] leading-[18px] tracking-[0.2px]\" style=\"color:color-mix(in srgb,var(--season-ink) 82%,transparent)\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</span> <span class=\"numeric-meta ml-[5px] min-w-0 truncate text-[13px] leading-[18px]\" style=\"color:color-mix(in srgb,var(--season-ink) 82%,transparent)\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(addressText(p))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/home.templ`, Line: 164, Col: 172}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/home.templ`, Line: 164, Col: 166}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {

@@ -66,11 +66,11 @@ func current(selected bool) templ.Attributes {
 // as labelled links. A phone keeps the app's floating bottom bar instead;
 // screens with no bottom bar still carry this one on a desktop.
 templ TopBar(p viewdata.Page, current string) {
-	<header id="lw-topbar" class="fixed inset-x-0 top-0 z-50 hidden h-[72px] shadow-raised lg:block" style={ templ.SafeCSS(p.SeasonCSS() + ";background-image:linear-gradient(to right,var(--season-ground),var(--season-ground-shade))") }>
+	<header id="lw-topbar" class="fixed inset-x-0 top-0 z-50 hidden h-[80px] shadow-raised lg:block" style={ templ.SafeCSS(p.SeasonCSS() + ";background-image:linear-gradient(to right,var(--season-ground),var(--season-ground-shade))") }>
 		<div class="mx-auto flex h-full max-w-[1400px] items-center gap-8 px-gutter">
 			<div class="flex min-w-0 shrink-0 flex-col">
-				<a href="/" class="flex items-center gap-2 text-[22px] font-semibold leading-[26px] tracking-[-0.7px]" style="color:var(--season-ink)"><img src="/static/images/logo.png" alt="" class="h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5"/> Uniminute</a>
-				<a href={ templ.SafeURL(tpl.When(p.User == nil, "/login?next=/account", "/addresses")) } class="mt-0.5 inline-flex max-w-[220px] items-center rounded-small text-[12.5px] leading-4 hover:underline">
+				<a href="/" class="brand-wordmark flex items-center gap-2.5" style="color:var(--season-ink)"><img src="/static/images/logo.png" alt="" class="h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5"/> Uniminute</a>
+				<a href={ templ.SafeURL(tpl.When(p.User == nil, "/login?next=/account", "/addresses")) } class="numeric-meta mt-1 inline-flex max-w-[220px] items-center rounded-small text-[12px] leading-4 hover:underline">
 					<span class="flex" style="color:var(--season-accent)">
 						@ui.Icon("map-pin", "h-3.5 w-3.5")
 					</span>
@@ -80,12 +80,12 @@ templ TopBar(p viewdata.Page, current string) {
 			if current != "search" {
 				<form action="/search" method="get" role="search" class="flex h-11 min-w-0 max-w-[640px] flex-1 items-center rounded-full bg-surface px-4 focus-within:ring-2 focus-within:ring-[color:var(--season-accent)]">
 					@ui.Icon("search", "h-[18px] w-[18px] shrink-0 text-strong")
-					<input type="search" name="q" value={ p.Query } placeholder="Search products, shops and more" aria-label="Search products and stores" autocomplete="off" class="ml-3 h-full min-w-0 flex-1 bg-transparent text-[14.5px] text-text outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"/>
+					<input type="search" name="q" value={ p.Query } placeholder="Search products, shops and more" aria-label="Search products and stores" autocomplete="off" class="ml-3 h-full min-w-0 flex-1 bg-transparent text-[15px] font-normal tracking-[0.1px] text-text outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"/>
 				</form>
 			} else {
 				<div class="flex-1"></div>
 			}
-			<nav aria-label="Main menu" class="ml-auto flex shrink-0 items-center gap-1">
+			<nav aria-label="Main menu" class="ml-auto flex shrink-0 items-center gap-1.5">
 				@topLink("/", "house", "Home", current == "home", -1)
 				@topLink("/cart", "shopping-cart", "Cart", current == "cart", p.CartCount)
 				if p.User != nil && p.User.HasStore {
@@ -103,12 +103,12 @@ templ topLink(href, icon, label string, selected bool, badge int) {
 	<a
 		href={ templ.SafeURL(href) }
 		{ current(selected)... }
-		class="relative flex h-11 items-center gap-2 rounded-full px-4 text-[14px] font-semibold transition-colors duration-150 hover:bg-white/10 motion-reduce:transition-none"
+		class="relative flex h-11 items-center gap-2.5 rounded-full px-3.5 text-[15px] font-medium tracking-[-0.1px] transition-colors duration-150 hover:bg-white/10 motion-reduce:transition-none"
 		style={ templ.SafeCSS(tpl.When(selected, "background-color:var(--season-accent);color:var(--season-ground)", "color:var(--season-ink)")) }>
 		<span class="relative flex">
 			@ui.Icon(icon, "h-5 w-5")
 			if badge >= 0 {
-				<span data-cart-count class="absolute -right-2 -top-1.5 h-4 min-w-4 rounded-full bg-peach px-1 text-center text-[11px] font-medium leading-4 text-text" hidden?={ badge == 0 }>{ strconv.Itoa(badge) }</span>
+				<span data-cart-count class="numeric-meta absolute -right-2 -top-1.5 h-4 min-w-4 rounded-full bg-peach px-1 text-center text-[11px] font-semibold leading-4 text-text" hidden?={ badge == 0 }>{ strconv.Itoa(badge) }</span>
 			}
 		</span>
 		{ label }

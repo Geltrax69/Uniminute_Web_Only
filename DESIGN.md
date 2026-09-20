@@ -39,11 +39,16 @@ Product, cart, checkout and administration remain task-first and truthful.
 
 ## Typography and layout
 
-- Inter Tight remains the functional face for controls, prices, navigation and
+- Inter Tight remains the functional face for controls, compact prices, navigation and
   dense operational screens. Instrument Serif is the editorial display face
   for storefront campaigns, discovery section headings, product names and
-  store introductions. It is used at regular weight with restrained negative
-  tracking; it never replaces numeric prices or task labels.
+  store introductions and the brand wordmark. It is used at regular weight
+  with restrained negative tracking; it never replaces numeric prices or task
+  labels.
+- Large feature prices and totals use Instrument Serif's regular-weight
+  figures, with an Inter Tight fallback for the rupee symbol and unsupported
+  glyphs. Compact card prices and supporting amounts stay in Inter Tight at
+  a restrained 600 weight with lining, tabular figures for easy comparison.
 - Storefront section headings scale from 29px to 39px; campaign display copy
   reaches 64px only when there is room. Supporting storefront copy is at least
   15px with relaxed leading, while product descriptions read at 16px and stay

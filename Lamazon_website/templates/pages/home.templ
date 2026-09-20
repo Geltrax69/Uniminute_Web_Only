@@ -155,13 +155,13 @@ templ HomeProducts(items []backend.Product, wishlist map[string]bool, showStore 
 templ serviceHeader(p viewdata.Page) {
 	<div class="rounded-featured px-4 pb-[15px] pt-4 shadow-raised" style="background-image:linear-gradient(to bottom right,var(--season-ground),var(--season-ground-shade))">
 		<div class="h-1"></div>
-		<h1 class="flex items-center gap-2 text-[22px] font-semibold leading-[28px] tracking-[-0.7px]" style="color:var(--season-ink)"><img src="/static/images/logo.png" alt="" class="h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5"/> Uniminute</h1>
+		<h1 class="brand-wordmark flex items-center gap-2.5" style="color:var(--season-ink)"><img src="/static/images/logo.png" alt="" class="h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5"/> Uniminute</h1>
 		<div class="h-0.5"></div>
 		<a href={ templ.SafeURL(addressHref(p)) } class="inline-flex max-w-full items-center rounded-small pb-1">
 			<span class="flex" style="color:var(--season-accent)">
 				@ui.Icon("map-pin", "h-[15px] w-[15px]")
 			</span>
-			<span class="ml-[5px] min-w-0 truncate text-[13.5px] leading-[18px] tracking-[0.2px]" style="color:color-mix(in srgb,var(--season-ink) 82%,transparent)">{ addressText(p) }</span>
+			<span class="numeric-meta ml-[5px] min-w-0 truncate text-[13px] leading-[18px]" style="color:color-mix(in srgb,var(--season-ink) 82%,transparent)">{ addressText(p) }</span>
 			<span class="ml-1 flex" style="color:var(--season-accent)">
 				@ui.Icon("chevron-down", "h-4 w-4")
 			</span>

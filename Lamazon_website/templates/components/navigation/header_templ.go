@@ -46,13 +46,13 @@ func Header(p viewdata.Page) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(p.SeasonCSS())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/navigation/header.templ`, Line: 14, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/navigation/header.templ`, Line: 14, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"rounded-featured p-4 pb-[15px] shadow-raised\" style=\"background-image:linear-gradient(135deg, var(--season-ground), var(--season-ground-shade))\"><div class=\"flex items-start justify-between gap-3\"><div class=\"min-w-0\"><h1 class=\"flex items-center gap-2 text-[22px] font-semibold leading-[28px] tracking-[-0.7px]\" style=\"color:var(--season-ink)\"><img src=\"/static/images/logo.png\" alt=\"\" class=\"h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5\"> Uniminute</h1><div class=\"mt-0.5\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"rounded-featured p-4 pb-[15px] shadow-raised\" style=\"background-image:linear-gradient(135deg, var(--season-ground), var(--season-ground-shade))\"><div class=\"flex items-start justify-between gap-3\"><div class=\"min-w-0\"><h1 class=\"brand-wordmark flex items-center gap-2.5\" style=\"color:var(--season-ink)\"><img src=\"/static/images/logo.png\" alt=\"\" class=\"h-7 w-7 shrink-0 rounded-md bg-white object-contain p-0.5\"> Uniminute</h1><div class=\"mt-0.5\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -72,7 +72,7 @@ func Header(p viewdata.Page) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(p.Address.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/navigation/header.templ`, Line: 28, Col: 162}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/navigation/header.templ`, Line: 28, Col: 162}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -85,7 +85,7 @@ func Header(p viewdata.Page) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(p.Address.Line)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/navigation/header.templ`, Line: 28, Col: 184}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/navigation/header.templ`, Line: 28, Col: 184}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -111,7 +111,7 @@ func Header(p viewdata.Page) templ.Component {
 			var templ_7745c5c3_Var5 templ.SafeURL
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(signInTarget(p)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/navigation/header.templ`, Line: 33, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/navigation/header.templ`, Line: 33, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {

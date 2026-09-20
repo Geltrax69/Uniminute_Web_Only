@@ -32,7 +32,7 @@ templ BuyBar(p backend.Product) {
 	{{ out := p.AvailableStock != nil && *p.AvailableStock == 0 }}
 	<div class="fixed inset-x-0 bottom-0 z-40 border-t border-transparent bg-surface shadow-raised">
 		<div class="mx-auto flex max-w-[1100px] items-center px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5">
-			<p class="hidden flex-1 text-title text-text min-[900px]:block" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</p>
+			<p class="display-price hidden flex-1 text-[26px] text-text min-[900px]:block" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</p>
 			<input type="hidden" id="buy-id" name="id" value={ p.ID }/>
 			<input type="hidden" id="buy-qty" name="qty" value="1" x-bind:value="qty"/>
 			for _, name := range optionNames(p) {

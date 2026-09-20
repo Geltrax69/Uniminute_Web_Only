@@ -41,13 +41,13 @@ templ Card(p backend.Product, opts CardOpts) {
 		}
 		<div class="pointer-events-none relative h-[114px] shrink-0 overflow-hidden pt-2" aria-hidden="true">
 			<p class="flex items-baseline whitespace-nowrap">
-				<span class="text-[17px] font-bold leading-[21px] tracking-[-0.2px] text-text">₹{ shop.Money(p.Price) }</span>
+				<span class="price-figure text-[18px] leading-[22px] text-text">₹{ shop.Money(p.Price) }</span>
 				if p.Discounted() {
-					<span class="ml-[5px] text-[12.5px] text-muted line-through">₹{ shop.Money(p.MRP) }</span>
+					<span class="numeric-meta ml-[5px] text-[12.5px] text-muted line-through">₹{ shop.Money(p.MRP) }</span>
 				}
 			</p>
 			if p.Discounted() {
-				<p class="text-[11.5px] font-bold leading-[15px] text-strong">{ p.DiscountPercent() }% off</p>
+				<p class="numeric-meta text-[11.5px] font-semibold leading-[15px] text-strong">{ p.DiscountPercent() }% off</p>
 			}
 			<h3 class="mt-0.5 line-clamp-2 text-[13px] font-medium leading-[16.5px] tracking-[0.05px] text-text">{ p.Name }</h3>
 			if opts.ShowStore {

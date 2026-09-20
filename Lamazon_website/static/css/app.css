@@ -49,6 +49,10 @@
 }
 .editorial-section { font-size: clamp(29px, 3.2vw, 39px); }
 .product-editorial-title { font-size: clamp(28px, 3vw, 40px); line-height: 1.07; overflow-wrap: break-word; }
+.brand-wordmark { font-family: var(--font-display); font-size: 29px; font-weight: 400; line-height: 1; letter-spacing: -0.025em; }
+.price-figure { font-family: "InterTight", "Inter Tight", system-ui, sans-serif; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -0.025em; }
+.display-price { font-family: "InstrumentSerif", "InterTight", system-ui, sans-serif; font-weight: 400; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -0.015em; }
+.numeric-meta { font-variant-numeric: lining-nums tabular-nums; letter-spacing: -0.01em; }
 .home-section-gap { height: 44px; }
 .home-close-gap { height: 52px; }
 @media (min-width: 700px) {
@@ -236,7 +240,7 @@ html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 /* From 1024px the tabs move to a top bar: the page starts below it, and the
    bottom clearance the floating bar needed is given back. */
 @media (min-width: 1024px) {
-  body:has(#lw-topbar) { padding-top: 72px; }
+  body:has(#lw-topbar) { padding-top: 80px; }
   body:has(#lw-topbar) main { padding-bottom: 48px !important; }
   #toasts { bottom: 24px !important; }
 }

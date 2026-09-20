@@ -39,16 +39,16 @@ templ Item(e shop.CartEntry) {
 				<div class="h-2"></div>
 				if p.Discounted() {
 					<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-						<span class="text-[12px] text-muted line-through">MRP ₹{ shop.Money(p.MRP * float64(e.Qty)) }</span>
+						<span class="numeric-meta text-[12px] text-muted line-through">MRP ₹{ shop.Money(p.MRP * float64(e.Qty)) }</span>
 						@product.DiscountBadge(p.DiscountPercent())
 					</div>
 				}
-				<p class="text-[18px] font-extrabold text-text">₹{ shop.Money(e.LineTotal()) }</p>
+				<p class="price-figure text-[20px] text-text">₹{ shop.Money(e.LineTotal()) }</p>
 			</div>
 		</div>
 		<div class="mt-3 h-px"></div>
 		<div class="mt-2.5 flex items-center">
-			<p class="min-w-0 flex-1 text-[12px] text-muted">₹{ shop.Money(p.Price) } each</p>
+			<p class="numeric-meta min-w-0 flex-1 text-[12px] text-muted">₹{ shop.Money(p.Price) } each</p>
 			<button
 				type="button"
 				class={ "tactile inline-flex shrink-0 items-center justify-center rounded-full shadow-tactile " + tplWhen(last, "text-danger", "text-strong") }
@@ -61,7 +61,7 @@ templ Item(e shop.CartEntry) {
 				title={ tplWhen(last, "Remove item", "Decrease quantity") }>
 				@ui.Icon(tplWhen(last, "trash-2", "minus"), "h-5 w-5")
 			</button>
-			<span class="px-2 text-[13px] font-bold text-text">{ strconv.Itoa(e.Qty) }</span>
+			<span class="numeric-meta px-2 text-[13px] font-semibold text-text">{ strconv.Itoa(e.Qty) }</span>
 			<button
 				type="button"
 				class="tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile"

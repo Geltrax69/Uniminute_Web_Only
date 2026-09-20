@@ -95,14 +95,14 @@ func BuyBar(p backend.Product) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		out := p.AvailableStock != nil && *p.AvailableStock == 0
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"fixed inset-x-0 bottom-0 z-40 border-t border-transparent bg-surface shadow-raised\"><div class=\"mx-auto flex max-w-[1100px] items-center px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5\"><p class=\"hidden flex-1 text-title text-text min-[900px]:block\" x-text=\"'₹' + t('price')\">₹")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"fixed inset-x-0 bottom-0 z-40 border-t border-transparent bg-surface shadow-raised\"><div class=\"mx-auto flex max-w-[1100px] items-center px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5\"><p class=\"display-price hidden flex-1 text-[26px] text-text min-[900px]:block\" x-text=\"'₹' + t('price')\">₹")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(p.Price))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 35, Col: 119}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 35, Col: 134}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -115,7 +115,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 36, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 36, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -133,7 +133,7 @@ func BuyBar(p backend.Product) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("opt." + name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 39, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 39, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -146,7 +146,7 @@ func BuyBar(p backend.Product) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue("picks[" + jsLit(name) + "] || ''")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 39, Col: 113}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 39, Col: 113}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -173,7 +173,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var7).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -196,7 +196,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(tplWhen(out, "true", "!!missing"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 42, Col: 213}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 42, Col: 213}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -218,7 +218,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var10).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(`{"buy": "1"}`)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 47, Col: 152}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 47, Col: 152}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -254,7 +254,7 @@ func BuyBar(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(tplWhen(out, "true", "!!missing"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/add-to-cart.templ`, Line: 47, Col: 239}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/add-to-cart.templ`, Line: 47, Col: 239}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
