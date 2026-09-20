@@ -1,6 +1,6 @@
 /* Lamazon storefront — Tailwind source.
-   All design tokens come from tailwind.config.js, which lifts them verbatim
-   from frontend/lib/widgets/design_system.dart. */
+   Core app tokens live in tailwind.config.js; editorial storefront typography
+   and spacing are layered here for the web browsing experience. */
 
 @tailwind base;
 @tailwind components;
@@ -11,6 +11,14 @@
   font-family: "InterTight";
   src: url("/static/fonts/InterTight-Variable.ttf") format("truetype");
   font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "InstrumentSerif";
+  src: url("/static/fonts/InstrumentSerif-Regular.ttf") format("truetype");
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -27,6 +35,25 @@
   --season-ground-shade: #0F3126;
   --season-accent:       #C6EE63;
   --season-ink:          #FFFDF8;
+  --font-display: "InstrumentSerif", Georgia, "Times New Roman", serif;
+}
+
+/* Editorial display is reserved for discovery and product storytelling.
+   Commerce controls, prices and operational screens keep the crisp sans. */
+.editorial-heading {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+.editorial-section { font-size: clamp(29px, 3.2vw, 39px); }
+.product-editorial-title { font-size: clamp(28px, 3vw, 40px); line-height: 1.07; overflow-wrap: break-word; }
+.home-section-gap { height: 44px; }
+.home-close-gap { height: 52px; }
+@media (min-width: 700px) {
+  .home-section-gap { height: 64px; }
+  .home-close-gap { height: 76px; }
 }
 
 @media (min-width: 700px)  { :root { --gutter: 24px; } }
@@ -103,17 +130,17 @@
 /* ── Campaign banner (CampaignBanner) ───────────────────────────────────── */
 /* 230px tall; from 760px wide, 348px with the art a third of the way in. */
 .banner-host { container-type: inline-size; }
-.banner { position: relative; height: 230px; }
+.banner { position: relative; height: 260px; }
 .banner-art { position: absolute; top: 0; right: 0; bottom: 0; left: 24%; }
 .banner-art > img, .banner-art > video { width: 100%; height: 100%; object-fit: cover; object-position: right center; }
-.banner-copy { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 18px 36% 18px 20px; }
+.banner-copy { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 24px 36% 24px 22px; }
 .banner-title, .banner-sub { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.banner-title { font-size: 22px; line-height: 28px; letter-spacing: -0.7px; font-weight: 600; }
+.banner-title { font-family: var(--font-display); font-size: clamp(31px, 6vw, 42px); line-height: 1.02; letter-spacing: -0.025em; font-weight: 400; text-wrap: balance; }
 @container (min-width: 760px) {
-  .banner { height: 348px; }
+  .banner { height: 390px; }
   .banner-art { left: 33%; }
-  .banner-copy { padding: 28px 43% 28px 30px; }
-  .banner-title { font-size: 31px; line-height: 36px; letter-spacing: -1px; -webkit-line-clamp: 3; }
+  .banner-copy { padding: 38px 43% 38px 42px; }
+  .banner-title { font-size: clamp(44px, 4.3vw, 64px); -webkit-line-clamp: 3; }
   .banner-sub { -webkit-line-clamp: 3; }
 }
 

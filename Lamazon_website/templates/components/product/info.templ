@@ -17,12 +17,12 @@ import (
 )
 
 templ Info(p backend.Product, rv backend.ProductReviews) {
-	<div class="p-6">
-		<p class="text-[14px] font-semibold text-strong">{ p.Store }</p>
-		<h1 class="mt-2 text-title text-text">{ p.Name }</h1>
+	<div class="px-5 pb-9 pt-7 md:px-8 md:pt-9">
+		<p class="text-[12px] font-semibold uppercase tracking-[1.2px] text-strong">{ p.Store }</p>
+		<h1 class="editorial-heading product-editorial-title mt-3 text-text">{ p.Name }</h1>
 		@Price(p)
-		<p class="mt-2 text-body text-muted" x-text="qty === 1 ? (missing ? 'From ₹' : '₹') + unit + (missing ? '' : ' each') : qty + ' × ₹' + unit">From ₹{ shop.Money(p.Price) }</p>
-		<p class="mt-3 text-body font-semibold text-strong">{ availability(p) }</p>
+		<p class="mt-2 text-[15px] leading-[22px] text-muted" x-text="qty === 1 ? (missing ? 'From ₹' : '₹') + unit + (missing ? '' : ' each') : qty + ' × ₹' + unit">From ₹{ shop.Money(p.Price) }</p>
+		<p class="mt-4 text-[15px] font-semibold leading-[22px] text-strong">{ availability(p) }</p>
 		if rv.Count > 0 {
 			<a href="#reviews" class="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">
 				@ui.Stars(int(rv.Average+0.5), "text-[16px]")
@@ -35,7 +35,7 @@ templ Info(p backend.Product, rv backend.ProductReviews) {
 				<span class="ml-1.5">No ratings yet</span>
 			</p>
 		}
-		<div class="mt-[22px] flex flex-wrap items-center gap-x-6 gap-y-3">
+		<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-track pt-6">
 			<span class="text-[16px] font-semibold text-text">Quantity</span>
 			@Stepper()
 		</div>
@@ -44,10 +44,10 @@ templ Info(p backend.Product, rv backend.ProductReviews) {
 				@optionPicker(opt)
 			}
 		}
-		<h2 class="mt-7 text-section text-text">About this product</h2>
-		<p class="mt-2 whitespace-pre-line text-[15px] leading-[1.6] text-muted">{ description(p) }</p>
+		<h2 class="editorial-heading mt-10 text-[29px] text-text">About this product</h2>
+		<p class="mt-3 max-w-[65ch] whitespace-pre-line text-[16px] leading-[1.6] text-muted">{ description(p) }</p>
 		if len(rv.Reviews) > 0 {
-			<h2 id="reviews" class="mt-7 scroll-mt-24 text-section text-text">Reviews</h2>
+			<h2 id="reviews" class="editorial-heading mt-10 scroll-mt-24 text-[29px] text-text">Reviews</h2>
 			for _, r := range rv.Reviews {
 				<div class="mt-3 rounded-small bg-surface p-3.5 shadow-surface">
 					<div class="flex items-center gap-2">
@@ -72,12 +72,12 @@ templ Info(p backend.Product, rv backend.ProductReviews) {
 // goes into the cart with the product.
 templ optionPicker(opt backend.ItemOption) {
 	{{ key := jsLit(opt.Name) }}
-	<div class="pt-[18px]">
+	<div class="pt-6">
 		<div class="flex items-center">
 			<span class="text-[15px] font-bold text-text">{ opt.Name }</span>
 			<span class="ml-2 text-[13px] text-muted" x-text={ jsLit(choiceLabels(opt)) + "[picks[" + key + "]] || ''" }></span>
 		</div>
-		<div class="mt-2.5 flex flex-wrap gap-2.5" role="radiogroup" aria-label={ opt.Name }>
+		<div class="mt-3 flex flex-wrap gap-2.5" role="radiogroup" aria-label={ opt.Name }>
 			for _, v := range opt.Values {
 				<button
 					type="button"
@@ -110,8 +110,8 @@ func choiceLabels(opt backend.ItemOption) map[string]string {
 
 // offers is _compareSection: the same product at other local shops.
 templ offers(p backend.Product) {
-	<div class="mt-[22px] flex items-center">
-		<h2 class="min-w-0 flex-1 text-section text-text">Local vendors</h2>
+	<div class="mt-10 flex items-center">
+		<h2 class="editorial-heading min-w-0 flex-1 text-[29px] text-text">Local vendors</h2>
 		<span class="ml-2.5">
 			@ui.ActionButton("Compare all", false, templ.Attributes{"href": "/compare/" + p.ID})
 		</span>

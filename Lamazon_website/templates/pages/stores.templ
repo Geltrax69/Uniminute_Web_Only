@@ -76,17 +76,17 @@ templ storeBody(d StorePageData) {
 		<div class="mt-3 flex h-40 items-center justify-center overflow-hidden rounded-[24px]">
 			@storeImage(d.Store.ImageURL, 0)
 		</div>
-		<h1 class="mt-3.5 text-title text-text">{ d.Store.Name }</h1>
+		<h1 class="editorial-heading mt-5 text-[38px] text-text md:text-[48px]">{ d.Store.Name }</h1>
 		if d.Store.Tagline != "" {
-			<p class="mt-1 text-[13px] text-muted">{ d.Store.Tagline }</p>
+			<p class="mt-2 max-w-[65ch] text-[16px] leading-[24px] text-muted">{ d.Store.Tagline }</p>
 		}
 		<div class="mt-2.5 flex flex-wrap gap-2">
 			@infoChip("truck", "Local delivery")
 			@infoChip("banknote", "Cash on delivery")
 			@infoChip("star", "4.5")
 		</div>
-		<h2 class="mt-[22px] text-[16px] font-bold text-text">Products ({ strconv.Itoa(len(d.Products)) })</h2>
-		<div class="mt-3">
+		<h2 class="editorial-heading mt-10 text-[30px] text-text">Products <span class="font-sans text-[15px] font-medium text-muted">({ strconv.Itoa(len(d.Products)) })</span></h2>
+		<div class="mt-5">
 			if len(d.Products) == 0 {
 				<p class="py-10 text-center text-[14px] text-muted">No products listed yet</p>
 			} else {

@@ -70,7 +70,7 @@ templ homeBody(d HomeData) {
 				<div class="h-4"></div>
 			</div>
 			@departmentStrip(d)
-			<div class="h-[22px]"></div>
+			<div class="h-[26px] md:h-9"></div>
 			if len(d.Campaigns) > 0 {
 				@campaignDeck(d)
 			} else {
@@ -83,29 +83,29 @@ templ homeBody(d HomeData) {
 				}, d.seasonGround(), searchHref(d.scope(), d.scope()))
 			}
 			if len(d.Offers) > 0 {
-				<div class="h-[34px]"></div>
+				<div class="home-section-gap"></div>
 				@shelf("Around you", "Fresh picks with a real saving", d.Offers, d.Page.Wishlist, searchHref("", d.scope()))
 			}
 			// Dart's dangling else: the per-department grids draw on All only.
 			if d.Tab == "All" {
 				for _, dept := range d.Departments {
 					if len(dept.Children) > 0 {
-						<div class="h-[34px]"></div>
+						<div class="home-section-gap"></div>
 						@categorySection(dept.Name, dept.Name, firstCategories(dept.Children, 8), tabHref(dept.Name), d)
 					}
 				}
 			}
 			if len(d.Shops) > 0 {
-				<div class="h-9"></div>
+				<div class="home-section-gap"></div>
 				@sectionHeading("Stores near you", "Local storefronts, one tap away", storesHref(d.scope()), "See all")
 				<div class="h-3.5"></div>
 				@storeRail(d.Shops)
 			}
 			if len(d.Saved) > 0 {
-				<div class="h-9"></div>
+				<div class="home-section-gap"></div>
 				@shelf("Saved for later", "Your shortlist is waiting", d.Saved, d.Page.Wishlist, "/saved")
 			}
-			<div class="h-9"></div>
+			<div class="home-section-gap"></div>
 			if len(d.Scoped) == 0 {
 				@nothingHere(d.scope())
 			} else {
@@ -121,7 +121,7 @@ templ homeBody(d HomeData) {
 				})
 				@HomeMore(d.Tab, HomePage, len(d.Scoped), false)
 			}
-			<div class="h-[42px]"></div>
+			<div class="home-close-gap"></div>
 			@homeClose()
 		</main>
 		@navigation.BottomNav(d.Page, "home")
@@ -269,13 +269,13 @@ templ campaignBanner(c backend.Campaign, seasonGround, href string) {
 			</div>
 			<div class="absolute inset-0" style={ templ.SafeCSS(bannerWash(pal.Background)) }></div>
 			<div class="banner-copy">
-				<span class="max-w-full truncate rounded-full bg-white/[.14] px-[9px] py-[5px] text-[10.5px] font-semibold leading-[13px] tracking-[0.9px]" style={ templ.SafeCSS("color:" + pal.Foreground) }>{ bannerTag(c) }</span>
-				<h2 class="banner-title mt-2.5" style={ templ.SafeCSS("color:" + pal.Foreground) }>{ c.Title }</h2>
+				<span class="max-w-full truncate rounded-full bg-white/[.14] px-3 py-1.5 text-[11px] font-semibold leading-[15px] tracking-[1px]" style={ templ.SafeCSS("color:" + pal.Foreground) }>{ bannerTag(c) }</span>
+				<h2 class="banner-title mt-4" style={ templ.SafeCSS("color:" + pal.Foreground) }>{ c.Title }</h2>
 				if strings.TrimSpace(c.Subtitle) != "" {
-					<p class="banner-sub mt-[7px] text-[13px] leading-[17px] tracking-[0.15px]" style={ templ.SafeCSS("color:" + tpl.RGBA(pal.Foreground, .86)) }>{ c.Subtitle }</p>
+					<p class="banner-sub mt-3 max-w-[42ch] text-[15px] leading-[22px] tracking-[0.1px]" style={ templ.SafeCSS("color:" + tpl.RGBA(pal.Foreground, .9)) }>{ c.Subtitle }</p>
 				}
 				<span
-					class="mt-3.5 inline-flex min-h-[42px] max-w-full items-center rounded-[23px] px-3.5 py-2.5 text-[13px] font-semibold shadow-tactile"
+					class="mt-5 inline-flex min-h-[46px] max-w-full items-center rounded-[23px] px-4 py-2.5 text-[13px] font-semibold shadow-tactile"
 					style={ templ.SafeCSS("background-image:linear-gradient(to bottom right," + tpl.Blend("#FFFFFF", .36, pal.Action) + "," + pal.Action + ");color:" + pal.ActionForeground) }>
 					<span class="truncate">{ c.CTA }</span>
 					@ui.Icon("arrow-right", "ml-[7px] h-4 w-4")
@@ -289,9 +289,9 @@ templ campaignBanner(c backend.Campaign, seasonGround, href string) {
 templ sectionHeading(title, subtitle, href, label string) {
 	<div class="flex items-end">
 		<div class="min-w-0 flex-1">
-			<h2 class="text-section text-text">{ title }</h2>
+			<h2 class="editorial-heading editorial-section text-text">{ title }</h2>
 			if subtitle != "" {
-				<p class="mt-[3px] text-body text-muted">{ subtitle }</p>
+				<p class="mt-2 max-w-[62ch] text-[15px] leading-[23px] text-muted">{ subtitle }</p>
 			}
 		</div>
 		if href != "" {
@@ -309,9 +309,9 @@ templ shelf(title, subtitle string, items []backend.Product, wishlist map[string
 	<section x-data>
 		<div class="flex items-end">
 			<div class="min-w-0 flex-1">
-				<h2 class="text-section text-text">{ title }</h2>
+				<h2 class="editorial-heading editorial-section text-text">{ title }</h2>
 				if subtitle != "" {
-					<p class="mt-[3px] text-body text-muted">{ subtitle }</p>
+					<p class="mt-2 max-w-[62ch] text-[15px] leading-[23px] text-muted">{ subtitle }</p>
 				}
 			</div>
 			<div class="ml-3 hidden gap-2 min-[720px]:flex">
@@ -324,7 +324,7 @@ templ shelf(title, subtitle string, items []backend.Product, wishlist map[string
 				</div>
 			}
 		</div>
-		<div class="h-3.5"></div>
+		<div class="h-5"></div>
 		<div x-ref="rail" class="bleed flex gap-3 overflow-x-auto pb-2.5 no-scrollbar">
 			for _, p := range items {
 				<div class="h-[292px] w-[166px] shrink-0">
@@ -339,7 +339,7 @@ templ shelf(title, subtitle string, items []backend.Product, wishlist map[string
 templ categorySection(title, dept string, cats []backend.Category, seeAll string, d HomeData) {
 	<section>
 		@sectionHeading(title, "", seeAll, "See all")
-		<div class="h-3.5"></div>
+		<div class="h-5"></div>
 		<div class="cat-host">
 			// On All each department shows six (eight on a desktop) and See all.
 			<div class={ "cat-grid", templ.KV("limited", seeAll != "") }>
@@ -348,7 +348,7 @@ templ categorySection(title, dept string, cats []backend.Category, seeAll string
 						<span class="relative min-h-0 flex-1 overflow-hidden rounded-[9px]">
 							@categoryVisual(c, dept, d)
 						</span>
-						<span class="mt-[7px] line-clamp-2 text-center text-[12px] font-semibold leading-[15px] tracking-[0.1px] text-text">{ c.Name }</span>
+						<span class="mt-2 line-clamp-2 text-center text-[13px] font-medium leading-[17px] text-text">{ c.Name }</span>
 					</a>
 				}
 			</div>
@@ -387,7 +387,7 @@ templ storeRail(shops []backend.Shop) {
 					}
 				</span>
 				<span class="ml-3 flex min-w-0 flex-1 flex-col justify-center">
-					<span class="truncate text-[15px] font-semibold tracking-[-0.15px] text-text">{ s.Name }</span>
+					<span class="truncate text-[16px] font-semibold tracking-[-0.25px] text-text">{ s.Name }</span>
 					<span class="mt-[3px] truncate text-[12.5px] leading-[15px] tracking-[0.15px] text-muted">{ s.Tagline }</span>
 					<span class="mt-1.5 flex items-center text-strong">
 						@ui.Icon("map-pin", "h-[13px] w-[13px]")
@@ -403,7 +403,7 @@ templ storeRail(shops []backend.Shop) {
 templ nothingHere(scope string) {
 	<div class="rounded-featured bg-surface p-7 text-center shadow-surface">
 		@ui.Icon("store", "mx-auto h-[38px] w-[38px] text-strong")
-		<h2 class="mt-3.5 text-title">{ tpl.When(scope != "", "Nothing in "+scope+" yet", "No shops open yet") }</h2>
+		<h2 class="editorial-heading mt-4 text-[32px] text-text">{ tpl.When(scope != "", "Nothing in "+scope+" yet", "No shops open yet") }</h2>
 		<p class="mt-[7px] text-body text-muted">{ tpl.When(scope != "", "Try another department, or open a store here yourself.", "The first local store to open will appear here.") }</p>
 		<div class="mt-5">
 			@ui.ActionButton("Open your store", true, templ.Attributes{"href": "/seller"})
@@ -414,7 +414,7 @@ templ nothingHere(scope string) {
 // _HomeClose.
 templ homeClose() {
 	<div class="flex items-center rounded-featured bg-forest p-[22px] shadow-raised">
-		<p class="flex-1 text-[22px] font-semibold leading-[28px] tracking-[-0.7px] text-white">Local stores.<br/>Good things, close by.</p>
+		<p class="editorial-heading flex-1 text-[32px] text-white md:text-[42px]">Local stores.<br/>Good things, close by.</p>
 		@ui.TactileButton("arrow-up", "Back to top", 44, "#C6EE63", templ.Attributes{
 			"x-data":     "",
 			"x-on:click": "window.scrollTo({top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'})",

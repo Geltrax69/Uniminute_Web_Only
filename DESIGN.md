@@ -39,10 +39,19 @@ Product, cart, checkout and administration remain task-first and truthful.
 
 ## Typography and layout
 
-- Inter Tight is the application face. Titles are 22/28 semi-bold with `-0.7`
-  tracking; section titles are 19/24 semi-bold with `0.6`; body and day labels
-  are 14.5/18 regular with `0.3`. Other display headlines use restrained
-  negative tracking.
+- Inter Tight remains the functional face for controls, prices, navigation and
+  dense operational screens. Instrument Serif is the editorial display face
+  for storefront campaigns, discovery section headings, product names and
+  store introductions. It is used at regular weight with restrained negative
+  tracking; it never replaces numeric prices or task labels.
+- Storefront section headings scale from 29px to 39px; campaign display copy
+  reaches 64px only when there is room. Supporting storefront copy is at least
+  15px with relaxed leading, while product descriptions read at 16px and stay
+  within a 65-character measure. Card metadata remains compact to preserve
+  browsing density.
+- Discovery sections have 44px of separation on phones and 64px on wider
+  screens. Within each section, headings remain close to their subtitle and
+  content, so the page reads as a sequence of clear editorial chapters.
 - Mobile gutters are 16px and grow to 24px at tablet, 32px at desktop. Content
   expands through a 1400px grid rather than retaining phone-width panels.
 - Headings receive more space above than below. Product grids are two columns on
