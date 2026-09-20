@@ -45,7 +45,7 @@ func Price(p backend.Product) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(p.Price))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/price.templ`, Line: 14, Col: 152}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/price.templ`, Line: 14, Col: 152}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -55,28 +55,28 @@ func Price(p backend.Product) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if p.Discounted() {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span class=\"numeric-meta text-[16px] text-muted line-through\" x-show=\"discountPercent > 0\" x-text=\"'MRP ₹' + t('mrp')\">MRP ₹")
+		if p.AnyDiscount() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span class=\"numeric-meta text-[16px] text-muted line-through\" x-show=\"discountPercent > 0\" x-cloak x-text=\"'MRP ₹' + t('mrp')\">MRP ₹")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(p.MRP))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/price.templ`, Line: 16, Col: 151}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/price.templ`, Line: 16, Col: 159}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</span> <span class=\"numeric-meta rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-semibold text-text shadow-badge\" x-show=\"discountPercent > 0\" x-text=\"discountPercent + '% OFF'\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</span> <span class=\"numeric-meta rounded-badge bg-peach px-[7.7px] py-1 text-[11px] font-semibold text-text shadow-badge\" x-show=\"discountPercent > 0\" x-cloak x-text=\"discountPercent + '% OFF'\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(itoa(p.DiscountPercent()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/price.templ`, Line: 17, Col: 209}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/price.templ`, Line: 17, Col: 217}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -91,15 +91,15 @@ func Price(p backend.Product) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if p.Discounted() {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"mt-2 text-body font-semibold text-strong\" x-show=\"discountPercent > 0\" x-text=\"'You save ₹' + t('save')\">You save ₹")
+		if p.AnyDiscount() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"mt-2 text-body font-semibold text-strong\" x-show=\"discountPercent > 0\" x-cloak x-text=\"'You save ₹' + t('save')\">You save ₹")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(p.MRP - p.Price))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/price.templ`, Line: 21, Col: 160}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/price.templ`, Line: 21, Col: 168}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -143,7 +143,7 @@ func DiscountBadge(percent int) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(itoa(percent))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/price.templ`, Line: 27, Col: 136}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/price.templ`, Line: 27, Col: 136}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

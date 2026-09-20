@@ -55,12 +55,18 @@ func validateVariantPrices(in *InventoryItem) error {
 		return fmt.Errorf("set a price for all %d option combinations", want)
 	}
 	seen := map[string]bool{}
-	minimum := 999999.99
+	minimum, cheapest := 999999.99, 0
 	for i, v := range in.VariantPrices {
 		if !isFinitePrice(v.Price) || v.Price <= 0 {
 			return fmt.Errorf("each combination price must be between ₹0.01 and ₹999999.99")
 		}
-		if in.MRP > 0 && v.Price > in.MRP {
+		if !isFinitePrice(v.MRP) || v.MRP < 0 {
+			return fmt.Errorf("each combination MRP must be between ₹0 and ₹999999.99")
+		}
+		if v.MRP > 0 && v.MRP < v.Price {
+			return fmt.Errorf("a combination MRP cannot be below its own price")
+		}
+		if v.MRP == 0 && in.MRP > 0 && v.Price > in.MRP {
 			return fmt.Errorf("MRP cannot be below a combination price")
 		}
 		choices, err := matchChoices(in.Title, groups, v.Choices)
@@ -74,10 +80,15 @@ func validateVariantPrices(in *InventoryItem) error {
 		seen[key] = true
 		in.VariantPrices[i].Choices = choices
 		if v.Price < minimum {
-			minimum = v.Price
+			minimum, cheapest = v.Price, i
 		}
 	}
 	in.Price = minimum // catalogue cards truthfully show the starting price
+	// The card shows the starting price, so it must show that combination's own
+	// MRP too, or the discount badge would be a lie.
+	if mrp := in.VariantPrices[cheapest].MRP; mrp > 0 {
+		in.MRP = mrp
+	}
 	return nil
 }
 

@@ -24,6 +24,11 @@ func TestProductPriceForSelections(t *testing.T) {
 	if _, ok := p.PriceFor([]Choice{{Name: "Colour", Value: "Green"}, {Name: "Storage", Value: "64GB"}}); ok {
 		t.Fatal("unavailable combination accepted")
 	}
+	// The details page opens with nothing picked: it must still price (and so
+	// render) rather than 404.
+	if got, ok := p.PriceFor(nil); !ok || got != 45000 {
+		t.Fatalf("nothing picked: got %.2f, ok=%v", got, ok)
+	}
 	p.VariantPrices = nil
 	if got, ok := p.PriceFor(nil); !ok || got != 45000 {
 		t.Fatal("legacy single price changed")

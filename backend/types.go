@@ -100,10 +100,13 @@ type ItemOption struct {
 	Values []string `json:"values"`
 }
 
-// VariantPrice is the selling price for one exact choice from every option group.
+// VariantPrice is the selling price for one exact choice from every option
+// group. MRP is that combination's own list price (0 when there is none) —
+// a 128GB model can be discounted differently from the 64GB one.
 type VariantPrice struct {
 	Choices Choices `json:"choices"`
 	Price   float64 `json:"price"`
+	MRP     float64 `json:"mrp,omitempty"`
 }
 
 // LowStockAt is the threshold below which an item is flagged for restocking.

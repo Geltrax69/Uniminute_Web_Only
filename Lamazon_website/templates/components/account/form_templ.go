@@ -104,7 +104,7 @@ func Field(name, hint, icon, kind, autocomplete string) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"flex rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"flex pt-[15px]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"flex rounded bg-surface px-3.5 shadow-surface focus-within:ring-2 focus-within:ring-strong\"><span class=\"flex pt-[15px]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -329,14 +329,14 @@ func SubmitBar(label, busyLabel string) templ.Component {
 			templ_7745c5c3_Var18 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"sticky bottom-0 border-t border-black/[.06] bg-canvas px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5\"><p class=\"mb-2 text-center text-[12.5px] text-muted\" x-show=\"blocker\" x-text=\"blocker\" x-cloak aria-live=\"polite\"></p><button type=\"submit\" class=\"w-full rounded-[28px] bg-strong py-4 text-[15px] font-bold text-white disabled:bg-[#DDDDD9] disabled:text-[#8E8E88]\" x-bind:disabled=\"blocker !== null || saving\" x-text=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"sticky bottom-0 border-t border-black/[.06] bg-canvas px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5\"><div class=\"mb-2.5 h-1 overflow-hidden rounded-full bg-track\" x-show=\"saving\" x-cloak role=\"progressbar\" aria-label=\"Saving\"><div class=\"lw-progress h-full w-1/3 rounded-full bg-strong\"></div></div><p class=\"mb-2 text-center text-[12.5px] text-muted\" x-show=\"blocker\" x-text=\"blocker\" x-cloak aria-live=\"polite\"></p><button type=\"submit\" class=\"w-full rounded-[28px] bg-strong py-4 text-[15px] font-bold text-white disabled:bg-[#DDDDD9] disabled:text-[#8E8E88]\" x-bind:disabled=\"blocker !== null || saving\" x-text=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue("saving ? '" + busyLabel + "' : '" + label + "'")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/account/form.templ`, Line: 63, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/account/form.templ`, Line: 66, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -349,7 +349,7 @@ func SubmitBar(label, busyLabel string) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/account/form.templ`, Line: 65, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/account/form.templ`, Line: 68, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {

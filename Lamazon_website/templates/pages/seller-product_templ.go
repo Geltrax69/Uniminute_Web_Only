@@ -157,7 +157,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"flex rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"flex pt-[15px]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"flex rounded bg-surface px-3.5 shadow-surface focus-within:ring-2 focus-within:ring-strong\"><span class=\"flex pt-[15px]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -217,7 +217,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span> <span class=\"ml-1.5\">With 0 units this shows as Sold out to buyers.</span></p><div class=\"mt-[22px] pb-2.5 pl-0.5\"><p class=\"text-[14.5px] font-extrabold text-text\">Options</p><p class=\"mt-0.5 text-[12.5px] text-muted\" x-text=\"options.length ? 'Buyers pick one of each before ordering' : `Only if buyers have to choose — ${presetList.slice(0, 2).map(p => p.name.toLowerCase()).join(', ')}…`\"></p></div><template x-for=\"(o, oi) in options\" :key=\"oi\"><div class=\"mb-2.5 rounded bg-white pb-3.5 pl-3.5 pr-2 pt-2.5\"><div class=\"flex items-center\"><p class=\"flex-1 text-[14px] font-extrabold text-text\" x-text=\"o.name\"></p><button type=\"button\" x-on:click=\"options.splice(oi, 1)\" x-bind:aria-label=\"`Remove ${o.name}`\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-warning hover:bg-strong/[.06]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span> <span class=\"ml-1.5\">With 0 units this shows as Sold out to buyers.</span></p><div class=\"mt-[22px] pb-2.5 pl-0.5\"><p class=\"text-[14.5px] font-extrabold text-text\">Options</p><p class=\"mt-0.5 text-[12.5px] text-muted\" x-text=\"options.length ? 'Buyers pick one of each before ordering' : `Only if buyers have to choose — ${presetList.slice(0, 2).map(p => p.name.toLowerCase()).join(', ')}…`\"></p></div><template x-for=\"(o, oi) in options\" :key=\"oi\"><div class=\"mb-3 rounded-featured bg-surface pb-3.5 pl-3.5 pr-2 pt-2.5 shadow-surface\"><div class=\"flex items-center\"><p class=\"flex-1 text-[14px] font-extrabold text-text\" x-text=\"o.name\"></p><button type=\"button\" x-on:click=\"options.splice(oi, 1)\" x-bind:aria-label=\"`Remove ${o.name}`\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-warning hover:bg-strong/[.06]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -249,7 +249,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"mb-2 text-[12.5px] text-muted\" x-text=\"`${variantRows.length} combinations · the lowest price appears on product cards`\"></p><div class=\"max-h-[400px] space-y-2 overflow-y-auto rounded bg-white p-3\"><template x-for=\"row in variantRows\" :key=\"row.key\"><label class=\"flex min-h-[52px] flex-wrap items-center justify-between gap-2 border-b border-track py-2 last:border-0\"><span class=\"min-w-0 flex-1 text-[13px] font-semibold text-text\" x-text=\"row.label\"></span> <span class=\"flex items-center rounded-small bg-canvas px-2.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-muted\">₹</span> <input type=\"text\" inputmode=\"decimal\" x-model=\"variantPriceInputs[row.key]\" x-on:blur=\"variantPriceInputs[row.key] = groupRupees(variantPriceInputs[row.key] || '')\" class=\"w-[100px] bg-transparent px-1.5 py-2 text-right text-[13px] font-semibold text-text outline-none\" placeholder=\"Price\" x-bind:aria-label=\"`Price for ${row.label}`\"></span></label></template></div></div><p class=\"mt-2 text-[12.5px] text-warning\" x-show=\"variantCount > 100\" x-cloak>Too many combinations. Reduce the choices to 100 or fewer.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"mb-2.5 text-[12.5px] text-muted\" x-text=\"`${variantRows.length} combinations · each can have its own MRP, and the lowest price appears on product cards`\"></p><div class=\"max-h-[460px] space-y-2.5 overflow-y-auto\"><template x-for=\"row in variantRows\" :key=\"row.key\"><div class=\"rounded-featured bg-surface p-3.5 shadow-surface\"><p class=\"text-[13px] font-extrabold text-text\" x-text=\"row.label\"></p><div class=\"mt-2.5 flex gap-2.5\"><label class=\"min-w-0 flex-1\"><span class=\"block pb-1 pl-0.5 text-[11.5px] text-muted\">MRP · optional</span> <span class=\"flex h-[42px] items-center rounded-small bg-canvas px-2.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[13px] text-muted\">₹</span> <input type=\"text\" inputmode=\"decimal\" x-model=\"variantMRPInputs[row.key]\" x-on:blur=\"variantMRPInputs[row.key] = groupRupees(variantMRPInputs[row.key] || '')\" class=\"min-w-0 flex-1 bg-transparent px-1.5 text-right text-[13px] font-semibold tabular-nums text-text outline-none\" placeholder=\"0\" x-bind:aria-label=\"`MRP for ${row.label}`\"></span></label> <label class=\"min-w-0 flex-1\"><span class=\"block pb-1 pl-0.5 text-[11.5px] text-muted\">Selling price</span> <span class=\"flex h-[42px] items-center rounded-small bg-canvas px-2.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[13px] text-muted\">₹</span> <input type=\"text\" inputmode=\"decimal\" x-model=\"variantPriceInputs[row.key]\" x-on:blur=\"variantPriceInputs[row.key] = groupRupees(variantPriceInputs[row.key] || '')\" class=\"min-w-0 flex-1 bg-transparent px-1.5 text-right text-[13px] font-semibold tabular-nums text-text outline-none\" placeholder=\"Price\" x-bind:aria-label=\"`Price for ${row.label}`\"></span></label></div><p class=\"mt-2 text-[11.5px] font-semibold text-[#1B7F3B]\" x-show=\"rowDiscount(row.key)\" x-cloak x-text=\"rowDiscount(row.key)\"></p></div></template></div></div><p class=\"mt-2 text-[12.5px] text-warning\" x-show=\"variantCount > 100\" x-cloak>Too many combinations. Reduce the choices to 100 or fewer.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -262,7 +262,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex flex-wrap gap-2\"><template x-for=\"g in groups\" :key=\"g.name\"><button type=\"button\" x-on:click=\"compareGroup = compareGroup === g.name ? '' : g.name\" x-text=\"compareGroup === g.name ? `✓ ${g.name}` : g.name\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template></div><template x-if=\"template.length\"><div class=\"mt-3 rounded bg-white px-3.5 pb-3.5 pt-3\"><p class=\"text-[12.5px] text-muted\" x-text=\"`What buyers compare ${compareGroup} on`\"></p><p class=\"mt-2 flex items-start text-[12px] leading-[1.35] text-[#B4531F]\" x-show=\"unwinnable.length\"><span class=\"mt-0.5 flex\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex flex-wrap gap-2\"><template x-for=\"g in groups\" :key=\"g.name\"><button type=\"button\" x-on:click=\"compareGroup = compareGroup === g.name ? '' : g.name\" x-text=\"compareGroup === g.name ? `✓ ${g.name}` : g.name\" class=\"rounded-[20px] border border-[#DDDDD8] bg-white px-3.5 py-[9px] text-[12.5px] font-bold text-text\"></button></template></div><template x-if=\"template.length\"><div class=\"mt-3 rounded-featured bg-surface px-3.5 pb-3.5 pt-3 shadow-surface\"><p class=\"text-[12.5px] text-muted\" x-text=\"`What buyers compare ${compareGroup} on`\"></p><p class=\"mt-2 flex items-start text-[12px] leading-[1.35] text-[#B4531F]\" x-show=\"unwinnable.length\"><span class=\"mt-0.5 flex\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -397,14 +397,14 @@ func moneyField(name, label string) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<label class=\"flex h-[52px] items-center rounded bg-white px-3.5 focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[16px] font-semibold text-muted\" aria-hidden=\"true\">₹</span> <input id=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<label class=\"flex h-[52px] items-center rounded bg-surface px-3.5 shadow-surface focus-within:ring-2 focus-within:ring-strong\"><span class=\"text-[16px] font-semibold text-muted\" aria-hidden=\"true\">₹</span> <input id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("field-" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 307, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 320, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -417,7 +417,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 308, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 321, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -430,7 +430,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 313, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 326, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -443,7 +443,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 314, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 327, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -456,7 +456,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(name + " = groupRupees(" + name + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 315, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 328, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {

@@ -138,20 +138,22 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('buy', (cap, basePrice, mrp, variants = [], optionNames = []) => ({
     qty: 1,
     picks: {},
-    get selectedPrice() {
-      if (!variants.length) return basePrice;
-      const match = variants.find((v) => v.choices.every((c) => this.picks[c.name] === c.value));
-      return match ? Number(match.price) : basePrice;
+    get variant() {
+      if (!variants.length) return null;
+      return variants.find((v) => v.choices.every((c) => this.picks[c.name] === c.value)) || null;
     },
+    get selectedPrice() { return this.variant ? Number(this.variant.price) : basePrice; },
+    // Each combination carries its own MRP; without one it falls back to the listing's.
+    get selectedMRP() { return this.variant ? Number(this.variant.mrp || 0) : mrp; },
     get unit() { return this.selectedPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 }); },
-    get discountPercent() { return mrp > this.selectedPrice ? Math.round((mrp - this.selectedPrice) / mrp * 100) : 0; },
+    get discountPercent() { return this.selectedMRP > this.selectedPrice ? Math.round((this.selectedMRP - this.selectedPrice) / this.selectedMRP * 100) : 0; },
     // The first option still to choose, or '' when the buyer can add to cart.
     get missing() { return optionNames.find((n) => !this.picks[n]) || ''; },
     get atCap() { return cap !== null && this.qty >= cap; },
     dec() { if (this.qty > 1) this.qty--; },
     inc() { if (!this.atCap && this.qty < 99) this.qty++; },
     t(key) {
-      const amount = key === 'mrp' ? mrp : key === 'save' ? mrp - this.selectedPrice : this.selectedPrice;
+      const amount = key === 'mrp' ? this.selectedMRP : key === 'save' ? this.selectedMRP - this.selectedPrice : this.selectedPrice;
       return (amount * this.qty).toLocaleString('en-IN', { maximumFractionDigits: 2 });
     },
   }));
@@ -603,6 +605,7 @@ document.addEventListener('alpine:init', () => {
     shots: cfg.imageUrls.map((url) => ({ url })),
     options: cfg.options.map((o) => ({ name: o.name, kind: o.kind || '', values: [...(o.values || [])], entry: '' })),
     variantPriceInputs: Object.fromEntries((cfg.variantPrices || []).map((v) => [JSON.stringify(v.choices), Number(v.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })])),
+    variantMRPInputs: Object.fromEntries((cfg.variantPrices || []).filter((v) => v.mrp > 0).map((v) => [JSON.stringify(v.choices), Number(v.mrp).toLocaleString('en-IN', { maximumFractionDigits: 2 })])),
     attrs: { ...cfg.attributes },
     section: '',
     busy: false,
@@ -642,8 +645,19 @@ document.addEventListener('alpine:init', () => {
       return rows.map((row) => ({ ...row, key: JSON.stringify(row.choices), label: row.choices.map((c) => `${c.name}: ${c.name.toLowerCase() === 'colour' ? this.swatchName(c.value) : c.value}`).join(' · ') }));
     },
     get variantCount() { return this.liveOptions().reduce((n, o) => n * o.values.length, 1); },
+    // A row's own MRP, or the listing-wide one when that row is left blank.
+    rowMRP(key) {
+      const own = rupees(this.variantMRPInputs[key] || '');
+      return own === '' ? this.mrpValue || 0 : Number(own);
+    },
+    rowPrice(key) { return Number(rupees(this.variantPriceInputs[key] || '')); },
+    rowDiscount(key) {
+      const mrp = this.rowMRP(key), price = this.rowPrice(key);
+      if (!(mrp > 0) || !(price > 0) || mrp <= price) return '';
+      return `${Math.round((mrp - price) / mrp * 100)}% OFF — ₹${(mrp - price).toLocaleString('en-IN', { maximumFractionDigits: 2 })} saved`;
+    },
     liveVariantPrices() {
-      return this.variantRows.map((row) => ({ choices: row.choices, price: Number(rupees(this.variantPriceInputs[row.key] || '')) }));
+      return this.variantRows.map((row) => ({ choices: row.choices, price: this.rowPrice(row.key), mrp: this.rowMRP(row.key) }));
     },
     get blocker() {
       if (!this.shots.length) return 'Add at least one photo';
@@ -652,14 +666,22 @@ document.addEventListener('alpine:init', () => {
       if (this.liveOptions().length && this.variantCount > 100) return 'Use at most 100 option combinations';
       if (this.variantRows.some((row) => !(Number(rupees(this.variantPriceInputs[row.key] || '')) > 0))) return 'Set a price for every option combination';
       if (!this.variantRows.length && !(this.priceValue > 0)) return 'Set a price above ₹0';
-      if (this.mrpValue > 0 && this.liveVariantPrices().some((v) => v.price > this.mrpValue)) return 'MRP cannot be below a combination price';
+      if (this.variantRows.some((row) => this.rowMRP(row.key) > 0 && this.rowMRP(row.key) < this.rowPrice(row.key))) return 'A combination MRP cannot be below its own price';
+      if (this.variantRows.some((row) => Number.isNaN(this.rowMRP(row.key)))) return 'Each combination MRP must be a number, or left blank';
       if (Number.isNaN(this.mrpValue)) return 'MRP must be a number, or left blank';
       if (!this.variantRows.length && this.mrpValue > 0 && this.mrpValue < this.priceValue) return 'MRP cannot be below the selling price';
       if (!(this.stockValue >= 0)) return 'Enter how many units you have';
       return null;
     },
     get discount() {
-      const mrp = this.mrpValue || 0, price = this.variantRows.length ? Math.min(...this.liveVariantPrices().map((v) => v.price || Infinity)) : (this.priceValue || 0);
+      if (this.variantRows.length) {
+        // The card shows the cheapest combination, so it shows that row's MRP.
+        const cheapest = this.liveVariantPrices().filter((v) => v.price > 0).sort((a, b) => a.price - b.price)[0];
+        if (!cheapest) return null;
+        const text = this.rowDiscount(JSON.stringify(cheapest.choices));
+        return text ? { bad: false, text: `Buyers see ${text} on the starting price.` } : null;
+      }
+      const mrp = this.mrpValue || 0, price = this.priceValue || 0;
       if (mrp <= 0 || price <= 0) return null;
       if (mrp < price) return { bad: true, text: 'MRP is below your selling price — buyers would see a markup, not a discount.' };
       if (mrp === price) return { bad: false, text: 'Same as the selling price, so no discount is shown.' };
@@ -729,6 +751,7 @@ document.addEventListener('alpine:init', () => {
           this.shots.forEach((s) => s.file && body.append('file', s.file));
           await sellerCall('POST', '/api/seller/items', body);
         }
+        try { sessionStorage.setItem('lw:flash', this.id ? 'Changes saved.' : `"${fields.title}" is listed — buyers can order it now.`); } catch {}
         lwLeave('/seller?pane=inventory');
       } catch (err) {
         lwToast(err.message, 'error');

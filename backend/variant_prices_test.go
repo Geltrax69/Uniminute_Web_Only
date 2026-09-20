@@ -66,3 +66,26 @@ func TestThreeOptionCombinationPrices(t *testing.T) {
 		t.Fatal("expected eight combinations")
 	}
 }
+
+// Each combination carries its own MRP, and the card's MRP follows the
+// combination whose price the card shows.
+func TestPerCombinationMRP(t *testing.T) {
+	item := InventoryItem{
+		Title: "Keyboard", Price: 8100, MRP: 14000,
+		Options: []ItemOption{{Name: "Model", Values: []string{"N-25", "N-32"}}},
+		VariantPrices: []VariantPrice{
+			{Choices: Choices{{"Model", "N-25"}}, Price: 6027, MRP: 9000},
+			{Choices: Choices{{"Model", "N-32"}}, Price: 11570, MRP: 16000},
+		},
+	}
+	if err := validateVariantPrices(&item); err != nil {
+		t.Fatal(err)
+	}
+	if item.Price != 6027 || item.MRP != 9000 {
+		t.Fatalf("card shows %v off %v", item.Price, item.MRP)
+	}
+	item.VariantPrices[1].MRP = 11000 // below its own price
+	if err := validateVariantPrices(&item); err == nil {
+		t.Fatal("MRP below the combination price accepted")
+	}
+}

@@ -244,3 +244,10 @@ html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   body:has(#lw-topbar) main { padding-bottom: 48px !important; }
   #toasts { bottom: 24px !important; }
 }
+
+/* ── Save progress bar (SellerSubmitBar) ────────────────────────────────── */
+/* Indeterminate: the upload has no byte-level progress to report, so the bar
+   only says "still going". */
+@keyframes lw-progress { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.lw-progress { animation: lw-progress 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .lw-progress { animation: none; width: 100%; } }

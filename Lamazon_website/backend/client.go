@@ -72,12 +72,17 @@ type Product struct {
 type VariantPrice struct {
 	Choices []Choice `json:"choices"`
 	Price   float64  `json:"price"`
+	MRP     float64  `json:"mrp,omitempty"`
 }
 
 // PriceFor returns the server-supplied price for an exact option combination.
 // Legacy listings without a matrix keep their original single price.
 func (p Product) PriceFor(picked []Choice) (float64, bool) {
 	if len(p.VariantPrices) == 0 {
+		return p.Price, true
+	}
+	// Nothing picked yet — the details page opens on the starting price.
+	if len(picked) == 0 {
 		return p.Price, true
 	}
 	for _, v := range p.VariantPrices {
@@ -103,6 +108,20 @@ func (p Product) PriceFor(picked []Choice) (float64, bool) {
 		}
 	}
 	return 0, false
+}
+
+// AnyDiscount is true when this listing shows a struck MRP for at least one
+// combination, so the details page renders the MRP row Alpine then drives.
+func (p Product) AnyDiscount() bool {
+	if p.Discounted() {
+		return true
+	}
+	for _, v := range p.VariantPrices {
+		if v.MRP > v.Price {
+			return true
+		}
+	}
+	return false
 }
 
 // Discounted mirrors Product.discounted: an MRP equal to the price is a sale
