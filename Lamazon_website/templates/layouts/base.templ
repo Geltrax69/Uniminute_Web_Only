@@ -24,6 +24,7 @@ templ Base(title, description, canonical string, content templ.Component) {
 			<link rel="preload" href="/static/fonts/InterTight-Variable.ttf" as="font" type="font/ttf" crossorigin/>
 			// tailwind.css is app.css compiled; app.css itself is only its source.
 			<link rel="stylesheet" href={ "/static/css/tailwind.css?v=" + tpl.AssetVersion }/>
+			<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 			<script src="/static/js/htmx.min.js" defer></script>
 			<script src={ "/static/js/app.js?v=" + tpl.AssetVersion } defer></script>
 			<script src="/static/js/alpine/cdn.min.js" defer></script>

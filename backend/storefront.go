@@ -166,7 +166,7 @@ func (a *API) handleStoreHome(w http.ResponseWriter, r *http.Request) {
 	}
 	a.render(w, "home.html", storePage{
 		Title:       "Uniminute — local shops, delivered on campus",
-		Description: "Order from shops around campus. Real stock, real prices, cash on delivery.",
+		Description: "Order from shops around campus. Real stock, real prices, online payment or cash on delivery.",
 		Products:    items,
 		Offers:      savingsOn(items),
 		Departments: a.departments(r, items),

@@ -2,7 +2,10 @@ module github.com/Geltrax69/Lamazon/backend
 
 go 1.25.6
 
-require github.com/jackc/pgx/v5 v5.10.0
+require (
+	github.com/jackc/pgx/v5 v5.10.0
+	github.com/razorpay/razorpay-go v1.4.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

@@ -2,9 +2,26 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"testing"
 )
+
+func TestValidPaymentProof(t *testing.T) {
+	proof := paymentProof{OrderID: "order_test", PaymentID: "pay_test"}
+	mac := hmac.New(sha256.New, []byte("secret"))
+	_, _ = mac.Write([]byte(proof.OrderID + "|" + proof.PaymentID))
+	proof.Signature = hex.EncodeToString(mac.Sum(nil))
+	if !validPaymentProof(proof, "secret") {
+		t.Fatal("valid Razorpay payment proof was rejected")
+	}
+	proof.PaymentID += "-tampered"
+	if validPaymentProof(proof, "secret") {
+		t.Fatal("tampered Razorpay payment proof was accepted")
+	}
+}
 
 func TestBasketCheckoutOneFeeAndMatchingViews(t *testing.T) {
 	h := testAPI(t)

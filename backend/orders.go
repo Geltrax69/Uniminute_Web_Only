@@ -2,17 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
+
+	razorpay "github.com/razorpay/razorpay-go"
 )
 
 var orderReferenceEncoding = base32.NewEncoding("23456789ABCDEFGHJKLMNPQRSTUVWXYZ").WithPadding(base32.NoPadding)
@@ -42,14 +47,16 @@ func orderReference(id string) string {
 // column list and the Scan cannot drift apart.
 const orderColumns = `id, item_id, item_title, units, amount, delivery_fee, stage, placed_at,
 	store_owner, store_name, receiver_name, receiver_phone, receiver_address,
-	reject_reason, rider_phone, assigned_to, options`
+	reject_reason, rider_phone, assigned_to, options, payment_method, payment_status,
+	razorpay_order_id, razorpay_payment_id`
 
 func scanOrder(row interface{ Scan(...any) error }) (Order, error) {
 	var o Order
 	err := row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName,
 		&o.ReceiverPhone, &o.ReceiverAddress, &o.RejectReason, &o.RiderPhone,
-		&o.AssignedTo, &o.Options)
+		&o.AssignedTo, &o.Options, &o.PaymentMethod, &o.PaymentStatus,
+		&o.RazorpayOrderID, &o.RazorpayPaymentID)
 	return o, err
 }
 
@@ -57,6 +64,39 @@ type checkoutLine struct {
 	ItemID  string  `json:"itemId"`
 	Units   int     `json:"units"`
 	Options Choices `json:"options,omitempty"`
+}
+
+type paymentProof struct {
+	PaymentID string `json:"razorpay_payment_id"`
+	OrderID   string `json:"razorpay_order_id"`
+	Signature string `json:"razorpay_signature"`
+}
+
+func validPaymentProof(payment paymentProof, secret string) bool {
+	if payment.OrderID == "" || payment.PaymentID == "" || payment.Signature == "" || secret == "" {
+		return false
+	}
+	provided, err := hex.DecodeString(payment.Signature)
+	if err != nil {
+		return false
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(payment.OrderID + "|" + payment.PaymentID))
+	return hmac.Equal(mac.Sum(nil), provided)
+}
+
+func razorpayInteger(value any) (int64, bool) {
+	switch n := value.(type) {
+	case int:
+		return int64(n), true
+	case int64:
+		return n, true
+	case float64:
+		if n == math.Trunc(n) {
+			return int64(n), true
+		}
+	}
+	return 0, false
 }
 
 // A legacy single-line request is still an order and includes its delivery fee.
@@ -78,7 +118,7 @@ func (a *API) handlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "please update Uniminute or reload the website before ordering")
 		return
 	}
-	a.placeBasket(w, r, []checkoutLine{{ItemID: in.ItemID, Units: in.Units}}, in.AddressID, in.ExpectedTotal, true, "")
+	a.placeBasket(w, r, []checkoutLine{{ItemID: in.ItemID, Units: in.Units}}, in.AddressID, in.ExpectedTotal, true, "", nil)
 }
 
 // POST /api/orders/checkout commits every line or none, with one fee per basket.
@@ -89,6 +129,7 @@ func (a *API) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		RequestID     string         `json:"requestId"`
 		AddressID     string         `json:"addressId"`
 		ExpectedTotal *float64       `json:"expectedTotal"`
+		Payment       *paymentProof  `json:"payment,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, 400, "invalid JSON body")
@@ -102,10 +143,32 @@ func (a *API) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "a checkout request ID is required")
 		return
 	}
-	a.placeBasket(w, r, in.Lines, in.AddressID, in.ExpectedTotal, false, in.RequestID)
+	if in.Payment != nil {
+		keyID, keySecret := os.Getenv("RAZORPAY_KEY_ID"), os.Getenv("RAZORPAY_KEY_SECRET")
+		if keyID == "" || keySecret == "" {
+			writeError(w, http.StatusServiceUnavailable, "online payment verification is not configured")
+			return
+		}
+		if !validPaymentProof(*in.Payment, keySecret) {
+			writeError(w, http.StatusBadRequest, "payment signature did not match")
+			return
+		}
+		order, err := razorpay.NewClient(keyID, keySecret).Order.Fetch(in.Payment.OrderID, nil, nil)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "could not confirm the Razorpay order")
+			return
+		}
+		orderAmount, ok := razorpayInteger(order["amount"])
+		currency, _ := order["currency"].(string)
+		if !ok || orderAmount != int64(math.Round(*in.ExpectedTotal*100)) || currency != "INR" {
+			writeError(w, http.StatusBadRequest, "payment amount does not match this order")
+			return
+		}
+	}
+	a.placeBasket(w, r, in.Lines, in.AddressID, in.ExpectedTotal, false, in.RequestID, in.Payment)
 }
 
-func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checkoutLine, addressID string, expected *float64, single bool, requestID string) {
+func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checkoutLine, addressID string, expected *float64, single bool, requestID string, payment *paymentProof) {
 	if len(lines) == 0 || len(lines) > 100 {
 		writeError(w, 400, "order between 1 and 100 items")
 		return
@@ -133,7 +196,8 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		Lines    []checkoutLine
 		Address  string
 		Expected *float64
-	}{lines, addressID, expected})
+		Payment  *paymentProof
+	}{lines, addressID, expected, payment})
 	fingerprint := hashCode(string(fingerprintBytes))
 	if requestID != "" {
 		if _, err = tx.ExecContext(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, buyer+":"+requestID); err != nil {
@@ -161,6 +225,21 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 			return
 		}
 	}
+	if payment != nil {
+		if _, err = tx.ExecContext(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "razorpay:"+payment.PaymentID); err != nil {
+			writeError(w, 500, "could not check payment status")
+			return
+		}
+		var used bool
+		if err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE razorpay_payment_id=$1)`, payment.PaymentID).Scan(&used); err != nil {
+			writeError(w, 500, "could not check payment status")
+			return
+		}
+		if used {
+			writeError(w, http.StatusConflict, "this payment has already been used")
+			return
+		}
+	}
 	{
 		var available bool
 		if err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM riders WHERE active)`).Scan(&available); err != nil {
@@ -184,6 +263,11 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 	}
 	basketFee := chargesTotal(charges)
 
+	paymentMethod, paymentStatus, razorpayOrderID, razorpayPaymentID := "cod", "due", "", ""
+	if payment != nil {
+		paymentMethod, paymentStatus = "razorpay", "paid"
+		razorpayOrderID, razorpayPaymentID = payment.OrderID, payment.PaymentID
+	}
 	out := make([]Order, 0, len(lines))
 	total := 0.0
 	for i, line := range lines {
@@ -241,9 +325,11 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		amount := math.Round((price*float64(line.Units)+fee)*100) / 100
 		o, err := scanOrder(tx.QueryRowContext(r.Context(), `INSERT INTO orders
    (item_id,item_title,units,amount,delivery_fee,stage,buyer_email,store_owner,store_name,
-    receiver_name,receiver_phone,receiver_address,options)
-   VALUES ($1,$2,$3,$4,$5,'received',$6,$7,$8,$9,$10,$11,$12) RETURNING `+orderColumns,
-			line.ItemID, title, line.Units, amount, fee, buyer, storeOwner, storeName, receiver.Name, receiver.Phone, receiver.Line, choices.key()))
+    receiver_name,receiver_phone,receiver_address,options,payment_method,payment_status,
+    razorpay_order_id,razorpay_payment_id)
+   VALUES ($1,$2,$3,$4,$5,'received',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING `+orderColumns,
+			line.ItemID, title, line.Units, amount, fee, buyer, storeOwner, storeName, receiver.Name, receiver.Phone, receiver.Line, choices.key(),
+			paymentMethod, paymentStatus, razorpayOrderID, razorpayPaymentID))
 		if err != nil {
 			log.Printf("checkout insert: %v", err)
 			writeError(w, 500, "could not place order")
@@ -335,7 +421,8 @@ func (a *API) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee,
 			&o.Stage, &o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.RejectReason, &o.RiderPhone,
-			&o.AssignedTo, &o.Options, &o.DeliveryCode); err != nil {
+			&o.AssignedTo, &o.Options, &o.PaymentMethod, &o.PaymentStatus,
+			&o.RazorpayOrderID, &o.RazorpayPaymentID, &o.DeliveryCode); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -399,7 +486,8 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 	var o Order
 	err = row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
-		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options, &buyer)
+		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options,
+		&o.PaymentMethod, &o.PaymentStatus, &o.RazorpayOrderID, &o.RazorpayPaymentID, &buyer)
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}
@@ -409,8 +497,12 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 			"the order over — it is what closes the delivery.",
 			o.StoreName, o.Units, o.ItemTitle, code), "/orders/"+o.ID)
 	if o.AssignedTo != "" {
+		action := "Collect order"
+		if o.PaymentStatus == "paid" {
+			action = "Pick up order"
+		}
 		a.notifyOrderLater("rider:"+o.AssignedTo, "New delivery assigned",
-			fmt.Sprintf("Collect order %s from %s: %d × %s.", orderReference(o.ID), o.StoreName, o.Units, o.ItemTitle), "/delivery")
+			fmt.Sprintf("%s %s from %s: %d × %s.", action, orderReference(o.ID), o.StoreName, o.Units, o.ItemTitle), "/delivery")
 	}
 	writeJSON(w, http.StatusOK, o)
 }
@@ -436,7 +528,8 @@ func (a *API) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
 	var o Order
 	err := row.Scan(&o.ID, &o.ItemID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
-		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options, &buyer)
+		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options,
+		&o.PaymentMethod, &o.PaymentStatus, &o.RazorpayOrderID, &o.RazorpayPaymentID, &buyer)
 	if !a.orderMoved(w, r, id, err) {
 		return
 	}
@@ -513,17 +606,21 @@ func (a *API) orderMoved(w http.ResponseWriter, r *http.Request, id string, err 
 // by acceptance ensures a cancellation racing the seller cannot undo acceptance.
 func (a *API) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	o, err := scanOrder(a.db.sql.QueryRowContext(r.Context(), `UPDATE orders SET stage='rejected',
-  reject_reason='Cancelled by customer' WHERE id=$1 AND buyer_email=$2 AND stage='received'
+  reject_reason='Cancelled by customer' WHERE id=$1 AND buyer_email=$2 AND stage='received' AND payment_status!='paid'
   RETURNING `+orderColumns, r.PathValue("id"), a.owner(r)))
 	if errors.Is(err, sql.ErrNoRows) {
-		var stage string
-		err = a.db.sql.QueryRowContext(r.Context(), `SELECT stage FROM orders WHERE id=$1 AND buyer_email=$2`, r.PathValue("id"), a.owner(r)).Scan(&stage)
+		var stage, paymentStatus string
+		err = a.db.sql.QueryRowContext(r.Context(), `SELECT stage,payment_status FROM orders WHERE id=$1 AND buyer_email=$2`, r.PathValue("id"), a.owner(r)).Scan(&stage, &paymentStatus)
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, 404, "order not found")
 			return
 		}
 		if err != nil {
 			writeError(w, 500, "could not cancel order")
+			return
+		}
+		if paymentStatus == "paid" && stage == string(StageReceived) {
+			writeError(w, 409, "contact support to cancel and refund an online-paid order")
 			return
 		}
 		writeError(w, 409, "only orders waiting for the shop can be cancelled")

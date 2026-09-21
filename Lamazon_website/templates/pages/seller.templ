@@ -206,7 +206,7 @@ templ sellerOrderRow(o backend.Order) {
 			if len(o.Options) > 0 {
 				<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
 			}
-			<p class="mt-0.5 text-[12.5px] text-muted">₹{ shop.Money(o.Amount) }</p>
+			<p class="mt-0.5 text-[12.5px] text-muted">₹{ shop.Money(o.Amount) } · { tpl.When(o.PaymentStatus == "paid", "Paid online", "Cash on delivery") }</p>
 			if o.ReceiverName != "" {
 				<p class="mt-1.5 truncate text-[11.5px] text-muted">For { o.ReceiverName } · { o.ReceiverPhone }</p>
 			}

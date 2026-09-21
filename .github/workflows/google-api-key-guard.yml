@@ -1,0 +1,18 @@
+name: Google API key guard
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Reject committed Google API keys
+        run: ./scripts/check-no-google-api-keys.sh

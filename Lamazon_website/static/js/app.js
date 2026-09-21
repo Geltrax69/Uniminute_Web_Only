@@ -158,6 +158,97 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // ── Razorpay checkout ───────────────────────────────────────────────────
+  // The server recalculates the cart total before creating the Razorpay order;
+  // this amount is only an early stale-page check, never a trusted price.
+  Alpine.data('razorpayCheckout', (amount) => ({
+    amount,
+    busy: false,
+    error: '',
+    pendingPayment: null,
+    get buttonLabel() {
+      return this.pendingPayment
+        ? 'Retry order confirmation'
+        : `Pay securely  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+    },
+    async responseError(response, fallback) {
+      try { return (await response.json()).error || fallback; } catch { return fallback; }
+    },
+    async pay() {
+      if (this.busy) return;
+      this.error = '';
+      if (!window.Razorpay) {
+        this.error = 'Secure checkout did not load. Check your connection and try again.';
+        lwToast(this.error, 'error');
+        return;
+      }
+      this.busy = true;
+      try {
+        if (this.pendingPayment) {
+          await this.verify(this.pendingPayment);
+          return;
+        }
+        const created = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ amount: this.amount, currency: 'INR', receipt: `cart-${Date.now()}` }),
+        });
+        if (!created.ok) throw new Error(await this.responseError(created, 'Could not start payment. Try again.'));
+        const order = await created.json();
+        const checkout = new Razorpay({
+          key: order.key_id,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.order_id,
+          name: 'Uniminute',
+          description: 'Cart payment',
+          handler: async (payment) => {
+            this.pendingPayment = payment;
+            try {
+              await this.verify(payment);
+            } catch (err) {
+              this.error = `${err.message || 'Payment could not be verified.'} Use “Retry order confirmation” — do not pay again.`;
+              this.busy = false;
+              lwToast(this.error, 'error');
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              this.busy = false;
+              lwToast('Payment cancelled. No order was placed.');
+            },
+          },
+          theme: { color: '#143E32' },
+        });
+        checkout.on('payment.failed', (event) => {
+          this.error = event?.error?.description || 'Payment failed. Check the details and try again.';
+          this.busy = false;
+          lwToast(this.error, 'error');
+        });
+        checkout.open();
+      } catch (err) {
+        const message = err.message || 'Could not start payment. Try again.';
+        this.error = this.pendingPayment
+          ? `${message} Use “Retry order confirmation” — do not pay again.`
+          : message;
+        this.busy = false;
+        lwToast(this.error, 'error');
+      }
+    },
+    async verify(payment) {
+      const verified = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payment),
+      });
+      if (!verified.ok) throw new Error(await this.responseError(verified, 'Payment could not be verified.'));
+      const result = await verified.json();
+      this.pendingPayment = null;
+      lwProcessing('Payment confirmed. Placing your order…', false);
+      location.assign(result.redirect || '/orders');
+    },
+  }));
+
   // ── sign-in card (LoginScreen) ───────────────────────────────────────────
   // One field per step; the button only wakes for something that could be
   // right, and the line under it says why it will not.

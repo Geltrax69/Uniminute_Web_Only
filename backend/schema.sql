@@ -226,6 +226,21 @@ ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS picked_at        TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS delivered_at     TIMESTAMPTZ;
 
+-- Payment details are attached to the existing fulfilment records. Cash orders
+-- remain due at the door; an online order is marked paid only after the
+-- Razorpay signature is verified by the API.
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS payment_method      TEXT NOT NULL DEFAULT 'cod',
+    ADD COLUMN IF NOT EXISTS payment_status      TEXT NOT NULL DEFAULT 'due',
+    ADD COLUMN IF NOT EXISTS razorpay_order_id   TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check
+    CHECK (payment_method IN ('cod', 'razorpay'));
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_payment_status_check
+    CHECK (payment_status IN ('due', 'paid'));
+
 -- Rejected, picked: the stages the workflow gained. Dropped first so the
 -- file stays runnable on every boot.
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_stage_check;

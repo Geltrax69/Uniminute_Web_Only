@@ -663,14 +663,14 @@ func deliveryBody(d DeliveryData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "\">Collected ₹")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var32 string
-				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(o.Amount))
+				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(paymentCollectionLabel(o.PaymentStatus, o.Amount, true))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 155, Col: 130}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 155, Col: 152}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
@@ -820,14 +820,14 @@ func riderOrderCard(o backend.RiderOrder, action string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\">Collect ₹")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var40 string
-		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(o.Amount))
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(paymentCollectionLabel(o.PaymentStatus, o.Amount, false))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 201, Col: 126}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 201, Col: 151}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -995,6 +995,16 @@ func riderOrderCard(o backend.RiderOrder, action string) templ.Component {
 	})
 }
 
+func paymentCollectionLabel(status string, amount float64, delivered bool) string {
+	if status == "paid" {
+		return "Paid online"
+	}
+	if delivered {
+		return "Collected ₹" + shop.Money(amount)
+	}
+	return "Collect ₹" + shop.Money(amount)
+}
+
 // riderStop is _Stop: one end of the run.
 func riderStop(icon, label, name, phone, address string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -1032,7 +1042,7 @@ func riderStop(icon, label, name, phone, address string) templ.Component {
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 228, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 238, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 		if templ_7745c5c3_Err != nil {
@@ -1045,7 +1055,7 @@ func riderStop(icon, label, name, phone, address string) templ.Component {
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 229, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 239, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -1063,7 +1073,7 @@ func riderStop(icon, label, name, phone, address string) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(phone)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 231, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 241, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {
@@ -1087,7 +1097,7 @@ func riderStop(icon, label, name, phone, address string) templ.Component {
 			var templ_7745c5c3_Var54 string
 			templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 236, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 246, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 			if templ_7745c5c3_Err != nil {
@@ -1134,7 +1144,7 @@ func riderTile(label, value, colour string) templ.Component {
 		var templ_7745c5c3_Var56 string
 		templ_7745c5c3_Var56, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.SafeCSS("color:" + tpl.When(colour == "", "#17221D", colour)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 244, Col: 118}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 254, Col: 118}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 		if templ_7745c5c3_Err != nil {
@@ -1147,7 +1157,7 @@ func riderTile(label, value, colour string) templ.Component {
 		var templ_7745c5c3_Var57 string
 		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 244, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 254, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 		if templ_7745c5c3_Err != nil {
@@ -1160,7 +1170,7 @@ func riderTile(label, value, colour string) templ.Component {
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 245, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/delivery.templ`, Line: 255, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 		if templ_7745c5c3_Err != nil {

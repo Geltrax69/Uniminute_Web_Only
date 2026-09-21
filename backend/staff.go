@@ -902,7 +902,8 @@ func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.sql.QueryContext(r.Context(), `
 		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.options, o.placed_at,
 		       o.store_name, o.receiver_name, o.receiver_phone,
-		       o.receiver_address, o.rider_phone, o.assigned_to, o.buyer_email
+		       o.receiver_address, o.rider_phone, o.assigned_to, o.buyer_email,
+		       o.payment_method, o.payment_status
 		FROM orders o
 		WHERE ($1::text = '' OR o.stage = $1)
 		ORDER BY o.placed_at DESC LIMIT 200`, stage)
@@ -918,7 +919,8 @@ func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&o.ID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
-			&o.ReceiverAddress, &o.RiderPhone, &o.AssignedTo, &o.BuyerEmail); err != nil {
+			&o.ReceiverAddress, &o.RiderPhone, &o.AssignedTo, &o.BuyerEmail,
+			&o.PaymentMethod, &o.PaymentStatus); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1007,7 +1009,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 		       -- line beats no card at all.
 		       trim(both ', ' FROM concat_ws(', ', s.location, s.city)),
 		       CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_name ELSE '' END, CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_phone ELSE '' END, CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_address ELSE '' END,
-		       o.rider_phone, o.assigned_to
+		       o.rider_phone, o.assigned_to, o.payment_method, o.payment_status
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
 		WHERE (o.stage = 'accepted' AND o.rider_phone = ''
@@ -1029,7 +1031,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.RiderPhone,
-			&o.AssignedTo); err != nil {
+			&o.AssignedTo, &o.PaymentMethod, &o.PaymentStatus); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1059,7 +1061,7 @@ func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 		       o.store_name,
 		       trim(both ', ' FROM concat_ws(', ', s.location, s.city)),
 		       o.receiver_name, o.receiver_phone, o.receiver_address,
-		       o.delivered_at
+		       o.delivered_at, o.payment_method, o.payment_status
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
 		WHERE o.stage = 'delivered' AND o.rider_phone = $1
@@ -1080,7 +1082,8 @@ func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&o.ID, &o.ItemTitle, &o.Units, &o.Amount, &o.DeliveryFee, &o.Stage,
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
-			&o.ReceiverPhone, &o.ReceiverAddress, &o.DeliveredAt); err != nil {
+			&o.ReceiverPhone, &o.ReceiverAddress, &o.DeliveredAt,
+			&o.PaymentMethod, &o.PaymentStatus); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}

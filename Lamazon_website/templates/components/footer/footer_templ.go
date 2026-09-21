@@ -35,7 +35,7 @@ func Footer(eta string, cities []string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"mt-12 border-t border-track bg-surface px-gutter py-10 pb-36\"><div class=\"mx-auto grid max-w-readable gap-8 md:grid-cols-3\"><div><h3 class=\"text-title-small\">Uniminute</h3><p class=\"mt-2 text-body text-muted\">Local shops, delivered on campus. Real stock, real prices, cash on delivery.</p><p class=\"mt-3 inline-flex items-center gap-2 text-small text-muted\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"mt-12 border-t border-track bg-surface px-gutter py-10 pb-36\"><div class=\"mx-auto grid max-w-readable gap-8 md:grid-cols-3\"><div><h3 class=\"text-title-small\">Uniminute</h3><p class=\"mt-2 text-body text-muted\">Local shops, delivered on campus. Real stock, real prices, secure online payment or cash on delivery.</p><p class=\"mt-3 inline-flex items-center gap-2 text-small text-muted\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -228,23 +228,27 @@ const (
 )
 
 type Order struct {
-	ID              string     `json:"id"`
-	ItemID          string     `json:"itemId"`
-	ItemTitle       string     `json:"itemTitle"`
-	Options         []Choice   `json:"options"`
-	Units           int        `json:"units"`
-	Amount          float64    `json:"amount"`
-	DeliveryFee     float64    `json:"deliveryFee"`
-	Stage           OrderStage `json:"stage"`
-	PlacedAt        time.Time  `json:"placedAt"`
-	StoreName       string     `json:"storeName,omitempty"`
-	ReceiverName    string     `json:"receiverName,omitempty"`
-	ReceiverPhone   string     `json:"receiverPhone,omitempty"`
-	RejectReason    string     `json:"rejectReason,omitempty"`
-	DeliveryCode    string     `json:"deliveryCode,omitempty"`
-	ReceiverAddress string     `json:"receiverAddress,omitempty"`
-	RiderPhone      string     `json:"riderPhone,omitempty"`
-	AssignedTo      string     `json:"assignedTo,omitempty"`
+	ID                string     `json:"id"`
+	ItemID            string     `json:"itemId"`
+	ItemTitle         string     `json:"itemTitle"`
+	Options           []Choice   `json:"options"`
+	Units             int        `json:"units"`
+	Amount            float64    `json:"amount"`
+	DeliveryFee       float64    `json:"deliveryFee"`
+	PaymentMethod     string     `json:"paymentMethod"`
+	PaymentStatus     string     `json:"paymentStatus"`
+	RazorpayOrderID   string     `json:"razorpayOrderId,omitempty"`
+	RazorpayPaymentID string     `json:"razorpayPaymentId,omitempty"`
+	Stage             OrderStage `json:"stage"`
+	PlacedAt          time.Time  `json:"placedAt"`
+	StoreName         string     `json:"storeName,omitempty"`
+	ReceiverName      string     `json:"receiverName,omitempty"`
+	ReceiverPhone     string     `json:"receiverPhone,omitempty"`
+	RejectReason      string     `json:"rejectReason,omitempty"`
+	DeliveryCode      string     `json:"deliveryCode,omitempty"`
+	ReceiverAddress   string     `json:"receiverAddress,omitempty"`
+	RiderPhone        string     `json:"riderPhone,omitempty"`
+	AssignedTo        string     `json:"assignedTo,omitempty"`
 }
 
 // LoginStart is POST /api/login's answer: either "this address has a password,
@@ -506,13 +510,14 @@ func (b *Backend) DefaultAddress(ctx context.Context, token, id string) error {
 }
 
 // POST /api/orders/checkout — commits every line or none.
-func (b *Backend) Checkout(ctx context.Context, token string, lines []CheckoutLine, addressID, requestID string, expectedTotal float64) (CheckoutResult, error) {
+func (b *Backend) Checkout(ctx context.Context, token string, lines []CheckoutLine, addressID, requestID string, expectedTotal float64, payment *PaymentProof) (CheckoutResult, error) {
 	in := struct {
 		Lines         []CheckoutLine `json:"lines"`
 		RequestID     string         `json:"requestId"`
 		AddressID     string         `json:"addressId"`
 		ExpectedTotal *float64       `json:"expectedTotal"`
-	}{Lines: lines, RequestID: requestID, AddressID: addressID, ExpectedTotal: &expectedTotal}
+		Payment       *PaymentProof  `json:"payment,omitempty"`
+	}{Lines: lines, RequestID: requestID, AddressID: addressID, ExpectedTotal: &expectedTotal, Payment: payment}
 	var out CheckoutResult
 	err := b.do(ctx, http.MethodPost, "/api/orders/checkout", token, in, &out)
 	return out, err
@@ -534,6 +539,14 @@ type CheckoutResult struct {
 	Orders      []Order `json:"orders"`
 	Amount      float64 `json:"amount"`
 	DeliveryFee float64 `json:"deliveryFee"`
+}
+
+// PaymentProof is the successful Razorpay Checkout response. The API verifies
+// the signature again before it records an order as paid.
+type PaymentProof struct {
+	PaymentID string `json:"razorpay_payment_id"`
+	OrderID   string `json:"razorpay_order_id"`
+	Signature string `json:"razorpay_signature"`
 }
 
 // GET /api/orders — the buyer's own orders, newest first.
@@ -611,6 +624,8 @@ type RiderOrder struct {
 	Stage           OrderStage `json:"stage"`
 	AssignedTo      string     `json:"assignedTo"`
 	Amount          float64    `json:"amount"`
+	PaymentMethod   string     `json:"paymentMethod"`
+	PaymentStatus   string     `json:"paymentStatus"`
 	Units           int        `json:"units"`
 	ItemTitle       string     `json:"itemTitle"`
 	StoreName       string     `json:"storeName"`

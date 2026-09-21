@@ -7,7 +7,7 @@ package main
 // It contains no bracketed blanks, because a blank anywhere in a document
 // unpublishes the whole of it — five pages that read "This policy is not
 // published yet" because nobody had typed a date. Everything here is a fact
-// this codebase can stand behind: cash on delivery, the four-digit code, the
+// this codebase can stand behind: online or cash payment, the four-digit code, the
 // per-order delivery charge, the named third parties that actually process
 // data. Nothing about a legal entity is invented; the details only the
 // operator knows are asked for on the Contact page rather than guessed at.
@@ -51,8 +51,9 @@ the reason.
 ## Prices and payment
 Shops set their own prices and their own MRP. Where a discount is shown, it is
 the difference between the two as the shop entered them. Prices include taxes
-unless a shop says otherwise. Orders are paid in cash to the rider on delivery;
-delivery is charged per order and the amount is shown before you place it. We
+unless a shop says otherwise. Orders can be paid online through Razorpay or in
+cash to the rider on delivery; delivery is charged per order and the amount is
+shown before you place it. We
 may cancel an order that was listed at an incorrect price, and anything already
 paid is refunded in full.
 
@@ -154,9 +155,10 @@ The rider calls the number on the order. Have your four-digit delivery code
 ready — the order is only closed when it is entered, which is how we know it
 reached you and not somebody else.
 
-## Payment on delivery
-Orders are paid in cash to the rider at the door. Have the order total ready if
-you can; riders do not always carry change.`
+## Payment
+Orders paid online through Razorpay are shown as paid to the rider. For cash on
+delivery orders, have the order total ready if you can; riders do not always
+carry change.`
 
 const refundsText = `## Cancellation
 You may request cancellation of your order before it is dispatched, subject to
@@ -170,8 +172,8 @@ We may cancel an order in situations such as product unavailability, incorrect
 pricing, suspected fraudulent activity, or operational issues.
 
 ## Refunds
-Orders are paid in cash on delivery, so most cancellations simply mean nothing
-is paid. Where money has changed hands and an order qualifies for a refund, the
+For cash on delivery orders, most cancellations simply mean nothing is paid.
+Where money has changed hands and an order qualifies for a refund, the
 refund is made through the same route it was paid, or another appropriate one
 agreed with you. Refund processing time may depend on the payment provider or
 bank.

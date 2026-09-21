@@ -26,7 +26,7 @@ import (
 var faqs = [][2]string{
 	{"Where is my order?", "Open My Orders and tap an order for its current status, delivery address and cancellation options. Pull down to refresh."},
 	{"How do I cancel an order?", "Open the order in My Orders and choose Cancel order before the shop accepts it. Accepted orders cannot be cancelled in the app."},
-	{"When do I get my refund?", "The app does not process online payments or automatic refunds. Read the published Refunds policy for the applicable terms."},
+	{"When do I get my refund?", "Eligible online payments are refunded through the original payment route. Refunds are not automatic yet, so contact support with the order and payment IDs. Read the Refunds policy for the applicable terms."},
 	{"Can I change my delivery address?", "Yes — pick a different saved address before checkout, or add a new one from Saved Addresses."},
 	{"Why do prices differ between shops?", "Each shop sets its own price. Use Compare Prices on any product to see every nearby shop selling it."},
 }

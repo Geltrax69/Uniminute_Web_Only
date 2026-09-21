@@ -140,15 +140,19 @@ const (
 // the address book — editing an address later must not redirect a bag that is
 // already out.
 type Order struct {
-	ID          string     `json:"id"`
-	ItemID      string     `json:"itemId"`
-	ItemTitle   string     `json:"itemTitle"`
-	Units       int        `json:"units"`
-	Amount      float64    `json:"amount"`
-	DeliveryFee float64    `json:"deliveryFee"`
-	Stage       OrderStage `json:"stage"`
-	Options     Choices    `json:"options"`
-	PlacedAt    time.Time  `json:"placedAt"`
+	ID                string     `json:"id"`
+	ItemID            string     `json:"itemId"`
+	ItemTitle         string     `json:"itemTitle"`
+	Units             int        `json:"units"`
+	Amount            float64    `json:"amount"`
+	DeliveryFee       float64    `json:"deliveryFee"`
+	PaymentMethod     string     `json:"paymentMethod"`
+	PaymentStatus     string     `json:"paymentStatus"`
+	RazorpayOrderID   string     `json:"razorpayOrderId,omitempty"`
+	RazorpayPaymentID string     `json:"razorpayPaymentId,omitempty"`
+	Stage             OrderStage `json:"stage"`
+	Options           Choices    `json:"options"`
+	PlacedAt          time.Time  `json:"placedAt"`
 
 	StoreOwner string `json:"storeOwner,omitempty"`
 	StoreName  string `json:"storeName,omitempty"`

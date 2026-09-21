@@ -70,7 +70,7 @@ templ orderDetailBody(d OrderDetailData) {
 				</div>
 				<div class="my-3 h-px"></div>
 				<div class="flex items-center">
-					<p class="flex-1 text-[14px] font-semibold text-text">Total paid on delivery</p>
+					<p class="flex-1 text-[14px] font-semibold text-text">{ tpl.When(o.PaymentStatus == "paid", "Total paid online", "Total due on delivery") }</p>
 					<p class="display-price text-[26px] text-text">₹{ shop.Money(o.Amount) }</p>
 				</div>
 			</div>
@@ -84,7 +84,7 @@ templ orderDetailBody(d OrderDetailData) {
 					@ui.Icon("refresh-cw", "h-[18px] w-[18px]")
 				</a>
 			</div>
-			if o.Stage == backend.StageReceived && !cancelled {
+			if o.Stage == backend.StageReceived && !cancelled && o.PaymentStatus != "paid" {
 				<div class="mt-2.5" x-data>
 					<button type="button" class={ ui.ButtonClass(false) + " w-full" } x-on:click="$refs.cancel.showModal()">
 						<span class="truncate">Cancel order</span>
@@ -99,6 +99,8 @@ templ orderDetailBody(d OrderDetailData) {
 						</div>
 					</dialog>
 				</div>
+			} else if o.Stage == backend.StageReceived && o.PaymentStatus == "paid" {
+				<p class="mt-3 text-center text-body text-muted">Need to cancel? Contact support with payment ID { o.RazorpayPaymentID } so the refund can be tracked.</p>
 			}
 		</div>
 		if o.Stage == backend.StageDelivered {

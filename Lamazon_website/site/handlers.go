@@ -1365,19 +1365,12 @@ func (s *Site) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		redirect(w, r, "/addresses/new")
 		return
 	}
-	entries := s.resolveCartEntries(r.Context(), shop.ReadCart(r))
-	if len(entries) == 0 {
+	amount, ok := s.cartAmountPaise(r)
+	if !ok {
 		redirect(w, r, "/cart")
 		return
 	}
-
-	var lines []backend.CheckoutLine
-	for _, e := range entries {
-		id, picked := shop.SplitLine(e.Product.ID)
-		lines = append(lines, backend.CheckoutLine{ItemID: id, Units: e.Qty, Options: picked})
-	}
-	expected := shop.CartSubtotal(entries) + shop.ChargesTotal(s.charges(r.Context()))
-	result, err := s.backend.Checkout(r.Context(), p.AccessToken, lines, addressID, shop.CheckoutRequestID(r), expected)
+	result, err := s.checkoutCart(r, p.AccessToken, addressID, float64(amount)/100, nil)
 	if err != nil {
 		// Checkout is a native form submission so its loading screen cannot be
 		// stranded by an AJAX redirect. The cart renders the recovery inline.

@@ -31,13 +31,23 @@ func APIBase() string {
 
 // New is the whole site as one handler, shared by cmd/server and the Vercel function.
 func New(apiBase string) http.Handler {
-	site := &Site{backend: backend.NewBackend(apiBase), apiBase: apiBase}
+	payment := razorpayFromEnv()
+	site := &Site{
+		backend:           backend.NewBackend(apiBase),
+		apiBase:           apiBase,
+		razorpay:          payment.orders,
+		razorpayKeyID:     payment.keyID,
+		razorpayKeySecret: payment.keySecret,
+	}
 	return recoverer(site.keepSession(freshForStaff(site.routes())))
 }
 
 type Site struct {
-	backend *backend.Backend
-	apiBase string
+	backend           *backend.Backend
+	apiBase           string
+	razorpay          razorpayOrderCreator
+	razorpayKeyID     string
+	razorpayKeySecret string
 }
 
 func (s *Site) routes() http.Handler {
@@ -116,6 +126,8 @@ func (s *Site) routes() http.Handler {
 	mux.HandleFunc("POST /account/addresses/{id}/delete", s.handleAddressDelete)
 
 	mux.HandleFunc("POST /checkout", s.handleCheckout)
+	mux.HandleFunc("POST /api/create-order", s.handleCreateRazorpayOrder)
+	mux.HandleFunc("POST /api/verify-payment", s.handleVerifyRazorpayPayment)
 	mux.HandleFunc("POST /orders/{id}/cancel", s.handleOrderCancel)
 	mux.HandleFunc("POST /orders/{id}/review", s.handleReview)
 

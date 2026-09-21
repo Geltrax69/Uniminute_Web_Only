@@ -5,6 +5,9 @@ package cart
 // that names the real next step (sign in, or place the order).
 
 import (
+	"math"
+	"strconv"
+
 	"lamazon/website/backend"
 	"lamazon/website/shop"
 	"lamazon/website/templates/components/ui"
@@ -36,8 +39,8 @@ templ PayOnDelivery() {
 	<div class="flex items-center rounded bg-surface p-4 shadow-surface">
 		@ui.Icon("banknote", "h-6 w-6 shrink-0 text-muted")
 		<div class="ml-4 min-w-0 py-2">
-			<p class="text-body text-text">Paying by cash on delivery</p>
-			<p class="text-body text-muted">Hand the amount to the rider when the order arrives. It is the only way to pay today.</p>
+			<p class="text-body text-text">Choose how to pay</p>
+			<p class="text-body text-muted">Pay securely online now, or hand the amount to the rider on delivery.</p>
 		</div>
 	</div>
 }
@@ -64,6 +67,27 @@ templ Summary(d Data) {
 		<div class="h-3.5"></div>
 		{{ short := shop.CartShortfall(d.Entries) }}
 		if d.SignedIn {
+			<div x-data={ "razorpayCheckout(" + strconv.FormatInt(paymentPaise(total), 10) + ")" }>
+				<button
+					type="button"
+					class={ ui.ButtonClass(true) + " w-full" }
+					x-on:click="pay()"
+					x-bind:disabled={ tplWhen(short > 0 || d.Address == nil, "true", "busy") }
+					disabled?={ short > 0 || d.Address == nil }
+					x-bind:aria-busy="busy">
+					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
+					@ui.Icon("shield-check", "h-[17px] w-[17px]")
+					<span class="truncate whitespace-pre" x-show="!busy" x-text="buttonLabel">Pay securely  ·  ₹{ shop.Money(total) }</span>
+					<span class="truncate" x-show="busy" x-cloak>Opening secure checkout…</span>
+				</button>
+				<p class="mt-2 text-center text-small text-muted">Cards, UPI, netbanking and wallets via Razorpay</p>
+				<p class="mt-2 text-body text-danger" role="alert" x-show="error" x-text="error" x-cloak></p>
+			</div>
+			<div class="my-4 flex items-center gap-3 text-small text-muted" aria-hidden="true">
+				<span class="h-px flex-1 bg-track"></span>
+				<span>or pay on delivery</span>
+				<span class="h-px flex-1 bg-track"></span>
+			</div>
 			<form
 				method="post"
 				action="/checkout"
@@ -75,7 +99,7 @@ templ Summary(d Data) {
 				}
 				<button type="submit" class={ ui.ButtonClass(true) + " w-full" } x-bind:disabled={ tplWhen(short > 0, "true", "busy") } disabled?={ short > 0 } x-bind:aria-busy="busy">
 					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
-					<span class="truncate whitespace-pre" x-show="!busy">Place order  ·  ₹{ shop.Money(total) }</span>
+					<span class="truncate whitespace-pre" x-show="!busy">Place cash order  ·  ₹{ shop.Money(total) }</span>
 					<span class="truncate" x-show="busy" x-cloak>Placing your order…</span>
 				</button>
 				if short > 0 {
@@ -102,4 +126,8 @@ func subtotalLabel(n int) string {
 		return "Sub Total (1 item)"
 	}
 	return "Sub Total (" + shop.Itoa(n) + " items)"
+}
+
+func paymentPaise(v float64) int64 {
+	return int64(math.Round(v * 100))
 }

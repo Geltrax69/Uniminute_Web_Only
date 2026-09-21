@@ -49,7 +49,8 @@ Then start the website:
 ```bash
 # Terminal 2 — website on :8100
 cd Lamazon_website
-go run .
+set -a && source ../.env && set +a
+go run ./cmd/server
 ```
 
 Open http://localhost:8100.
@@ -60,6 +61,12 @@ Open http://localhost:8100.
 |----------|---------|-------------|
 | `API_BASE` | `http://localhost:8080` | URL of the existing backend |
 | `PORT` | `8100` | Port this server listens on |
+| `RAZORPAY_KEY_ID` | — | Razorpay public test/live key used to open Standard Checkout |
+| `RAZORPAY_KEY_SECRET` | — | Server-only Razorpay secret used to create orders and verify signatures |
+
+Keep both Razorpay values in the ignored repository-root `.env` file for local development and
+set them in the hosting provider's environment for deployed builds. Never put
+`RAZORPAY_KEY_SECRET` in templates or browser JavaScript.
 
 ---
 

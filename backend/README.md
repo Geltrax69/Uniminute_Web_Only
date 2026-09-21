@@ -28,12 +28,16 @@ docker run -d --name lamazon-pg \
   -e POSTGRES_USER=lamazon -e POSTGRES_PASSWORD=lamazon -e POSTGRES_DB=lamazon \
   -p 5433:5432 postgres:16-alpine
 
+set -a && source ../.env && set +a
 go run .              # http://localhost:8080
 go test ./...         # runs against DATABASE_URL, skips if no database
 ```
 
 `DATABASE_URL` defaults to
 `postgres://lamazon:lamazon@localhost:5433/lamazon?sslmode=disable`.
+Razorpay checkout also requires `RAZORPAY_KEY_ID` and
+`RAZORPAY_KEY_SECRET`; `dev-full-stack.sh` loads both from the ignored
+repository-root `.env` automatically.
 
 ## Calling it from Flutter
 
