@@ -163,13 +163,15 @@ document.addEventListener('alpine:init', () => {
   // this amount is only an early stale-page check, never a trusted price.
   Alpine.data('razorpayCheckout', (amount) => ({
     amount,
+    method: 'razorpay',
     busy: false,
+    cashBusy: false,
     error: '',
     pendingPayment: null,
     get buttonLabel() {
       return this.pendingPayment
         ? 'Retry order confirmation'
-        : `Pay securely  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+        : `${this.method === 'cod' ? 'Place cash order' : 'Continue with Razorpay'}  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
     },
     async responseError(response, fallback) {
       try { return (await response.json()).error || fallback; } catch { return fallback; }
@@ -234,6 +236,17 @@ document.addEventListener('alpine:init', () => {
         this.busy = false;
         lwToast(this.error, 'error');
       }
+    },
+    place(cashForm) {
+      this.error = '';
+      if (this.pendingPayment || this.method === 'razorpay') {
+        this.pay();
+        return;
+      }
+      if (this.cashBusy || !cashForm) return;
+      this.cashBusy = true;
+      lwProcessing('Placing your order…', false);
+      cashForm.requestSubmit();
     },
     async verify(payment) {
       const verified = await fetch('/api/verify-payment', {

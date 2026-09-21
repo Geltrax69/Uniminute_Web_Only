@@ -4,12 +4,19 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
+
+type unusedOrderCreator struct{}
+
+func (unusedOrderCreator) Create(map[string]interface{}, map[string]string) (map[string]interface{}, error) {
+	return nil, nil
+}
 
 func TestVerifyPaymentSignature(t *testing.T) {
 	const (
@@ -65,13 +72,42 @@ func TestPaymentStateRoundTripAndTamper(t *testing.T) {
 }
 
 func TestCreateOrderRejectsSubMinimumAmount(t *testing.T) {
-	s := &Site{}
+	s := &Site{razorpay: unusedOrderCreator{}, razorpayKeyID: "test-key", razorpayKeySecret: "test-secret"}
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/create-order",
 		strings.NewReader(`{"amount":99,"currency":"INR","receipt":"cart-1"}`))
 	s.handleCreateRazorpayOrder(recorder, request)
 	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "at least") {
 		t.Fatalf("create order: got %d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestUnconfiguredStorefrontProxiesPaymentEndpoint(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/create-order" {
+			t.Fatalf("proxied path = %q", r.URL.Path)
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil || string(body) != `{"amount":100,"currency":"INR","receipt":"cart-1"}` {
+			t.Fatalf("proxied body = %q, %v", body, err)
+		}
+		http.SetCookie(w, &http.Cookie{Name: razorpayStateCookie, Value: "signed-state", Path: "/", HttpOnly: true})
+		paymentJSON(w, http.StatusCreated, map[string]string{"order_id": "order_test"})
+	}))
+	defer upstream.Close()
+
+	s := &Site{paymentProxy: paymentEndpointProxy(upstream.URL)}
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/create-order",
+		strings.NewReader(`{"amount":100,"currency":"INR","receipt":"cart-1"}`))
+	s.handleCreateRazorpayOrder(recorder, request)
+
+	if recorder.Code != http.StatusCreated || !strings.Contains(recorder.Body.String(), "order_test") {
+		t.Fatalf("proxy response: got %d %q", recorder.Code, recorder.Body.String())
+	}
+	cookies := recorder.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != razorpayStateCookie || cookies[0].Value != "signed-state" {
+		t.Fatalf("proxied cookies = %+v", cookies)
 	}
 }
 

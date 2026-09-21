@@ -63,10 +63,15 @@ Open http://localhost:8100.
 | `PORT` | `8100` | Port this server listens on |
 | `RAZORPAY_KEY_ID` | — | Razorpay public test/live key used to open Standard Checkout |
 | `RAZORPAY_KEY_SECRET` | — | Server-only Razorpay secret used to create orders and verify signatures |
+| `PAYMENT_API_BASE` | production API host | Optional credentialed payment-service fallback for stateless storefront deployments |
 
 Keep both Razorpay values in the ignored repository-root `.env` file for local development and
 set them in the hosting provider's environment for deployed builds. Never put
 `RAZORPAY_KEY_SECRET` in templates or browser JavaScript.
+When the storefront has no local Razorpay credentials and calls the production
+API, its two payment endpoints are proxied server-to-server to that credentialed
+host. This keeps the secret in one deployment while preserving the shopper's
+signed cart and payment-state cookies.
 
 ---
 

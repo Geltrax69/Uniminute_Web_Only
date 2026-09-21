@@ -1,7 +1,7 @@
 package cart
 
 // body.templ — everything under CartScreen's header: the empty state, or the
-// lines beside (from 900px) or above the delivery, payment and summary panels.
+// lines beside (from 900px) or above the delivery and summary panels.
 // Every quantity change swaps this whole block, so totals never go stale.
 
 import (
@@ -47,8 +47,6 @@ templ Body(d Data) {
 				</div>
 				<div class="pt-3 min-[900px]:min-w-0 min-[900px]:flex-[4] min-[900px]:pt-0">
 					@DeliveryAddress(d.Address)
-					<div class="h-4"></div>
-					@PayOnDelivery()
 					<div class="h-4"></div>
 					@Summary(d)
 				</div>

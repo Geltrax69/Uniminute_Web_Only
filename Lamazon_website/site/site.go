@@ -32,12 +32,23 @@ func APIBase() string {
 // New is the whole site as one handler, shared by cmd/server and the Vercel function.
 func New(apiBase string) http.Handler {
 	payment := razorpayFromEnv()
+	var paymentProxy http.Handler
+	if payment.orders == nil {
+		proxyBase := strings.TrimRight(strings.TrimSpace(os.Getenv("PAYMENT_API_BASE")), "/")
+		if proxyBase == "" && strings.EqualFold(strings.TrimRight(apiBase, "/"), defaultAPIBase) {
+			proxyBase = defaultAPIBase
+		}
+		if proxyBase != "" {
+			paymentProxy = paymentEndpointProxy(proxyBase)
+		}
+	}
 	site := &Site{
 		backend:           backend.NewBackend(apiBase),
 		apiBase:           apiBase,
 		razorpay:          payment.orders,
 		razorpayKeyID:     payment.keyID,
 		razorpayKeySecret: payment.keySecret,
+		paymentProxy:      paymentProxy,
 	}
 	return recoverer(site.keepSession(freshForStaff(site.routes())))
 }
@@ -48,6 +59,7 @@ type Site struct {
 	razorpay          razorpayOrderCreator
 	razorpayKeyID     string
 	razorpayKeySecret string
+	paymentProxy      http.Handler
 }
 
 func (s *Site) routes() http.Handler {
@@ -222,6 +234,27 @@ func bearerProxy(apiBase string, b *backend.Backend) http.Handler {
 		proxy.ServeHTTP(w, r)
 		forgetOnWrite(b, r)
 	})
+}
+
+// paymentEndpointProxy lets a stateless storefront deployment use the
+// credentialed payment service on the API host. Cookies pass through unchanged,
+// and Set-Cookie returns to the storefront origin, so the signed payment state
+// remains bound to the same shopper without exposing Razorpay's secret.
+func paymentEndpointProxy(apiBase string) http.Handler {
+	target, err := url.Parse(apiBase)
+	if err != nil {
+		log.Fatalf("PAYMENT_API_BASE %q: %v", apiBase, err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	direct := proxy.Director
+	proxy.Director = func(r *http.Request) {
+		direct(r)
+		r.Host = target.Host
+	}
+	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) {
+		paymentError(w, http.StatusBadGateway, "Online payment is temporarily unavailable. Try again in a moment.")
+	}
+	return proxy
 }
 
 // notProxied lists every /api prefix the website answers itself — there are

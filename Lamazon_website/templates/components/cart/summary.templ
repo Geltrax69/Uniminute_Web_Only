@@ -1,8 +1,7 @@
 package cart
 
 // summary.templ — CartScreen's right-hand column: _DeliveryAddress, the cash
-// on delivery statement, and _CheckoutPanel with its totals and the button
-// that names the real next step (sign in, or place the order).
+// payment choice, and the one button that names the real next step.
 
 import (
 	"math"
@@ -35,16 +34,6 @@ templ DeliveryAddress(a *backend.Address) {
 	</div>
 }
 
-templ PayOnDelivery() {
-	<div class="flex items-center rounded bg-surface p-4 shadow-surface">
-		@ui.Icon("banknote", "h-6 w-6 shrink-0 text-muted")
-		<div class="ml-4 min-w-0 py-2">
-			<p class="text-body text-text">Choose how to pay</p>
-			<p class="text-body text-muted">Pay securely online now, or hand the amount to the rider on delivery.</p>
-		</div>
-	</div>
-}
-
 templ Summary(d Data) {
 	{{ sub := shop.CartSubtotal(d.Entries) }}
 	{{ total := sub + shop.ChargesTotal(d.Charges) }}
@@ -68,44 +57,68 @@ templ Summary(d Data) {
 		{{ short := shop.CartShortfall(d.Entries) }}
 		if d.SignedIn {
 			<div x-data={ "razorpayCheckout(" + strconv.FormatInt(paymentPaise(total), 10) + ")" }>
+				<fieldset>
+					<legend class="mb-2.5 text-[14px] font-bold text-text">Payment method</legend>
+					<div class="grid grid-cols-2 gap-2" role="radiogroup">
+						<label
+							class="relative flex min-h-[72px] cursor-pointer items-center rounded-[12px] px-3 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-strong focus-within:ring-offset-2"
+							x-bind:class="method === 'razorpay' ? 'bg-strong text-white shadow-control' : 'bg-base text-text hover:bg-track/60'">
+							<input class="sr-only" type="radio" name="paymentMethod" value="razorpay" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment" checked/>
+							@ui.Icon("shield-check", "h-5 w-5 shrink-0")
+							<span class="ml-2.5 min-w-0">
+								<span class="block text-[14px] font-bold leading-tight">Razorpay</span>
+								<span class="mt-1 block text-[12px] leading-tight" x-bind:class="method === 'razorpay' ? 'text-white/75' : 'text-muted'">Pay online</span>
+							</span>
+							<span class="ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" x-bind:class="method === 'razorpay' ? 'border-white bg-white' : 'border-muted/50'">
+								<span class="h-2 w-2 rounded-full bg-strong" x-show="method === 'razorpay'"></span>
+							</span>
+						</label>
+						<label
+							class="relative flex min-h-[72px] cursor-pointer items-center rounded-[12px] px-3 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-strong focus-within:ring-offset-2"
+							x-bind:class="method === 'cod' ? 'bg-strong text-white shadow-control' : 'bg-base text-text hover:bg-track/60'">
+							<input class="sr-only" type="radio" name="paymentMethod" value="cod" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment"/>
+							@ui.Icon("banknote", "h-5 w-5 shrink-0")
+							<span class="ml-2.5 min-w-0">
+								<span class="block text-[14px] font-bold leading-tight">Cash on Delivery</span>
+								<span class="mt-1 block text-[12px] leading-tight" x-bind:class="method === 'cod' ? 'text-white/75' : 'text-muted'">Pay on arrival</span>
+							</span>
+							<span class="ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" x-bind:class="method === 'cod' ? 'border-white bg-white' : 'border-muted/50'">
+								<span class="h-2 w-2 rounded-full bg-strong" x-show="method === 'cod'" x-cloak></span>
+							</span>
+						</label>
+					</div>
+				</fieldset>
+				<form
+					x-ref="cashForm"
+					method="post"
+					action="/checkout"
+					class="hidden"
+					x-on:submit="cashBusy = true; lwProcessing('Placing your order…', false)"
+				>
+					if d.Address != nil {
+						<input type="hidden" name="addressId" value={ d.Address.ID }/>
+					}
+				</form>
 				<button
 					type="button"
-					class={ ui.ButtonClass(true) + " w-full" }
-					x-on:click="pay()"
-					x-bind:disabled={ tplWhen(short > 0 || d.Address == nil, "true", "busy") }
+					class={ ui.ButtonClass(true) + " mt-3.5 w-full" }
+					x-on:click="place($refs.cashForm)"
+					x-bind:disabled={ tplWhen(short > 0 || d.Address == nil, "true", "busy || cashBusy") }
 					disabled?={ short > 0 || d.Address == nil }
-					x-bind:aria-busy="busy">
+					x-bind:aria-busy="busy || cashBusy">
 					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
-					@ui.Icon("shield-check", "h-[17px] w-[17px]")
-					<span class="truncate whitespace-pre" x-show="!busy" x-text="buttonLabel">Pay securely  ·  ₹{ shop.Money(total) }</span>
+					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="cashBusy" x-cloak></span>
+					<span x-show="!busy && !cashBusy && method === 'razorpay'">@ui.Icon("shield-check", "h-[17px] w-[17px]")</span>
+					<span x-show="!busy && !cashBusy && method === 'cod'" x-cloak>@ui.Icon("banknote", "h-[17px] w-[17px]")</span>
+					<span class="truncate whitespace-pre" x-show="!busy && !cashBusy" x-text="buttonLabel">Continue with Razorpay  ·  ₹{ shop.Money(total) }</span>
 					<span class="truncate" x-show="busy" x-cloak>Opening secure checkout…</span>
+					<span class="truncate" x-show="cashBusy" x-cloak>Placing your order…</span>
 				</button>
-				<p class="mt-2 text-center text-small text-muted">Cards, UPI, netbanking and wallets via Razorpay</p>
 				<p class="mt-2 text-body text-danger" role="alert" x-show="error" x-text="error" x-cloak></p>
-			</div>
-			<div class="my-4 flex items-center gap-3 text-small text-muted" aria-hidden="true">
-				<span class="h-px flex-1 bg-track"></span>
-				<span>or pay on delivery</span>
-				<span class="h-px flex-1 bg-track"></span>
-			</div>
-			<form
-				method="post"
-				action="/checkout"
-				x-data="{ busy: false }"
-				x-on:submit="if (busy) { $event.preventDefault(); return }; busy = true; lwProcessing('Placing your order…', false)"
-			>
-				if d.Address != nil {
-					<input type="hidden" name="addressId" value={ d.Address.ID }/>
-				}
-				<button type="submit" class={ ui.ButtonClass(true) + " w-full" } x-bind:disabled={ tplWhen(short > 0, "true", "busy") } disabled?={ short > 0 } x-bind:aria-busy="busy">
-					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
-					<span class="truncate whitespace-pre" x-show="!busy">Place cash order  ·  ₹{ shop.Money(total) }</span>
-					<span class="truncate" x-show="busy" x-cloak>Placing your order…</span>
-				</button>
 				if short > 0 {
 					@ui.Unavailable(tplWhen(short == 1, "1 item is short on stock. Lower its quantity or remove it to place your order.", shop.Itoa(short)+" items are short on stock. Lower their quantity or remove them to place your order."))
 				}
-			</form>
+			</div>
 		} else {
 			<a href="/login?next=/cart" class={ ui.ButtonClass(true) + " w-full" }>
 				<span class="truncate">Sign in to place order</span>

@@ -65,6 +65,14 @@ type paymentState struct {
 }
 
 func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {
+	if s.razorpay == nil || s.razorpayKeyID == "" || s.razorpayKeySecret == "" {
+		if s.paymentProxy != nil {
+			s.paymentProxy.ServeHTTP(w, r)
+			return
+		}
+		paymentError(w, http.StatusServiceUnavailable, "Online payment is temporarily unavailable.")
+		return
+	}
 	var in createOrderRequest
 	if err := decodePaymentJSON(w, r, &in); err != nil {
 		paymentError(w, http.StatusBadRequest, "Send a valid order request.")
@@ -84,11 +92,6 @@ func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request)
 		paymentError(w, http.StatusBadRequest, "Receipt must be between 1 and 40 characters.")
 		return
 	}
-	if s.razorpay == nil || s.razorpayKeyID == "" || s.razorpayKeySecret == "" {
-		paymentError(w, http.StatusServiceUnavailable, "Online payment is not configured yet.")
-		return
-	}
-
 	p := s.buildPage(r)
 	if p.User == nil {
 		paymentError(w, http.StatusUnauthorized, "Sign in before paying for your order.")
@@ -166,6 +169,14 @@ type verifyPaymentRequest struct {
 }
 
 func (s *Site) handleVerifyRazorpayPayment(w http.ResponseWriter, r *http.Request) {
+	if s.razorpayKeySecret == "" {
+		if s.paymentProxy != nil {
+			s.paymentProxy.ServeHTTP(w, r)
+			return
+		}
+		paymentError(w, http.StatusServiceUnavailable, "Online payment is temporarily unavailable.")
+		return
+	}
 	var in verifyPaymentRequest
 	if err := decodePaymentJSON(w, r, &in); err != nil {
 		paymentError(w, http.StatusBadRequest, "Send valid payment details.")
@@ -178,11 +189,6 @@ func (s *Site) handleVerifyRazorpayPayment(w http.ResponseWriter, r *http.Reques
 		paymentError(w, http.StatusBadRequest, "Payment ID, order ID and signature are required.")
 		return
 	}
-	if s.razorpayKeySecret == "" {
-		paymentError(w, http.StatusServiceUnavailable, "Online payment is not configured yet.")
-		return
-	}
-
 	state, err := s.readPaymentState(r)
 	if err != nil || state.OrderID != in.OrderID || state.Expires < time.Now().Unix() {
 		paymentError(w, http.StatusBadRequest, "This payment session expired. Return to your cart and try again.")
