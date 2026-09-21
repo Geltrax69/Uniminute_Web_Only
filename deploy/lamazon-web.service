@@ -1,0 +1,23 @@
+[Unit]
+Description=Lamazon Go storefront
+After=network-online.target lamazon-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/Lamazon
+EnvironmentFile=/var/www/Lamazon/.env.systemd
+Environment=PORT=8100
+Environment=API_BASE=http://127.0.0.1:8081
+ExecStart=/var/www/Lamazon/bin/lamazon-web
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target
