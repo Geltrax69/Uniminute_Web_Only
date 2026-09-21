@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=root
+Group=root
 WorkingDirectory=/var/www/Lamazon
 EnvironmentFile=/var/www/Lamazon/.env.systemd
 Environment=PORT=8100
