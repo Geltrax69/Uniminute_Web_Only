@@ -9,9 +9,7 @@ User=root
 Group=root
 WorkingDirectory=/var/www/Lamazon
 EnvironmentFile=/var/www/Lamazon/.env.systemd
-Environment=PORT=8100
-Environment=API_BASE=http://127.0.0.1:8081
-ExecStart=/var/www/Lamazon/bin/lamazon-web
+ExecStart=/usr/bin/env PORT=8100 API_BASE=http://127.0.0.1:8081 /var/www/Lamazon/bin/lamazon-web
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
