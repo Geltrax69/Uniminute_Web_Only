@@ -563,6 +563,11 @@ func (b *Backend) CancelOrder(ctx context.Context, token, id string) error {
 	return b.do(ctx, http.MethodPost, "/api/orders/"+url.PathEscape(id)+"/cancel", token, map[string]any{}, nil)
 }
 
+// PayOnDelivery recovers an incomplete Razorpay order before fulfilment starts.
+func (b *Backend) PayOnDelivery(ctx context.Context, token, id string) error {
+	return b.do(ctx, http.MethodPost, "/api/orders/"+url.PathEscape(id)+"/pay-on-delivery", token, map[string]any{}, nil)
+}
+
 // Policy is one published document from GET /api/policies.
 type Policy struct {
 	Slug      string    `json:"slug"`

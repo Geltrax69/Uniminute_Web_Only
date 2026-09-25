@@ -203,6 +203,7 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("POST /api/seller/orders", s.handlePlaceOrder)
 	mux.HandleFunc("GET /api/orders", s.handleMyOrders)
 	mux.HandleFunc("POST /api/orders/{id}/cancel", s.handleCancelOrder)
+	mux.HandleFunc("POST /api/orders/{id}/pay-on-delivery", s.handlePayOnDelivery)
 
 	// Admin. Everything but the login needs an admin token, checked in
 	// withStaff below.

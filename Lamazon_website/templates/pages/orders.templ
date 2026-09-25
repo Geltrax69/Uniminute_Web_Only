@@ -51,7 +51,7 @@ templ ordersBody(d OrdersPageData) {
 }
 
 templ orderCard(o backend.Order, reviews map[string]backend.Review) {
-	{{ colour := statusColour(o.Stage) }}
+	{{ colour := statusColour(o) }}
 	<a href={ templ.SafeURL("/orders/" + o.ID) } class="block rounded-[20px] bg-white p-4 hover:bg-[#FCFCFA]">
 		<div class="flex items-center">
 			<p class="min-w-0 flex-1 text-[14.5px] font-extrabold text-text">Order No. { shop.OrderRef(o.ID) }</p>
@@ -62,6 +62,7 @@ templ orderCard(o backend.Order, reviews map[string]backend.Review) {
 			<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
 		}
 		<p class="text-[12.5px] text-muted">{ o.StoreName } · { ago(o.PlacedAt) }</p>
+		<p class="mt-1 text-[12px] font-semibold" style={ templ.SafeCSS("color:" + paymentColour(o)) }>{ paymentModeLabel(o) }</p>
 		if o.ReceiverAddress != "" {
 			<p class="mt-1 text-[12px] leading-[1.35] text-muted">{ o.ReceiverAddress }</p>
 		}
@@ -98,8 +99,11 @@ const cancelledByCustomer = "Cancelled by customer"
 
 // statusColour is _statusColor: green delivered, red refused, blue on the way,
 // amber for everything still waiting on someone.
-func statusColour(s backend.OrderStage) string {
-	switch s {
+func statusColour(o backend.Order) string {
+	if paymentNeedsAction(o) {
+		return "#B93643"
+	}
+	switch o.Stage {
 	case backend.StageDelivered:
 		return "#1D4939"
 	case backend.StageRejected:
@@ -115,6 +119,9 @@ func statusLabel(o backend.Order) string {
 	if o.RejectReason == cancelledByCustomer {
 		return "Cancelled"
 	}
+	if paymentNeedsAction(o) {
+		return "Payment issue"
+	}
 	switch o.Stage {
 	case backend.StageAccepted:
 		return "Accepted — being prepared"
@@ -126,6 +133,27 @@ func statusLabel(o backend.Order) string {
 		return "Delivered"
 	}
 	return "Waiting for store acceptance"
+}
+
+func paymentNeedsAction(o backend.Order) bool {
+	return o.Stage == backend.StageReceived && o.PaymentMethod == "razorpay" && o.PaymentStatus != "paid"
+}
+
+func paymentModeLabel(o backend.Order) string {
+	if o.PaymentMethod == "razorpay" {
+		if o.PaymentStatus == "paid" {
+			return "Razorpay · paid online"
+		}
+		return "Razorpay · payment incomplete"
+	}
+	return "Cash on Delivery · due at the door"
+}
+
+func paymentColour(o backend.Order) string {
+	if paymentNeedsAction(o) {
+		return "#B93643"
+	}
+	return "#52635B"
 }
 
 // ago is _ago.

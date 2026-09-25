@@ -381,7 +381,7 @@ func Summary(d Data) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span> <span class=\"truncate\" x-show=\"busy\" x-cloak>Opening secure checkout…</span> <span class=\"truncate\" x-show=\"cashBusy\" x-cloak>Placing your order…</span></button><p class=\"mt-2 text-body text-danger\" role=\"alert\" x-show=\"error\" x-text=\"error\" x-cloak></p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span> <span class=\"truncate\" x-show=\"busy\" x-cloak>Opening secure checkout…</span> <span class=\"truncate\" x-show=\"cashBusy\" x-cloak>Placing your order…</span></button><p class=\"mt-2 text-body text-danger\" role=\"alert\" x-show=\"error\" x-text=\"error\" x-cloak></p><div class=\"mt-3 rounded-[14px] bg-danger/[.06] p-3\" x-show=\"paymentFailed && !pendingPayment\" x-cloak><p class=\"text-[13px] font-bold text-danger\">Payment issue — no order was placed</p><p class=\"mt-1 text-[12px] leading-[1.4] text-muted\">Try Razorpay again, switch to Pay on Delivery, or cancel this checkout.</p><div class=\"mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3\"><button type=\"button\" class=\"min-h-touch rounded-full bg-strong px-3 text-[12.5px] font-bold text-white\" x-on:click=\"pay()\">Try again</button> <button type=\"button\" class=\"min-h-touch rounded-full bg-white px-3 text-[12.5px] font-bold text-strong\" x-on:click=\"chooseCash()\">Pay on Delivery</button> <button type=\"button\" class=\"min-h-touch rounded-full px-3 text-[12.5px] font-bold text-muted\" x-on:click=\"cancelFailure()\">Cancel</button></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -473,7 +473,7 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 132, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 141, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -508,7 +508,7 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 133, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 142, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {

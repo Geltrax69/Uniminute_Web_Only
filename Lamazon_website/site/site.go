@@ -141,6 +141,7 @@ func (s *Site) routes() http.Handler {
 	mux.HandleFunc("POST /api/create-order", s.handleCreateRazorpayOrder)
 	mux.HandleFunc("POST /api/verify-payment", s.handleVerifyRazorpayPayment)
 	mux.HandleFunc("POST /orders/{id}/cancel", s.handleOrderCancel)
+	mux.HandleFunc("POST /orders/{id}/pay-on-delivery", s.handleOrderPayOnDelivery)
 	mux.HandleFunc("POST /orders/{id}/review", s.handleReview)
 
 	// --- static and proxy -------------------------------------------------

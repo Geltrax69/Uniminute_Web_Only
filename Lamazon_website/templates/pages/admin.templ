@@ -401,6 +401,7 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 			@pill(stage, orderStageColour(stage))
 		</div>
 		<p class="mt-[3px] text-[12px] text-muted">₹{ shop.Money(nv(o, "amount")) } · { sv(o, "storeName") } → { sv(o, "receiverName") } · { sv(o, "receiverPhone") }</p>
+		<p class="mt-0.5 text-[11.5px] font-semibold" style={ templ.SafeCSS("color:" + adminPaymentColour(o)) }>{ adminPaymentLabel(o) }</p>
 		<p class="text-[11.5px] text-muted">{ sv(o, "receiverAddress") }</p>
 		<div class="mt-1.5 flex items-center">
 			<p class={ "min-w-0 flex-1 text-[12px] font-semibold " + tpl.When(carrier == "" && assigned == "", "text-muted", "text-text") }>
@@ -412,11 +413,32 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 					Open to any rider
 				}
 			</p>
-			if stage == "received" || stage == "accepted" {
+			if (stage == "received" || stage == "accepted") && adminPaymentReady(o) {
 				<button type="button" x-on:click={ "openAssign(" + jsonArg(sv(o, "id")) + ")" } class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]">{ tpl.When(assigned == "", "Assign rider", "Reassign") }</button>
 			}
 		</div>
 	</div>
+}
+
+func adminPaymentLabel(o map[string]any) string {
+	if sv(o, "paymentMethod") == "razorpay" {
+		if sv(o, "paymentStatus") == "paid" {
+			return "Razorpay · paid online"
+		}
+		return "Razorpay · payment incomplete"
+	}
+	return "Cash on Delivery · due at the door"
+}
+
+func adminPaymentColour(o map[string]any) string {
+	if sv(o, "paymentMethod") == "razorpay" && sv(o, "paymentStatus") != "paid" {
+		return "#B93643"
+	}
+	return "#52635B"
+}
+
+func adminPaymentReady(o map[string]any) bool {
+	return sv(o, "paymentMethod") == "cod" || sv(o, "paymentStatus") == "paid"
 }
 
 templ insightsSection(in map[string]any) {

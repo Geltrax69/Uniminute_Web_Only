@@ -1437,6 +1437,20 @@ func (s *Site) handleOrderCancel(w http.ResponseWriter, r *http.Request) {
 	redirect(w, r, "/orders/"+id)
 }
 
+func (s *Site) handleOrderPayOnDelivery(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	p := s.buildPage(r)
+	if !requireAuth(w, r, p) {
+		return
+	}
+	if err := s.backend.PayOnDelivery(r.Context(), p.AccessToken, id); err != nil {
+		errorToast(w, apiMessage(err))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	redirect(w, r, "/orders/"+id)
+}
+
 // cartProduct is the product a basket line names. "id@Store" is the same
 // product bought from another local vendor at that vendor's price — the id
 // CompareScreen puts in the app's cart — so it is the base product with that

@@ -206,7 +206,10 @@ templ sellerOrderRow(o backend.Order) {
 			if len(o.Options) > 0 {
 				<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
 			}
-			<p class="mt-0.5 text-[12.5px] text-muted">₹{ shop.Money(o.Amount) } · { tpl.When(o.PaymentStatus == "paid", "Paid online", "Cash on delivery") }</p>
+			<p class="mt-0.5 text-[12.5px] font-semibold" style={ templ.SafeCSS("color:" + paymentColour(o)) }>₹{ shop.Money(o.Amount) } · { paymentModeLabel(o) }</p>
+			if paymentNeedsAction(o) {
+				<p class="mt-1 text-[11.5px] text-danger">Payment incomplete — do not prepare this order yet.</p>
+			}
 			if o.ReceiverName != "" {
 				<p class="mt-1.5 truncate text-[11.5px] text-muted">For { o.ReceiverName } · { o.ReceiverPhone }</p>
 			}
@@ -219,7 +222,7 @@ templ sellerOrderRow(o backend.Order) {
 				<p class="mt-1 text-[11.5px] font-medium text-[#2F6FED]">{ riderStatus(o, true) }</p>
 			}
 		</div>
-		if o.Stage == backend.StageReceived {
+		if o.Stage == backend.StageReceived && !paymentNeedsAction(o) {
 			<div class="ml-2 flex flex-col items-center">
 				<button type="button" x-on:click={ "accept(" + jsonArg(o.ID) + ")" } class="rounded-[20px] bg-text px-4 py-2.5 text-[12.5px] font-bold text-white">Accept</button>
 				<button type="button" x-on:click={ "openReject(" + jsonArg(o.ID) + ")" } class="min-h-touch px-3 text-[12px] text-danger">Reject</button>

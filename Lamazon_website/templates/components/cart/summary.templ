@@ -115,6 +115,15 @@ templ Summary(d Data) {
 					<span class="truncate" x-show="cashBusy" x-cloak>Placing your order…</span>
 				</button>
 				<p class="mt-2 text-body text-danger" role="alert" x-show="error" x-text="error" x-cloak></p>
+				<div class="mt-3 rounded-[14px] bg-danger/[.06] p-3" x-show="paymentFailed && !pendingPayment" x-cloak>
+					<p class="text-[13px] font-bold text-danger">Payment issue — no order was placed</p>
+					<p class="mt-1 text-[12px] leading-[1.4] text-muted">Try Razorpay again, switch to Pay on Delivery, or cancel this checkout.</p>
+					<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+						<button type="button" class="min-h-touch rounded-full bg-strong px-3 text-[12.5px] font-bold text-white" x-on:click="pay()">Try again</button>
+						<button type="button" class="min-h-touch rounded-full bg-white px-3 text-[12.5px] font-bold text-strong" x-on:click="chooseCash()">Pay on Delivery</button>
+						<button type="button" class="min-h-touch rounded-full px-3 text-[12.5px] font-bold text-muted" x-on:click="cancelFailure()">Cancel</button>
+					</div>
+				</div>
 				if short > 0 {
 					@ui.Unavailable(tplWhen(short == 1, "1 item is short on stock. Lower its quantity or remove it to place your order.", shop.Itoa(short)+" items are short on stock. Lower their quantity or remove them to place your order."))
 				}

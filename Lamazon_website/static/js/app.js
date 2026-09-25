@@ -167,6 +167,7 @@ document.addEventListener('alpine:init', () => {
     busy: false,
     cashBusy: false,
     error: '',
+    paymentFailed: false,
     pendingPayment: null,
     get buttonLabel() {
       return this.pendingPayment
@@ -179,6 +180,7 @@ document.addEventListener('alpine:init', () => {
     async pay() {
       if (this.busy) return;
       this.error = '';
+      this.paymentFailed = false;
       if (!window.Razorpay) {
         this.error = 'Secure checkout did not load. Check your connection and try again.';
         lwToast(this.error, 'error');
@@ -197,6 +199,7 @@ document.addEventListener('alpine:init', () => {
         });
         if (!created.ok) throw new Error(await this.responseError(created, 'Could not start payment. Try again.'));
         const order = await created.json();
+        let checkoutFailed = false;
         const checkout = new Razorpay({
           key: order.key_id,
           amount: order.amount,
@@ -217,13 +220,19 @@ document.addEventListener('alpine:init', () => {
           modal: {
             ondismiss: () => {
               this.busy = false;
-              lwToast('Payment cancelled. No order was placed.');
+              if (!checkoutFailed) {
+                this.paymentFailed = true;
+                this.error = 'Payment was cancelled. No order was placed.';
+                lwToast(this.error);
+              }
             },
           },
           theme: { color: '#143E32' },
         });
         checkout.on('payment.failed', (event) => {
+          checkoutFailed = true;
           this.error = event?.error?.description || 'Payment failed. Check the details and try again.';
+          this.paymentFailed = true;
           this.busy = false;
           lwToast(this.error, 'error');
         });
@@ -233,6 +242,7 @@ document.addEventListener('alpine:init', () => {
         this.error = this.pendingPayment
           ? `${message} Use “Retry order confirmation” — do not pay again.`
           : message;
+        this.paymentFailed = !this.pendingPayment;
         this.busy = false;
         lwToast(this.error, 'error');
       }
@@ -248,6 +258,15 @@ document.addEventListener('alpine:init', () => {
       lwProcessing('Placing your order…', false);
       cashForm.requestSubmit();
     },
+    chooseCash() {
+      this.method = 'cod';
+      this.paymentFailed = false;
+      this.error = '';
+    },
+    cancelFailure() {
+      this.paymentFailed = false;
+      this.error = '';
+    },
     async verify(payment) {
       const verified = await fetch('/api/verify-payment', {
         method: 'POST',
@@ -257,6 +276,7 @@ document.addEventListener('alpine:init', () => {
       if (!verified.ok) throw new Error(await this.responseError(verified, 'Payment could not be verified.'));
       const result = await verified.json();
       this.pendingPayment = null;
+      this.paymentFailed = false;
       lwProcessing('Payment confirmed. Placing your order…', false);
       location.assign(result.redirect || '/orders');
     },

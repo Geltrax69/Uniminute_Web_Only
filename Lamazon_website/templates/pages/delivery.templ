@@ -152,7 +152,7 @@ templ deliveryBody(d DeliveryData) {
 								<p class="line-clamp-2 text-[12px] leading-[1.3] text-muted">{ o.ReceiverAddress }</p>
 							</div>
 							<div class="ml-2 text-right">
-								<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>{ paymentCollectionLabel(o.PaymentStatus, o.Amount, true) }</p>
+								<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>{ paymentCollectionLabel(o.PaymentMethod, o.PaymentStatus, o.Amount, true) }</p>
 								if o.DeliveredAt != nil {
 									<p class="text-[11.5px] text-muted">{ o.DeliveredAt.Local().Format("2 Jan, 15:04") }</p>
 								}
@@ -198,7 +198,7 @@ templ riderOrderCard(o backend.RiderOrder, action string) {
 			if o.AssignedTo != "" {
 				<span class="rounded-[10px] px-2 py-[3px] text-[10.5px] font-extrabold" style={ templ.SafeCSS("background-color:" + tpl.RGBA(riderGreen, .12) + ";color:" + riderGreen) }>Assigned to you</span>
 			}
-			<span class="text-[14.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>{ paymentCollectionLabel(o.PaymentStatus, o.Amount, false) }</span>
+			<span class="text-[14.5px] font-extrabold" style={ templ.SafeCSS("color:" + riderGreen) }>{ paymentCollectionLabel(o.PaymentMethod, o.PaymentStatus, o.Amount, false) }</span>
 		</div>
 		<p class="mt-2 text-[13.5px] font-semibold text-text">{ strconv.Itoa(o.Units) } × { o.ItemTitle }</p>
 								if len(o.Options) > 0 {
@@ -218,9 +218,9 @@ templ riderOrderCard(o backend.RiderOrder, action string) {
 	</div>
 }
 
-func paymentCollectionLabel(status string, amount float64, delivered bool) string {
-	if status == "paid" {
-		return "Paid online"
+func paymentCollectionLabel(method, status string, amount float64, delivered bool) string {
+	if method == "razorpay" && status == "paid" {
+		return "Paid via Razorpay"
 	}
 	if delivered {
 		return "Collected ₹" + shop.Money(amount)

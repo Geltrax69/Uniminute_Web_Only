@@ -164,8 +164,26 @@ func (a *API) handleCheckout(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "payment amount does not match this order")
 			return
 		}
+		captured, err := razorpay.NewClient(keyID, keySecret).Payment.Fetch(in.Payment.PaymentID, nil, nil)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "could not confirm the Razorpay payment")
+			return
+		}
+		if !capturedPaymentMatches(captured, in.Payment.OrderID, orderAmount) {
+			writeError(w, http.StatusBadRequest, "payment is not captured — the order was not placed")
+			return
+		}
 	}
 	a.placeBasket(w, r, in.Lines, in.AddressID, in.ExpectedTotal, false, in.RequestID, in.Payment)
+}
+
+func capturedPaymentMatches(payment map[string]interface{}, orderID string, amount int64) bool {
+	paymentOrderID, _ := payment["order_id"].(string)
+	paymentStatus, _ := payment["status"].(string)
+	paymentAmount, amountOK := razorpayInteger(payment["amount"])
+	paymentCurrency, _ := payment["currency"].(string)
+	return paymentOrderID == orderID && paymentStatus == "captured" && amountOK &&
+		paymentAmount == amount && paymentCurrency == "INR"
 }
 
 func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checkoutLine, addressID string, expected *float64, single bool, requestID string, payment *paymentProof) {
@@ -357,8 +375,12 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		return
 	}
 	for _, o := range out {
+		paymentLabel := "Cash on Delivery"
+		if o.PaymentMethod == "razorpay" {
+			paymentLabel = "Paid via Razorpay"
+		}
 		a.notifyOrderLater(o.StoreOwner, fmt.Sprintf("New order: %d × %s", o.Units, o.ItemTitle),
-			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + charges ₹%.2f = total ₹%.2f\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount),
+			fmt.Sprintf("%s just received an order.\n\n%d × %s\nItems ₹%.2f + charges ₹%.2f = total ₹%.2f\nPayment: %s\n\nOpen Uniminute to accept it.", o.StoreName, o.Units, o.ItemTitle, o.Amount-o.DeliveryFee, o.DeliveryFee, o.Amount, paymentLabel),
 			"/seller?pane=orders")
 		a.notifyOrderLater(buyer, "Order "+orderReference(o.ID)+" placed successfully",
 			fmt.Sprintf("Your order %s for %d × %s was sent to %s. We are waiting for the store to accept it.",
@@ -480,6 +502,7 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 			-- one drawn above.
 			assigned_to = CASE WHEN assigned_to <> '' THEN assigned_to ELSE $4 END
 		WHERE id = $1 AND store_owner = $2 AND stage = 'received'
+		  AND (payment_method = 'cod' OR payment_status = 'paid')
 		RETURNING `+orderColumns+`, buyer_email`,
 		id, a.owner(r), code, rider)
 
@@ -554,6 +577,7 @@ func (a *API) handleDeliverOrder(w http.ResponseWriter, r *http.Request) {
 	o, err := scanOrder(tx.QueryRowContext(r.Context(), `
 		UPDATE orders SET stage = 'delivered', delivered_at = now()
 		WHERE id = $1 AND store_owner = $2 AND stage = 'accepted' AND rider_phone = ''
+		  AND (payment_method = 'cod' OR payment_status = 'paid')
 		RETURNING `+orderColumns, id, a.owner(r)))
 	if !a.orderMoved(w, r, id, err) {
 		return
@@ -633,4 +657,28 @@ func (a *API) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	a.notifyOrderLater(o.StoreOwner, "Order "+orderReference(o.ID)+" was cancelled", "The customer cancelled the order before acceptance.", "/seller?pane=orders")
 	o.StoreOwner = ""
 	writeJSON(w, 200, o)
+}
+
+// POST /api/orders/{id}/pay-on-delivery turns an incomplete online order into
+// a normal cash order. It is deliberately limited to the buyer's own order
+// before the shop has accepted it; a paid Razorpay order must use the refund
+// process instead.
+func (a *API) handlePayOnDelivery(w http.ResponseWriter, r *http.Request) {
+	o, err := scanOrder(a.db.sql.QueryRowContext(r.Context(), `UPDATE orders
+  SET payment_method='cod', payment_status='due', razorpay_order_id='', razorpay_payment_id=''
+  WHERE id=$1 AND buyer_email=$2 AND stage='received'
+    AND payment_method='razorpay' AND payment_status!='paid'
+  RETURNING `+orderColumns, r.PathValue("id"), a.owner(r)))
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, http.StatusConflict, "this order cannot be changed to pay on delivery")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not change the payment method")
+		return
+	}
+	a.notifyOrderLater(o.StoreOwner, "Order "+orderReference(o.ID)+" will be paid on delivery",
+		"The customer changed this order to Cash on Delivery. It is ready for you to accept.", "/seller?pane=orders")
+	o.StoreOwner = ""
+	writeJSON(w, http.StatusOK, o)
 }

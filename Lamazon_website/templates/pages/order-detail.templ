@@ -41,7 +41,9 @@ templ orderDetailBody(d OrderDetailData) {
 			hx-select="#order-detail"
 			hx-target="this"
 			hx-swap="outerHTML">
-			if cancelled || o.Stage == backend.StageRejected {
+			if paymentNeedsAction(o) {
+				@paymentIssuePanel(o)
+			} else if cancelled || o.Stage == backend.StageRejected {
 				@orderNotice("circle-x", "#B93643", rejectedText(o, cancelled))
 			} else {
 				@statusPanel(o)
@@ -70,9 +72,10 @@ templ orderDetailBody(d OrderDetailData) {
 				</div>
 				<div class="my-3 h-px"></div>
 				<div class="flex items-center">
-					<p class="flex-1 text-[14px] font-semibold text-text">{ tpl.When(o.PaymentStatus == "paid", "Total paid online", "Total due on delivery") }</p>
+					<p class="flex-1 text-[14px] font-semibold text-text">{ paymentTotalLabel(o) }</p>
 					<p class="display-price text-[26px] text-text">₹{ shop.Money(o.Amount) }</p>
 				</div>
+				<p class="mt-1 text-body font-semibold" style={ templ.SafeCSS("color:" + paymentColour(o)) }>{ paymentModeLabel(o) }</p>
 			</div>
 			<div class="mt-4 rounded bg-surface p-4 shadow-surface">
 				<h2 class="text-section text-text">Delivering to</h2>
@@ -107,6 +110,41 @@ templ orderDetailBody(d OrderDetailData) {
 			@reviewForm(o, d.Review)
 		}
 	</main>
+}
+
+templ paymentIssuePanel(o backend.Order) {
+	<section class="rounded bg-surface p-4 shadow-surface" aria-labelledby="payment-issue-title">
+		<div class="flex items-start gap-3">
+			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger">
+				@ui.Icon("circle-alert", "h-[18px] w-[18px]")
+			</span>
+			<div class="min-w-0">
+				<h2 id="payment-issue-title" class="text-section text-text">Payment issue</h2>
+				<p class="mt-1 text-body leading-[1.5] text-muted">Your Razorpay payment was not completed, so the shop cannot accept this order yet. You have not been marked as paid.</p>
+			</div>
+		</div>
+		<div class="mt-4 grid gap-2 sm:grid-cols-2">
+			<a href="/cart" class={ ui.ButtonClass(true) + " w-full" }>
+				@ui.Icon("refresh-cw", "h-[17px] w-[17px]")
+				<span>Try Razorpay again</span>
+			</a>
+			<button type="button" hx-post={ "/orders/" + o.ID + "/pay-on-delivery" } hx-swap="none" class={ ui.ButtonClass(false) + " w-full" }>
+				@ui.Icon("banknote", "h-[17px] w-[17px]")
+				<span>Pay on Delivery</span>
+			</button>
+		</div>
+		<p class="mt-2 text-center text-body text-muted">Or cancel the order below. The shop will only see it as ready after you choose a valid payment method.</p>
+	</section>
+}
+
+func paymentTotalLabel(o backend.Order) string {
+	if o.PaymentStatus == "paid" {
+		return "Total paid online"
+	}
+	if o.PaymentMethod == "razorpay" {
+		return "Payment not completed"
+	}
+	return "Total due on delivery"
 }
 
 // reviewForm rates the product and, if a rider carried it, the delivery.

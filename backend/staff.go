@@ -968,6 +968,7 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 	err := a.db.sql.QueryRowContext(r.Context(), `
 		UPDATE orders SET assigned_to = $2
 		WHERE id = $1 AND stage IN ('received', 'accepted')
+		  AND (payment_method = 'cod' OR payment_status = 'paid')
 		RETURNING stage`, id, phone).Scan(&stage)
 	if errors.Is(err, sql.ErrNoRows) {
 		var exists string
@@ -1012,9 +1013,10 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 		       o.rider_phone, o.assigned_to, o.payment_method, o.payment_status
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
-		WHERE (o.stage = 'accepted' AND o.rider_phone = ''
+		WHERE ((o.stage = 'accepted' AND o.rider_phone = ''
 		       AND (o.assigned_to = '' OR o.assigned_to = $1))
-		   OR (o.stage = 'picked' AND o.rider_phone = $1)
+		   OR (o.stage = 'picked' AND o.rider_phone = $1))
+		  AND (o.payment_method = 'cod' OR o.payment_status = 'paid')
 		-- Yours first, then the open pool.
 		ORDER BY (o.stage = 'picked') DESC, (o.assigned_to = $1) DESC,
 		         o.placed_at`, phone)
@@ -1122,6 +1124,7 @@ func (a *API) handleRiderPick(w http.ResponseWriter, r *http.Request) {
 		UPDATE orders SET stage = 'picked', rider_phone = $2, picked_at = now()
 		WHERE id = $1 AND stage = 'accepted' AND rider_phone = ''
 		  AND (assigned_to = '' OR assigned_to = $2)
+		  AND (payment_method = 'cod' OR payment_status = 'paid')
 		RETURNING id, item_title, units, amount, delivery_fee, stage, placed_at, store_name,
 		          receiver_name, receiver_phone, receiver_address, buyer_email,
 		          assigned_to`,

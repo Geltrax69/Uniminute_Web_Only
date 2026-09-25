@@ -49,7 +49,11 @@ templ placedBody(d PlacedPageData) {
 			</div>
 		</div>
 		<div class="mt-7 rounded bg-surface p-5 shadow-surface">
-			<p class="text-body text-muted">Pay on delivery</p>
+			if len(d.Orders) > 0 {
+				<p class="text-body font-semibold" style={ templ.SafeCSS("color:" + paymentColour(d.Orders[0])) }>{ paymentModeLabel(d.Orders[0]) }</p>
+			} else {
+				<p class="text-body text-muted">Order total</p>
+			}
 			<p class="display-price text-[30px] text-text">₹{ shop.Money(ordersTotal(d.Orders)) }</p>
 			<div class="h-3"></div>
 			if len(d.Orders) > 0 {
@@ -76,6 +80,7 @@ templ placedBody(d PlacedPageData) {
 					<p class="mt-0.5 text-[12.5px] font-medium text-strong">{ shop.ChoicesText(o.Options) }</p>
 				}
 				<p class="text-body text-muted">{ o.StoreName }</p>
+				<p class="mt-1 text-body font-semibold" style={ templ.SafeCSS("color:" + paymentColour(o)) }>{ paymentModeLabel(o) }</p>
 				<div class="mt-4 rounded bg-canvas p-3">
 					<p class="mb-3 text-body font-semibold text-strong" aria-live="polite">{ statusLabel(o) }</p>
 					@statusTrack(o)
