@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Confirm the offline build/test baseline for the packages that CAN build without network, so later verification is grounded. Network is restricted in this sandbox: github.com/a-h/templ, github.com/razorpay/razorpay-go, and the Go 1.25.6 toolchain cannot be downloaded (proxy returns Forbidden). This feature only establishes and records the baseline; it makes no code changes.",
+  "status": "completed",
+  "steps": [
+    "From Uniminute_Web_Only/Lamazon_website run `GOPROXY=off go build ./backend/... ./shop/... ./viewdata/...` and confirm it exits 0 (these packages have no external deps and build offline).",
+    "From Uniminute_Web_Only/Lamazon_website run `GOPROXY=off go test ./backend/... ./shop/...` and confirm existing tests pass.",
+    "Confirm (do NOT try to fix) that `go build ./site/... ./templates/...` fails only because github.com/a-h/templ and github.com/razorpay/razorpay-go are Forbidden to download, and that the ./backend module fails only because Go 1.25.6 is unavailable. Record these as known environment constraints, not regressions.",
+    "Confirm the templ binary is unavailable: `templ` is not on PATH and `go run github.com/a-h/templ/cmd/templ` cannot run offline. This is why generated *_templ.go files must be hand-edited in FEAT-002."
+  ],
+  "acceptance_criteria": [
+    "`GOPROXY=off go build ./backend/... ./shop/... ./viewdata/...` from Lamazon_website exits 0.",
+    "`GOPROXY=off go test ./backend/... ./shop/...` from Lamazon_website passes.",
+    "The findings field records exactly which packages build offline and which are blocked by network, so FEAT-002 verification expectations are clear."
+  ],
+  "verification": [
+    "cd Lamazon_website && GOPROXY=off go build ./backend/... ./shop/... ./viewdata/...",
+    "cd Lamazon_website && GOPROXY=off go test ./backend/... ./shop/..."
+  ],
+  "blocked_reason": null,
+  "findings": "Offline baseline confirmed on branch codex/functionality-checkout. No code changes made.\n\nBUILDS OFFLINE (exit 0), verified from Lamazon_website:\n- `GOPROXY=off go build ./backend/... ./shop/... ./viewdata/...` -> exit 0 (no external deps).\n- `GOPROXY=off go test ./backend/... ./shop/...` -> PASS: 'ok lamazon/website/backend (cached)', 'ok lamazon/website/shop (cached)'.\n\nBLOCKED BY ENVIRONMENT (known constraints, NOT regressions - do not attempt to fix):\n- `GOPROXY=off go build ./site/... ./templates/...` fails ONLY because module lookup is disabled offline: 'go: downloading github.com/a-h/templ v0.3.1020', 'go: downloading github.com/razorpay/razorpay-go v1.4.0', then 'module lookup disabled by GOPROXY=off' at site/handlers.go:44, site/razorpay.go:20-21, and templates/components/cart/body_templ.go:9. proxy.golang.org is Forbidden; these deps are not in the module cache.\n- The separate ./backend module (github.com/Geltrax69/Lamazon/backend) fails ONLY on the toolchain: `GOTOOLCHAIN=local GOPROXY=off go build ./...` -> 'go: go.mod requires go >= 1.25.6 (running go 1.25.1; GOTOOLCHAIN=local)'. Go 1.25.6 cannot be downloaded.\n- The `templ` binary is unavailable: not on PATH ('no templ in ...'), and `go run github.com/a-h/templ/cmd/templ` cannot run offline. Therefore in FEAT-002 any .templ edit MUST be mirrored by a hand-edit to the generated *_templ.go; the generated file is what compiles/runs.\n\nVERIFICATION EXPECTATIONS FOR FEAT-002:\n- For the changed ./site and ./templates packages, verify via: (1) `gofmt -l <file>` returns nothing, (2) manual diff review that hand-edited *_templ.go mirrors the .templ source, (3) `GOPROXY=off go build ./backend/... ./shop/... ./viewdata/...` still exits 0. Do NOT expect a full build/test of the templates/site packages to run offline.\n- Environment: go1.25.1 on PATH."
+}
