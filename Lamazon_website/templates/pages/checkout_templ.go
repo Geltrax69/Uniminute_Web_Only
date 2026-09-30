@@ -465,6 +465,15 @@ func placedBody(d PlacedPageData) templ.Component {
 	})
 }
 
+func placedHasPaymentIssue(orders []backend.Order) bool {
+	for _, o := range orders {
+		if paymentNeedsAction(o) {
+			return true
+		}
+	}
+	return false
+}
+
 func ordersTotal(orders []backend.Order) float64 {
 	sum := 0.0
 	for _, o := range orders {
