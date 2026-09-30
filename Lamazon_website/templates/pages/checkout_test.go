@@ -23,3 +23,31 @@ func TestPlacedPagePollsOnlyWhileAnOrderIsLive(t *testing.T) {
 		t.Fatalf("terminal orders should stop polling, got %q", got)
 	}
 }
+
+func TestPlacedPageShowsPaymentIssueForUnpaidRazorpay(t *testing.T) {
+	unpaid := []backend.Order{
+		{ID: "order-1", Stage: backend.StageReceived, PaymentMethod: "razorpay", PaymentStatus: "due"},
+	}
+	if !placedHasPaymentIssue(unpaid) {
+		t.Fatal("unpaid Razorpay order should surface a payment issue on the placed page")
+	}
+
+	paid := []backend.Order{
+		{ID: "order-2", Stage: backend.StageReceived, PaymentMethod: "razorpay", PaymentStatus: "paid"},
+	}
+	if placedHasPaymentIssue(paid) {
+		t.Fatal("paid Razorpay order must not surface a payment issue")
+	}
+
+	cod := []backend.Order{
+		{ID: "order-3", Stage: backend.StageReceived, PaymentMethod: "cod", PaymentStatus: "due"},
+	}
+	if placedHasPaymentIssue(cod) {
+		t.Fatal("cash-on-delivery order must not surface a payment issue")
+	}
+
+	mixed := append(append([]backend.Order{}, paid...), unpaid...)
+	if !placedHasPaymentIssue(mixed) {
+		t.Fatal("any unpaid Razorpay order in the set should surface a payment issue")
+	}
+}
