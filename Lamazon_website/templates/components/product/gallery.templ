@@ -10,19 +10,27 @@ import (
 	"lamazon/website/templates/components/ui"
 )
 
-// MobileHeader keeps navigation and a compact, expandable title above the photo.
-templ MobileHeader(p backend.Product, wishlisted bool) {
+// MobileHeader follows the mobile commerce reading order: search, store and
+// review summary, full compact title, then the product photography.
+templ MobileHeader(p backend.Product, rv backend.ProductReviews) {
 	<div class="min-[900px]:hidden">
-		<nav aria-label="Product actions" class="flex items-center justify-between px-3 py-2">
-			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{"x-on:click": "history.length > 1 ? history.back() : location.assign('/')"})
-			<div class="flex gap-2">
-				@heroHeart(p.ID, wishlisted)
-				@ui.TactileButton("shopping-cart", "Open cart", 44, "", templ.Attributes{"href": "/cart"})
-			</div>
+		<nav aria-label="Product actions" class="flex items-center gap-2 bg-strong px-3 py-2">
+			<button type="button" aria-label="Back" x-on:click="history.length > 1 ? history.back() : location.assign('/')" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+				@ui.Icon("arrow-left", "h-5 w-5")
+			</button>
+			<form method="get" action="/search" role="search" class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-surface px-3">
+				<button type="submit" aria-label="Search products" class="flex h-11 w-6 shrink-0 items-center justify-center text-strong">
+					@ui.Icon("search", "h-5 w-5")
+				</button>
+				<input type="search" name="q" placeholder="Search Uniminute" aria-label="Search Uniminute" class="min-w-0 w-full bg-transparent text-[16px] text-text outline-none placeholder:text-muted"/>
+			</form>
+			<a href="/cart" aria-label="Open cart" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+				@ui.Icon("shopping-cart", "h-5 w-5")
+			</a>
 		</nav>
-		<div class="px-5 pb-3 pt-1" x-data="{ expanded: false, truncated: false, measure() { if (!this.expanded) this.truncated = this.$refs.name.scrollHeight > this.$refs.name.clientHeight + 1; } }" x-init="$nextTick(() => measure())" x-on:resize.window.debounce.150ms="measure()">
-			<h1 id="mobile-product-name" x-ref="name" class="text-[16px] font-medium leading-6 text-text" x-bind:class="!expanded && 'line-clamp-3'">{ p.Name }</h1>
-			<button type="button" x-show="truncated" x-cloak x-on:click="expanded = !expanded" x-bind:aria-expanded="expanded" aria-controls="mobile-product-name" class="-ml-2 inline-flex min-h-touch items-center rounded-full px-2 text-[13px] font-semibold text-strong underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong" x-text="expanded ? 'Show less' : 'Read full title'">Read full title</button>
+		<div class="px-4 pb-4 pt-2">
+			@StoreAndReviews(p, rv)
+			<h1 class="mt-1 text-[16px] font-normal leading-[23px] text-text">{ p.Name }</h1>
 		</div>
 	</div>
 }
@@ -42,11 +50,15 @@ templ Gallery(p backend.Product, wishlisted bool) {
 							src={ templ.URL(shop.Hero(src)) }
 							alt={ p.Name + ", image " + itoa(i+1) + " of " + itoa(len(photos)) }
 							loading={ loadingAttr(i) }
-							class="h-full w-full object-contain"/>
+							class="h-full w-full object-contain"
+						/>
 					}
 				</div>
 			}
 		</div>
+		if p.AnyDiscount() {
+			<span class="absolute left-4 top-4 flex h-14 w-14 items-center justify-center rounded-full bg-strong text-center text-[14px] font-bold leading-4 text-white min-[900px]:hidden" x-show="discountPercent > 0" x-cloak x-text="discountPercent + '% off'"></span>
+		}
 		<div class="absolute inset-x-0 top-0 hidden justify-between px-3.5 pt-2 min-[900px]:flex">
 			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
 				"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
@@ -55,6 +67,9 @@ templ Gallery(p backend.Product, wishlisted bool) {
 				@heroHeart(p.ID, wishlisted)
 				@ui.TactileButton("shopping-cart", "Open cart", 44, "", templ.Attributes{"href": "/cart"})
 			</div>
+		</div>
+		<div class="flex justify-end px-3 min-[900px]:hidden">
+			@heroHeart(p.ID, wishlisted)
 		</div>
 		if len(photos) > 1 {
 			<div class="flex items-center justify-between px-4 py-1">
@@ -90,7 +105,8 @@ templ heroHeart(id string, saved bool) {
 		x-on:htmx:after-request="if ($event.detail.successful) on = !on"
 		x-bind:aria-pressed="on"
 		aria-label="Save product"
-		title="Save product">
+		title="Save product"
+	>
 		if saved {
 			<span class="flex" x-show="on">
 				@ui.Icon("heart-handshake", "h-5 w-5")

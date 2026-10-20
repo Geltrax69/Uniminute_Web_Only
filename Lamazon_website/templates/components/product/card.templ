@@ -23,7 +23,7 @@ const scarceAt = 5
 
 templ Card(p backend.Product, opts CardOpts) {
 	<article class="relative flex h-full flex-col">
-		<a href={ templ.SafeURL("/p/" + p.ID) } class="absolute inset-0 z-0 rounded-small" aria-label={ cardLabel(p, false) }></a>
+		<a href={ templ.SafeURL(shop.ProductPath(p)) } class="absolute inset-0 z-0 rounded-small" aria-label={ cardLabel(p, false) }></a>
 		<div class="pointer-events-none relative min-h-0 flex-1 overflow-hidden rounded-small bg-surface">
 			if p.ImageURL != "" {
 				<img src={ templ.URL(shop.Thumb(p.ImageURL)) } alt="" loading="lazy" class="h-full w-full object-cover"/>

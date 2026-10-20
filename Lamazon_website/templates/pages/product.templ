@@ -24,9 +24,9 @@ templ ProductPage(d ProductPageData) {
 }
 
 templ productBody(d ProductPageData) {
-	<div x-data={ product.BuyData(d.Product) }>
+	<div class="bg-surface" x-data={ product.BuyData(d.Product) }>
 		<main id="main" class="pb-[calc(84px+env(safe-area-inset-bottom))] min-[900px]:p-8 min-[900px]:pb-[calc(116px+env(safe-area-inset-bottom))]">
-			@product.MobileHeader(d.Product, d.Wishlisted)
+			@product.MobileHeader(d.Product, d.Reviews)
 			<div class="min-[900px]:flex min-[900px]:items-start min-[900px]:gap-6">
 				<div class="min-[900px]:min-w-0 min-[900px]:flex-[6]">
 					@product.Gallery(d.Product, d.Wishlisted)

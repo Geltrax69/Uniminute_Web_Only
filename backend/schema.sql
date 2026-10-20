@@ -777,3 +777,10 @@ FROM (VALUES
 WHERE c.parent = art.department
   AND c.name = art.name
   AND (c.image_url = art.old_url OR c.image_url = '');
+
+-- Random, durable public catalogue references. Internal IDs stay unchanged for
+-- orders, inventory ownership and existing clients. PostgreSQL 13+ supplies UUIDs.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS public_id TEXT NOT NULL DEFAULT replace(gen_random_uuid()::text, '-', '');
+CREATE UNIQUE INDEX IF NOT EXISTS products_public_id_unique ON products (public_id);
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS public_id TEXT NOT NULL DEFAULT replace(gen_random_uuid()::text, '-', '');
+CREATE UNIQUE INDEX IF NOT EXISTS inventory_public_id_unique ON inventory_items (public_id);

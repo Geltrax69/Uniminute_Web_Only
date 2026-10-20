@@ -20,7 +20,7 @@ templ Item(e shop.CartEntry) {
 	{{ last := e.Qty <= 1 }}
 	<article class="rounded bg-surface p-3.5 shadow-surface">
 		<div class="flex items-start">
-			<a href={ templ.SafeURL("/p/" + p.ID) } class="h-[88px] w-[88px] shrink-0 overflow-hidden rounded-small" tabindex="-1" aria-hidden="true">
+			<a href={ templ.SafeURL(shop.ProductPath(p)) } class="h-[88px] w-[88px] shrink-0 overflow-hidden rounded-small" tabindex="-1" aria-hidden="true">
 				if p.ImageURL != "" {
 					<img src={ templ.URL(shop.CatalogueImage(p.ImageURL, 160)) } alt="" loading="lazy" class="h-full w-full object-cover"/>
 				} else {
@@ -31,7 +31,7 @@ templ Item(e shop.CartEntry) {
 			</a>
 			<div class="ml-3.5 min-w-0 flex-1">
 				<p class="text-[12px] text-muted">{ p.Store }</p>
-				<a href={ templ.SafeURL("/p/" + p.ID) } class="mt-1 line-clamp-3 text-[16px] font-semibold text-text">{ p.Name }</a>
+				<a href={ templ.SafeURL(shop.ProductPath(p)) } class="mt-1 line-clamp-3 text-[16px] font-semibold text-text">{ p.Name }</a>
 				{{ _, picked := shop.SplitLine(p.ID) }}
 				if len(picked) > 0 {
 					<p class="mt-1 text-[13px] font-medium text-strong">{ shop.ChoicesText(picked) }</p>

@@ -18,8 +18,9 @@ import (
 	"lamazon/website/templates/components/ui"
 )
 
-// MobileHeader keeps navigation and a compact, expandable title above the photo.
-func MobileHeader(p backend.Product, wishlisted bool) templ.Component {
+// MobileHeader follows the mobile commerce reading order: search, store and
+// review summary, full compact title, then the product photography.
+func MobileHeader(p backend.Product, rv backend.ProductReviews) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -40,40 +41,52 @@ func MobileHeader(p backend.Product, wishlisted bool) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-[900px]:hidden\"><nav aria-label=\"Product actions\" class=\"flex items-center justify-between px-3 py-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-[900px]:hidden\"><nav aria-label=\"Product actions\" class=\"flex items-center gap-2 bg-strong px-3 py-2\"><button type=\"button\" aria-label=\"Back\" x-on:click=\"history.length > 1 ? history.back() : location.assign('/')\" class=\"flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{"x-on:click": "history.length > 1 ? history.back() : location.assign('/')"}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("arrow-left", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"flex gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</button><form method=\"get\" action=\"/search\" role=\"search\" class=\"flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-surface px-3\"><button type=\"submit\" aria-label=\"Search products\" class=\"flex h-11 w-6 shrink-0 items-center justify-center text-strong\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = heroHeart(p.ID, wishlisted).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("search", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = ui.TactileButton("shopping-cart", "Open cart", 44, "", templ.Attributes{"href": "/cart"}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</button> <input type=\"search\" name=\"q\" placeholder=\"Search Uniminute\" aria-label=\"Search Uniminute\" class=\"min-w-0 w-full bg-transparent text-[16px] text-text outline-none placeholder:text-muted\"></form><a href=\"/cart\" aria-label=\"Open cart\" class=\"flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></nav><div class=\"px-5 pb-3 pt-1\" x-data=\"{ expanded: false, truncated: false, measure() { if (!this.expanded) this.truncated = this.$refs.name.scrollHeight > this.$refs.name.clientHeight + 1; } }\" x-init=\"$nextTick(() => measure())\" x-on:resize.window.debounce.150ms=\"measure()\"><h1 id=\"mobile-product-name\" x-ref=\"name\" class=\"text-[16px] font-medium leading-6 text-text\" x-bind:class=\"!expanded && 'line-clamp-3'\">")
+		templ_7745c5c3_Err = ui.Icon("shopping-cart", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</a></nav><div class=\"px-4 pb-4 pt-2\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = StoreAndReviews(p, rv).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h1 class=\"mt-1 text-[16px] font-normal leading-[23px] text-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(p.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 24, Col: 148}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 33, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</h1><button type=\"button\" x-show=\"truncated\" x-cloak x-on:click=\"expanded = !expanded\" x-bind:aria-expanded=\"expanded\" aria-controls=\"mobile-product-name\" class=\"-ml-2 inline-flex min-h-touch items-center rounded-full px-2 text-[13px] font-semibold text-strong underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\" x-text=\"expanded ? 'Show less' : 'Read full title'\">Read full title</button></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h1></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -103,30 +116,30 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		photos := Photos(p)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"relative bg-surface\" x-data=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"relative bg-surface\" x-data=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue("hero(" + itoa(len(photos)) + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 32, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 40, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><div x-ref=\"track\" x-on:scroll.debounce.60ms=\"onScroll()\" class=\"flex h-[min(100vw,480px)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden no-scrollbar min-[900px]:h-[540px] min-[900px]:rounded-small\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div x-ref=\"track\" x-on:scroll.debounce.60ms=\"onScroll()\" class=\"flex h-[min(100vw,480px)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden no-scrollbar min-[900px]:h-[540px] min-[900px]:rounded-small\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for i, src := range photos {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"h-full w-full shrink-0 snap-center\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"h-full w-full shrink-0 snap-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if src == "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"flex h-full w-full items-center justify-center bg-img-ground\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<span class=\"flex h-full w-full items-center justify-center bg-img-ground\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -134,61 +147,71 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<img src=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<img src=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.URL(shop.Hero(src)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 42, Col: 38}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 50, Col: 38}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" alt=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" alt=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Name + ", image " + itoa(i+1) + " of " + itoa(len(photos)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 43, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 51, Col: 73}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" loading=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" loading=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(loadingAttr(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 44, Col: 31}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 52, Col: 31}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"h-full w-full object-contain\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" class=\"h-full w-full object-contain\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div><div class=\"absolute inset-x-0 top-0 hidden justify-between px-3.5 pt-2 min-[900px]:flex\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if p.AnyDiscount() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<span class=\"absolute left-4 top-4 flex h-14 w-14 items-center justify-center rounded-full bg-strong text-center text-[14px] font-bold leading-4 text-white min-[900px]:hidden\" x-show=\"discountPercent > 0\" x-cloak x-text=\"discountPercent + '% off'\"></span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"absolute inset-x-0 top-0 hidden justify-between px-3.5 pt-2 min-[900px]:flex\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -198,7 +221,7 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"flex gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"flex gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -210,12 +233,20 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div></div><div class=\"flex justify-end px-3 min-[900px]:hidden\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = heroHeart(p.ID, wishlisted).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if len(photos) > 1 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<div class=\"flex items-center justify-between px-4 py-1\"><button type=\"button\" aria-label=\"Previous image\" x-on:click=\"go(-1)\" x-bind:disabled=\"page === 0\" disabled class=\"flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"flex items-center justify-between px-4 py-1\"><button type=\"button\" aria-label=\"Previous image\" x-on:click=\"go(-1)\" x-bind:disabled=\"page === 0\" disabled class=\"flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -223,69 +254,69 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</button><div class=\"flex min-w-0 items-center overflow-x-auto\" aria-label=\"Product images\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</button><div class=\"flex min-w-0 items-center overflow-x-auto\" aria-label=\"Product images\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for i := range photos {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<button type=\"button\" aria-label=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<button type=\"button\" aria-label=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue("Show image " + itoa(i+1))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 66, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 81, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" x-bind:aria-pressed=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" x-bind:aria-pressed=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue("page === " + itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 66, Col: 112}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 81, Col: 112}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" x-on:click=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" x-on:click=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("go(" + itoa(i) + " - page)")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 66, Col: 156}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 81, Col: 156}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"flex h-11 w-6 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\"><span class=\"h-1.5 w-1.5 rounded-full\" x-bind:class=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" class=\"flex h-11 w-6 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\"><span class=\"h-1.5 w-1.5 rounded-full\" x-bind:class=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("page === " + itoa(i) + " ? 'bg-strong' : 'bg-track'")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 67, Col: 114}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 82, Col: 114}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"></span></button>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"></span></button>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div><button type=\"button\" aria-label=\"Next image\" x-on:click=\"go(1)\" x-bind:disabled=\"page === count - 1\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div><button type=\"button\" aria-label=\"Next image\" x-on:click=\"go(1)\" x-bind:disabled=\"page === count - 1\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -293,12 +324,12 @@ func Gallery(p backend.Product, wishlisted bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -329,51 +360,51 @@ func heroHeart(id string, saved bool) templ.Component {
 			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<button type=\"button\" class=\"tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile\" style=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<button type=\"button\" class=\"tactile inline-flex shrink-0 items-center justify-center rounded-full text-strong shadow-tactile\" style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.SafeCSS(ui.TactileStyle(44, "")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 85, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 100, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" hx-post=\"/wishlist/toggle\" hx-vals=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\" hx-post=\"/wishlist/toggle\" hx-vals=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.JSONString(map[string]string{"id": id}))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 87, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 102, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\" hx-swap=\"none\" x-data=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" hx-swap=\"none\" x-data=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ on: " + tplWhen(saved, "true", "false") + " }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 89, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/gallery.templ`, Line: 104, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" x-on:htmx:after-request=\"if ($event.detail.successful) on = !on\" x-bind:aria-pressed=\"on\" aria-label=\"Save product\" title=\"Save product\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" x-on:htmx:after-request=\"if ($event.detail.successful) on = !on\" x-bind:aria-pressed=\"on\" aria-label=\"Save product\" title=\"Save product\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if saved {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<span class=\"flex\" x-show=\"on\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<span class=\"flex\" x-show=\"on\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -381,7 +412,7 @@ func heroHeart(id string, saved bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</span> <span class=\"flex\" x-show=\"!on\" x-cloak>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</span> <span class=\"flex\" x-show=\"!on\" x-cloak>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -389,12 +420,12 @@ func heroHeart(id string, saved bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<span class=\"flex\" x-show=\"on\" x-cloak>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<span class=\"flex\" x-show=\"on\" x-cloak>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -402,7 +433,7 @@ func heroHeart(id string, saved bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span> <span class=\"flex\" x-show=\"!on\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span> <span class=\"flex\" x-show=\"!on\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -410,12 +441,12 @@ func heroHeart(id string, saved bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</button>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</button>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

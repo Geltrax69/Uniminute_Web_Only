@@ -4,6 +4,7 @@ import "time"
 
 // Product is one listing in the catalog.
 type Product struct {
+	PublicID       string  `json:"publicId,omitempty"`
 	AvailableStock *int    `json:"availableStock,omitempty"`
 	ID             string  `json:"id"`
 	Name           string  `json:"name"`

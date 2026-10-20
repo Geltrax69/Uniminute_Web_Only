@@ -173,7 +173,7 @@ const productQuery = `
 		       '[]'::jsonb AS options,
 		       '[]'::jsonb AS variant_prices,
 		       p.image_url, p.store,
-		       p.description, p.image_url AS photos, NULL::int AS available_stock
+		       p.description, p.image_url AS photos, NULL::int AS available_stock, p.public_id
 		FROM products p
 		UNION ALL
 		SELECT i.id, i.title, COALESCE(NULLIF(i.category, ''), 'Food'),
@@ -187,7 +187,7 @@ const productQuery = `
 		       -- every photo, not just the cover: the details gallery shows
 		       -- all of them, and dropping them here lost the rest silently.
 		       array_to_string(i.image_urls, E'\n'),
-               GREATEST(i.stock - COALESCE((SELECT sum(o.units) FROM orders o WHERE o.item_id=i.id AND o.stage NOT IN ('delivered','rejected')),0),0)::int
+               GREATEST(i.stock - COALESCE((SELECT sum(o.units) FROM orders o WHERE o.item_id=i.id AND o.stage NOT IN ('delivered','rejected')),0),0)::int, i.public_id
 		FROM inventory_items i
 		JOIN seller_stores s ON s.owner = i.owner
 		LEFT JOIN tree t ON t.name = i.category
@@ -199,9 +199,9 @@ const productQuery = `
 	       p.image_url, p.store, p.description, p.photos,
 	       COALESCE((SELECT json_agg(json_build_object('store', o.store, 'price', o.price)
 	                                 ORDER BY o.store)
-	                 FROM offers o WHERE o.product_id = p.id), '[]'), p.available_stock
+	                 FROM offers o WHERE o.product_id = p.id), '[]'), p.available_stock, p.public_id
 	FROM catalogue p
-	WHERE ($1::text = '' OR p.id = $1)
+	WHERE ($1::text = '' OR p.id = $1 OR p.public_id = $1)
 	  AND ($2::text = '' OR p.tab ILIKE $2)
 	  AND ($3::text = '' OR p.category ILIKE $3)
 	  AND ($4::text = '' OR p.name ILIKE '%' || $4 || '%'
@@ -227,7 +227,7 @@ func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 		var photos string
 		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Tab, &p.Price,
 			&p.MRP, &options, &variants, &p.ImageURL, &p.Store, &p.Description, &photos,
-			&offers, &p.AvailableStock); err != nil {
+			&offers, &p.AvailableStock, &p.PublicID); err != nil {
 			return nil, err
 		}
 		p.ImageURLs = splitURLs(photos)

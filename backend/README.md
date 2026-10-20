@@ -183,3 +183,15 @@ a live token.
 
 No payments. Nothing prunes expired rows from `auth_sessions` or
 `login_codes`, and deleting an item leaves its Cloudinary photos behind.
+
+### Public catalogue references
+
+The product API returns a random, persistent `publicId` for both seeded products
+and seller inventory. `GET /api/products/{id}` accepts either this reference or
+the existing internal ID. The website uses public references in product links
+and redirects legacy links. On API startup, the idempotent schema adds the
+public-ID columns and their unique indexes; existing internal IDs and order
+relationships stay unchanged. PostgreSQL 13 or newer supplies `gen_random_uuid()`.
+
+Deploy this backend update to activate opaque links in the website. Public IDs
+reduce sequential URL guessing; authorization still belongs to server handlers.

@@ -489,6 +489,13 @@ func (s *Site) handleProduct(w http.ResponseWriter, r *http.Request) {
 		s.handleNotFound(w, r)
 		return
 	}
+	// Existing sequential links remain usable, but the browser and shared links
+	// settle on the random public reference once the backend provides it.
+	canonical := shop.ProductPath(prod)
+	if prod.PublicID != "" && r.URL.EscapedPath() != strings.SplitN(canonical, "?", 2)[0] {
+		http.Redirect(w, r, canonical, http.StatusPermanentRedirect)
+		return
+	}
 	p.Title = prod.Name + " — Uniminute"
 	p.Description = prod.Description
 	reviews, _ := s.backend.ProductReviews(r.Context(), prod.ID)
@@ -1478,8 +1485,8 @@ func (s *Site) cartProduct(ctx context.Context, lineID string) (backend.Product,
 			return p, fmt.Errorf("option combination unavailable")
 		}
 	}
-	if err == nil && lineID != id {
-		p.ID = lineID
+	if err == nil && len(picked) > 0 {
+		p.ID = shop.LineID(p.ID, picked)
 	}
 	return p, err
 }
@@ -1492,7 +1499,7 @@ func (s *Site) offerProduct(ctx context.Context, id string) (backend.Product, er
 	}
 	for _, o := range p.Offers {
 		if o.Store == store {
-			p.ID, p.Store, p.Price, p.MRP = id, store, o.Price, 0
+			p.ID, p.Store, p.Price, p.MRP = p.ID+"@"+store, store, o.Price, 0
 			p.VariantPrices = nil
 			p.AvailableStock, p.Offers = nil, nil
 			return p, nil
