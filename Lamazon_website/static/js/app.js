@@ -238,136 +238,175 @@ document.addEventListener('alpine:init', () => {
   // ── Razorpay checkout ───────────────────────────────────────────────────
   // The server recalculates the cart total before creating the Razorpay order;
   // this amount is only an early stale-page check, never a trusted price.
-  Alpine.data('razorpayCheckout', (amount) => ({
-    amount,
-    method: 'razorpay',
-    busy: false,
-    cashBusy: false,
-    error: '',
-    paymentFailed: false,
-    pendingPayment: null,
-    init() {
-      this.$watch('paymentFailed', () => this.syncFailureDialog());
-      this.$watch('pendingPayment', () => this.syncFailureDialog());
-    },
-    syncFailureDialog() {
-      const dialog = this.$refs.paymentIssue;
-      if (!dialog) return;
-      if (this.paymentFailed && !this.pendingPayment) {
-        if (!dialog.open) dialog.showModal();
-      } else if (dialog.open) dialog.close();
-    },
-    get buttonLabel() {
-      return this.pendingPayment
-        ? 'Retry order confirmation'
-        : `${this.method === 'cod' ? 'Place cash order' : 'Continue with Razorpay'}  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-    },
-    async responseError(response, fallback) {
-      try { return (await response.json()).error || fallback; } catch { return fallback; }
-    },
-    async pay() {
-      if (this.busy) return;
-      this.error = '';
-      this.paymentFailed = false;
-      if (!window.Razorpay) {
-        this.error = 'Secure checkout did not load. Check your connection and try again.';
-        this.paymentFailed = true;
-        return;
-      }
-      this.busy = true;
-      try {
-        if (this.pendingPayment) {
-          await this.verify(this.pendingPayment);
-          return;
-        }
-        const created = await fetch('/api/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ amount: this.amount, currency: 'INR', receipt: `cart-${Date.now()}` }),
+  Alpine.data('razorpayCheckout', (amount) => {
+    let activeCheckout = null;
+    let attempt = 0;
+    return {
+      amount,
+      method: 'razorpay',
+      busy: false,
+      cashBusy: false,
+      error: '',
+      paymentFailed: false,
+      gatewayOpen: false,
+      amountLimited: false,
+      pendingPayment: null,
+      init() {
+        ['paymentFailed', 'pendingPayment', 'gatewayOpen'].forEach((key) => {
+          this.$watch(key, () => this.syncFailureDialog());
         });
-        if (!created.ok) throw new Error(await this.responseError(created, 'Could not start payment. Try again.'));
-        const order = await created.json();
-        let checkoutFailed = false;
-        const checkout = new Razorpay({
-          key: order.key_id,
-          amount: order.amount,
-          currency: order.currency,
-          order_id: order.order_id,
-          name: 'Uniminute',
-          description: 'Cart payment',
-          handler: async (payment) => {
-            this.pendingPayment = payment;
-            try {
-              await this.verify(payment);
-            } catch (err) {
-              this.error = `${err.message || 'Payment could not be verified.'} Use “Retry order confirmation” — do not pay again.`;
-              this.busy = false;
-              lwToast(this.error, 'error');
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              this.busy = false;
-              if (!checkoutFailed && !this.pendingPayment) {
-                this.paymentFailed = true;
-                this.error = 'Payment was cancelled. No order was placed.';
+      },
+      destroy() {
+        attempt++;
+        activeCheckout?.close();
+        activeCheckout = null;
+      },
+      syncFailureDialog() {
+        const dialog = this.$refs.paymentIssue;
+        if (!dialog) return;
+        if (this.paymentFailed && !this.pendingPayment && !this.gatewayOpen) {
+          if (!dialog.open) dialog.showModal();
+        } else if (dialog.open) dialog.close();
+      },
+      showFailure(message) {
+        this.error = message;
+        this.amountLimited = /amount.*(?:maximum|limit)|(?:maximum|limit).*amount/i.test(message);
+        this.paymentFailed = true;
+      },
+      get failureHelp() {
+        return this.amountLimited
+          ? 'This payment exceeds the limit allowed by the payment provider or selected method. Choose Pay on Delivery, or return to your cart and change the total before trying online payment again.'
+          : 'Try again, switch to Pay on Delivery, or return to your cart.';
+      },
+      get buttonLabel() {
+        return this.pendingPayment
+          ? 'Retry order confirmation'
+          : `${this.method === 'cod' ? 'Place cash order' : 'Continue with Razorpay'}  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      },
+      async responseError(response, fallback) {
+        try { return (await response.json()).error || fallback; } catch { return fallback; }
+      },
+      async pay() {
+        if (this.busy || this.gatewayOpen) return;
+        const current = ++attempt;
+        this.error = '';
+        this.paymentFailed = false;
+        this.amountLimited = false;
+        // Close our dialog synchronously before opening the payment provider.
+        this.syncFailureDialog();
+        this.busy = true;
+        try {
+          if (this.pendingPayment) {
+            await this.verify(this.pendingPayment);
+            return;
+          }
+          if (!window.Razorpay) throw new Error('Secure checkout did not load. Check your connection and try again.');
+          const created = await fetch('/api/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ amount: this.amount, currency: 'INR', receipt: `cart-${Date.now()}` }),
+          });
+          if (current !== attempt) return;
+          if (!created.ok) throw new Error(await this.responseError(created, 'Could not start payment. Try again.'));
+          const order = await created.json();
+          if (current !== attempt) return;
+          let failure = '';
+          let completed = false;
+          const checkout = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            order_id: order.order_id,
+            name: 'Uniminute',
+            description: 'Cart payment',
+            // Our dialog owns retries. Razorpay closes before it is displayed.
+            retry: { enabled: false },
+            handler: async (payment) => {
+              if (current !== attempt || completed) return;
+              completed = true;
+              this.pendingPayment = payment;
+              ++attempt;
+              activeCheckout = null;
+              this.gatewayOpen = false;
+              try {
+                await this.verify(payment);
+              } catch (err) {
+                this.error = `${err.message || 'Payment could not be verified.'} Use “Retry order confirmation” — do not pay again.`;
+                this.busy = false;
+                lwToast(this.error, 'error');
               }
             },
-          },
-          theme: { color: '#143E32' },
-        });
-        checkout.on('payment.failed', (event) => {
-          checkoutFailed = true;
-          this.error = event?.error?.description || 'Payment failed. Check the details and try again.';
-          checkout.close();
-          this.paymentFailed = true;
+            modal: {
+              ondismiss: () => {
+                if (current !== attempt || completed) return;
+                ++attempt;
+                activeCheckout = null;
+                this.gatewayOpen = false;
+                this.busy = false;
+                if (!this.pendingPayment) this.showFailure(failure || 'Payment was cancelled. No order was placed.');
+              },
+            },
+            theme: { color: '#143E32' },
+          });
+          checkout.on('payment.failed', (event) => {
+            if (current !== attempt || completed || failure) return;
+            failure = event?.error?.description || 'Payment failed. Check the details and try again.';
+            // With SDK retry disabled, ondismiss follows this event. Do not
+            // put another modal over a Razorpay frame that is still closing.
+          });
+          activeCheckout = checkout;
+          this.gatewayOpen = true;
+          checkout.open();
+        } catch (err) {
+          if (current !== attempt) return;
+          ++attempt;
+          const checkout = activeCheckout;
+          activeCheckout = null;
+          checkout?.close();
+          this.gatewayOpen = false;
           this.busy = false;
+          const message = err.message || 'Could not start payment. Try again.';
+          if (this.pendingPayment) {
+            this.error = `${message} Use “Retry order confirmation” — do not pay again.`;
+            lwToast(this.error, 'error');
+          } else this.showFailure(message);
+        }
+      },
+      place(cashForm) {
+        this.error = '';
+        if (this.pendingPayment || this.method === 'razorpay') {
+          this.pay();
+          return;
+        }
+        if (this.cashBusy || !cashForm) return;
+        this.cashBusy = true;
+        lwProcessing('Placing your order…', false);
+        cashForm.requestSubmit();
+      },
+      chooseCash() {
+        this.method = 'cod';
+        this.cancelFailure();
+      },
+      cancelFailure() {
+        this.paymentFailed = false;
+        this.error = '';
+        this.syncFailureDialog();
+      },
+      async verify(payment) {
+        const verified = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payment),
         });
-        checkout.open();
-      } catch (err) {
-        const message = err.message || 'Could not start payment. Try again.';
-        this.error = this.pendingPayment
-          ? `${message} Use “Retry order confirmation” — do not pay again.`
-          : message;
-        this.paymentFailed = !this.pendingPayment;
-        this.busy = false;
-        if (this.pendingPayment) lwToast(this.error, 'error');
-      }
-    },
-    place(cashForm) {
-      this.error = '';
-      if (this.pendingPayment || this.method === 'razorpay') {
-        this.pay();
-        return;
-      }
-      if (this.cashBusy || !cashForm) return;
-      this.cashBusy = true;
-      lwProcessing('Placing your order…', false);
-      cashForm.requestSubmit();
-    },
-    chooseCash() {
-      this.method = 'cod';
-      this.paymentFailed = false;
-      this.error = '';
-    },
-    cancelFailure() {
-      this.paymentFailed = false;
-      this.error = '';
-    },
-    async verify(payment) {
-      const verified = await fetch('/api/verify-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payment),
-      });
-      if (!verified.ok) throw new Error(await this.responseError(verified, 'Payment could not be verified.'));
-      const result = await verified.json();
-      this.pendingPayment = null;
-      this.paymentFailed = false;
-      lwProcessing('Payment confirmed. Placing your order…', false);
-      location.assign(result.redirect || '/orders');
-    },
-  }));
+        if (!verified.ok) throw new Error(await this.responseError(verified, 'Payment could not be verified.'));
+        const result = await verified.json();
+        this.pendingPayment = null;
+        this.paymentFailed = false;
+        lwProcessing('Payment confirmed. Placing your order…', false);
+        location.assign(result.redirect || '/orders');
+      },
+    };
+  });
 
   // ── sign-in card (LoginScreen) ───────────────────────────────────────────
   // One field per step; the button only wakes for something that could be

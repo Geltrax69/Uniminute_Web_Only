@@ -119,13 +119,13 @@ templ Summary(d Data) {
                     <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-danger/[.08] text-danger">
                         @ui.Icon("circle-alert", "h-6 w-6")
                     </div>
-                    <h2 id="checkout-payment-issue-title" class="text-[21px] font-semibold leading-7">Payment not completed</h2>
+                    <h2 id="checkout-payment-issue-title" class="text-[21px] font-semibold leading-7" x-text="amountLimited ? 'Payment amount not supported' : 'Payment not completed'">Payment not completed</h2>
                     <p id="checkout-payment-issue-description" class="mt-3 text-[14px] leading-5 text-muted" x-text="error || 'No order was placed. Try again or choose Pay on Delivery.'"></p>
-                    <p class="mt-2 text-[14px] leading-5 text-muted">Try again, switch to Pay on Delivery, or return to your cart.</p>
+                    <p class="mt-2 text-[14px] leading-5 text-muted" x-text="failureHelp">Try again, switch to Pay on Delivery, or return to your cart.</p>
                     <div class="mt-6 flex flex-col gap-3">
-                        <button type="button" class="min-h-12 rounded-full bg-strong px-5 py-3 text-[15px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-on:click="pay()">Try again</button>
+                        <button type="button" class="min-h-12 rounded-full bg-strong px-5 py-3 text-[15px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-show="!amountLimited" x-bind:disabled="busy || gatewayOpen" x-on:click="pay()">Try again</button>
                         <button type="button" class="min-h-12 rounded-full bg-strong/[.06] px-5 py-3 text-[15px] font-semibold text-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-on:click="chooseCash()">Pay on Delivery</button>
-                        <button type="button" class="min-h-11 rounded-full px-5 py-2 text-[14px] font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong" x-on:click="cancelFailure()">Cancel</button>
+                        <button type="button" class="min-h-11 rounded-full px-5 py-2 text-[14px] font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong" x-on:click="cancelFailure()" x-text="amountLimited ? 'Return to cart' : 'Cancel'">Cancel</button>
                     </div>
                 </dialog>
 				if short > 0 {
