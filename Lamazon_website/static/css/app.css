@@ -251,3 +251,9 @@ html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 @keyframes lw-progress { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 .lw-progress { animation: lw-progress 1.1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .lw-progress { animation: none; width: 100%; } }
+
+/* On phones, the product photograph leads and commerce stays compact. */
+.product-detail-price { font-family: "InterTight", "Inter Tight", system-ui, sans-serif; font-size: 28px; font-weight: 600; line-height: 34px; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -0.025em; }
+@media (min-width: 900px) {
+  .product-detail-price { font-family: var(--font-display); font-size: 38px; font-weight: 400; line-height: 44px; letter-spacing: -0.015em; }
+}

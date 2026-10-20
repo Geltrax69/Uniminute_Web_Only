@@ -1,6 +1,6 @@
 package product
 
-// info.templ — the info column of DetailsScreen: store, name (the page's h1),
+// info.templ — the info column of DetailsScreen: name (the desktop h1),
 // price, unit line, availability, ratings, the delivery and payment card, the
 // quantity stepper, option pickers, "About this product", and the other local
 // vendors selling the same thing. Quantity-driven text reads the Alpine buy
@@ -17,11 +17,10 @@ import (
 )
 
 templ Info(p backend.Product, rv backend.ProductReviews) {
-	<div class="px-5 pb-9 pt-7 md:px-8 md:pt-9">
-		<p class="text-[12px] font-semibold uppercase tracking-[1.2px] text-strong">{ p.Store }</p>
-		<h1 class="editorial-heading product-editorial-title mt-3 text-text">{ p.Name }</h1>
+	<div class="px-5 pb-9 pt-4 min-[900px]:px-8 min-[900px]:pt-9">
+		<h1 class="editorial-heading product-editorial-title hidden text-text min-[900px]:block">{ p.Name }</h1>
 		@Price(p)
-		<p class="mt-2 text-[15px] leading-[22px] text-muted" x-text="qty === 1 ? (missing ? 'From ₹' : '₹') + unit + (missing ? '' : ' each') : qty + ' × ₹' + unit">From ₹{ shop.Money(p.Price) }</p>
+		<p class="mt-2 text-[15px] leading-[22px] text-muted" x-show="qty > 1 || missing" x-cloak x-text="qty === 1 ? (missing ? 'From ₹' : '₹') + unit + (missing ? '' : ' each') : qty + ' × ₹' + unit">From ₹{ shop.Money(p.Price) }</p>
 		<p class="mt-4 text-[15px] font-semibold leading-[22px] text-strong">{ availability(p) }</p>
 		if rv.Count > 0 {
 			<a href="#reviews" class="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">

@@ -1,9 +1,8 @@
 package product
 
-// gallery.templ — _Hero from details_screen.dart: every photo at full width,
-// paged by swiping (CSS scroll snap), on the page background with a 28px
-// rounded bottom. Back, save and cart float over the top; with more than one
-// photo, previous / "n / N" / next sit along the bottom.
+// gallery.templ — Product photos on an uninterrupted surface, paged by
+// swiping or by the controls below. On phones, compact navigation and title
+// precede the image; desktop actions float over the image.
 
 import (
 	"lamazon/website/backend"
@@ -11,10 +10,27 @@ import (
 	"lamazon/website/templates/components/ui"
 )
 
+// MobileHeader keeps navigation and a compact, expandable title above the photo.
+templ MobileHeader(p backend.Product, wishlisted bool) {
+	<div class="min-[900px]:hidden">
+		<nav aria-label="Product actions" class="flex items-center justify-between px-3 py-2">
+			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{"x-on:click": "history.length > 1 ? history.back() : location.assign('/')"})
+			<div class="flex gap-2">
+				@heroHeart(p.ID, wishlisted)
+				@ui.TactileButton("shopping-cart", "Open cart", 44, "", templ.Attributes{"href": "/cart"})
+			</div>
+		</nav>
+		<div class="px-5 pb-3 pt-1" x-data="{ expanded: false, truncated: false, measure() { if (!this.expanded) this.truncated = this.$refs.name.scrollHeight > this.$refs.name.clientHeight + 1; } }" x-init="$nextTick(() => measure())" x-on:resize.window.debounce.150ms="measure()">
+			<h1 id="mobile-product-name" x-ref="name" class="text-[16px] font-medium leading-6 text-text" x-bind:class="!expanded && 'line-clamp-3'">{ p.Name }</h1>
+			<button type="button" x-show="truncated" x-cloak x-on:click="expanded = !expanded" x-bind:aria-expanded="expanded" aria-controls="mobile-product-name" class="-ml-2 inline-flex min-h-touch items-center rounded-full px-2 text-[13px] font-semibold text-strong underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong" x-text="expanded ? 'Show less' : 'Read full title'">Read full title</button>
+		</div>
+	</div>
+}
+
 templ Gallery(p backend.Product, wishlisted bool) {
 	{{ photos := Photos(p) }}
-	<div class="relative h-[clamp(240px,45vh,420px)] min-[900px]:h-[540px]" x-data={ "hero(" + itoa(len(photos)) + ")" }>
-		<div x-ref="track" x-on:scroll.debounce.60ms="onScroll()" class="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden rounded-b-[28px] no-scrollbar">
+	<div class="relative bg-surface" x-data={ "hero(" + itoa(len(photos)) + ")" }>
+		<div x-ref="track" x-on:scroll.debounce.60ms="onScroll()" class="flex h-[min(100vw,480px)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden no-scrollbar min-[900px]:h-[540px] min-[900px]:rounded-small">
 			for i, src := range photos {
 				<div class="h-full w-full shrink-0 snap-center">
 					if src == "" {
@@ -31,7 +47,7 @@ templ Gallery(p backend.Product, wishlisted bool) {
 				</div>
 			}
 		</div>
-		<div class="absolute inset-x-0 top-0 flex justify-between px-3.5 pt-2">
+		<div class="absolute inset-x-0 top-0 hidden justify-between px-3.5 pt-2 min-[900px]:flex">
 			@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
 				"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
 			})
@@ -41,10 +57,20 @@ templ Gallery(p backend.Product, wishlisted bool) {
 			</div>
 		</div>
 		if len(photos) > 1 {
-			<div class="absolute inset-x-4 bottom-4 flex items-center justify-between">
-				@ui.TactileButton("chevron-left", "Previous image", 44, "", templ.Attributes{"x-on:click": "go(-1)", "x-bind:disabled": "page === 0", "disabled": true})
-				<span class="rounded-[14px] bg-surface px-3.5 py-2 text-[14px] font-bold text-text shadow-surface" x-text="(page + 1) + ' / ' + count">1 / { itoa(len(photos)) }</span>
-				@ui.TactileButton("chevron-right", "Next image", 44, "", templ.Attributes{"x-on:click": "go(1)", "x-bind:disabled": "page === count - 1"})
+			<div class="flex items-center justify-between px-4 py-1">
+				<button type="button" aria-label="Previous image" x-on:click="go(-1)" x-bind:disabled="page === 0" disabled class="flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong">
+					@ui.Icon("chevron-left", "h-5 w-5")
+				</button>
+				<div class="flex min-w-0 items-center overflow-x-auto" aria-label="Product images">
+					for i := range photos {
+						<button type="button" aria-label={ "Show image " + itoa(i+1) } x-bind:aria-pressed={ "page === " + itoa(i) } x-on:click={ "go(" + itoa(i) + " - page)" } class="flex h-11 w-6 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong">
+							<span class="h-1.5 w-1.5 rounded-full" x-bind:class={ "page === " + itoa(i) + " ? 'bg-strong' : 'bg-track'" }></span>
+						</button>
+					}
+				</div>
+				<button type="button" aria-label="Next image" x-on:click="go(1)" x-bind:disabled="page === count - 1" class="flex h-11 w-11 items-center justify-center rounded-full text-strong disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong">
+					@ui.Icon("chevron-right", "h-5 w-5")
+				</button>
 			</div>
 		}
 	</div>
