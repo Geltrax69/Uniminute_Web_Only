@@ -14,14 +14,19 @@ import templruntime "github.com/a-h/templ/runtime"
 // spacing: 14): ceil(width / 164) columns, each tile twice as tall as wide
 // (productTileAspect 0.50).
 
-import "lamazon/website/backend"
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+)
 
 type GridOpts struct {
-	ID        string
-	ShowStore bool
-	Wishlist  map[string]bool
-	Spaced    bool                       // 16px spacing (search) instead of 14px (home)
-	QuickAdd  func(backend.Product) bool // nil: the home rule, anything without options
+	StoreSearch bool
+	StoreQuery  string
+	ID          string
+	ShowStore   bool
+	Wishlist    map[string]bool
+	Spaced      bool                       // 16px spacing (search) instead of 14px (home)
+	QuickAdd    func(backend.Product) bool // nil: the home rule, anything without options
 }
 
 func Grid(items []backend.Product, opts GridOpts) templ.Component {
@@ -61,7 +66,7 @@ func Grid(items []backend.Product, opts GridOpts) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(opts.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/grid.templ`, Line: 21, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/grid.templ`, Line: 26, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -74,7 +79,7 @@ func Grid(items []backend.Product, opts GridOpts) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var2).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/product/grid.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/product/grid.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -131,7 +136,15 @@ func Cards(items []backend.Product, opts GridOpts) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		for _, p := range items {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, storeSearchAttrs(p, opts))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, ">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -143,7 +156,7 @@ func Cards(items []backend.Product, opts GridOpts) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -169,6 +182,17 @@ func equalFold(a, b string) bool {
 		}
 	}
 	return true
+}
+
+func storeSearchAttrs(p backend.Product, opts GridOpts) templ.Attributes {
+	if !opts.StoreSearch {
+		return nil
+	}
+	attrs := templ.Attributes{"data-store-search": shop.StoreSearchText(p), "x-show": "matches($el.dataset.storeSearch)"}
+	if !shop.StoreSearchMatches(p, opts.StoreQuery) {
+		attrs["style"] = "display:none"
+	}
+	return attrs
 }
 
 var _ = templruntime.GeneratedTemplate

@@ -63,6 +63,7 @@ type StorePageData struct {
 	Store            backend.Shop
 	Products         []backend.Product
 	Sections         []StoreSection
+	Query            string
 	SelectedCategory string
 }
 
@@ -71,7 +72,7 @@ templ StorePage(d StorePageData) {
 }
 
 templ storeBody(d StorePageData) {
-	<main id="main" class="store-menu mx-auto w-full max-w-shell px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-2" x-data={ "storeMenu(" + jsonArg(d.SelectedCategory) + "," + jsonArg(storeMenuConfig(d)) + ")" }>
+	<main id="main" class="store-menu mx-auto w-full max-w-shell px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-2" x-data={ "storeMenu(" + jsonArg(d.SelectedCategory) + "," + jsonArg(storeMenuConfig(d)) + "," + jsonArg(d.Query) + ")" }>
 		@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
 			"x-data":     "",
 			"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
@@ -94,59 +95,74 @@ templ storeBody(d StorePageData) {
 		if len(d.Products) == 0 {
 			<p class="py-10 text-center text-[14px] text-muted">No products listed yet</p>
 		} else {
+			<form method="get" role="search" aria-label={ "Search in " + d.Store.Name } class="mt-5 flex min-h-12 max-w-[620px] items-center gap-3 rounded-small bg-surface px-4 ring-1 ring-strong/15 focus-within:ring-2 focus-within:ring-strong" x-on:submit.prevent="search($refs.shopSearch.value)">
+				@ui.Icon("search", "h-5 w-5 shrink-0 text-muted")
+				<label for="shop-search" class="sr-only">Search this shop’s items</label>
+				<input id="shop-search" x-ref="shopSearch" type="search" name="q" value={ d.Query } placeholder={ "Search in " + d.Store.Name } autocomplete="off" class="min-w-0 flex-1 bg-transparent py-3 text-[15px] text-text outline-none placeholder:text-muted" x-bind:value="query" x-on:input="search($event.target.value)"/>
+				<button type="button" x-show="query" x-cloak aria-label="Clear shop search" x-on:click="search(''); $refs.shopSearch.focus()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:text-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong">
+					@ui.Icon("x", "h-4 w-4")
+				</button>
+				<noscript><button type="submit" class="min-h-11 px-3 text-[14px] font-semibold text-strong">Search</button></noscript>
+			</form>
+			<p role="status" aria-live="polite" aria-atomic="true" class="sr-only" x-text="query.trim() ? count + (count === 1 ? ' item found in this shop' : ' items found in this shop') : ''"></p>
 			<nav aria-label="Store categories" class="mt-5 hidden flex-wrap gap-2 lg:flex">
-				@storeCategoryLink("", "All items", len(d.Products), d.SelectedCategory)
+				@storeCategoryLink("", "All items", storeAllCount(d), d.SelectedCategory, d.Query)
 				for _, section := range d.Sections {
-					@storeCategoryLink(section.Name, section.Name, len(section.Products), d.SelectedCategory)
+					@storeCategoryLink(section.Name, section.Name, storeSectionCount(section, d.Query), d.SelectedCategory, d.Query)
 				}
 			</nav>
 			<div x-cloak x-show="loading || offline" role="status" aria-live="polite" class="mt-5 rounded-small bg-surface p-4">
-                <p class="text-[14px] font-medium text-strong" x-text="offline ? 'You’re offline. Reconnect to load menu images.' : slow ? 'Still loading menu images. Your connection may be slow…' : 'Loading menu images…'"></p>
-                <div x-show="loading &amp;&amp; !offline" role="progressbar" aria-label="Loading menu images" class="mt-3 h-1 overflow-hidden rounded-full bg-strong/10">
-                    <div class="lw-progress h-full w-1/3 rounded-full bg-strong"></div>
-                </div>
-            </div>
-            <div x-ref="products" aria-busy="false" x-bind:aria-busy="loading ? 'true' : 'false'" class="mt-8 space-y-10">
+				<p class="text-[14px] font-medium text-strong" x-text="offline ? 'You’re offline. Reconnect to load menu images.' : slow ? 'Still loading menu images. Your connection may be slow…' : 'Loading menu images…'"></p>
+				<div x-show="loading &amp;&amp; !offline" role="progressbar" aria-label="Loading menu images" class="mt-3 h-1 overflow-hidden rounded-full bg-strong/10">
+					<div class="lw-progress h-full w-1/3 rounded-full bg-strong"></div>
+				</div>
+			</div>
+			<div x-ref="products" aria-busy="false" x-bind:aria-busy="loading ? 'true' : 'false'" class="mt-8 space-y-10">
 				for _, section := range d.Sections {
-					<section id={ section.ID } aria-labelledby={ section.ID + "-title" } x-show={ "active === '' || active === " + jsonArg(section.Name) } style={ templ.SafeCSS(tpl.When(d.SelectedCategory != "" && d.SelectedCategory != section.Name, "display:none", "")) }>
+					<section id={ section.ID } aria-labelledby={ section.ID + "-title" } x-show={ "showSection(" + jsonArg(section.Name) + ")" } style={ templ.SafeCSS(tpl.When((d.SelectedCategory != "" && d.SelectedCategory != section.Name) || storeSectionCount(section, d.Query) == 0, "display:none", "")) }>
 						<h3 id={ section.ID + "-title" } class="mb-4 flex items-baseline gap-2 text-[21px] font-semibold leading-7 text-text">
 							{ section.Name }
-							<span class="text-[14px] font-normal tabular-nums text-muted">({ strconv.Itoa(len(section.Products)) })</span>
+							<span class="text-[14px] font-normal tabular-nums text-muted" x-text={ "'(' + sectionCount(" + jsonArg(section.Name) + ") + ')'" }>({ strconv.Itoa(storeSectionCount(section, d.Query)) })</span>
 						</h3>
-						@product.Grid(section.Products, product.GridOpts{ID: section.ID + "-products", Spaced: true, Wishlist: d.Page.Wishlist, QuickAdd: product.FoodOrGrocery})
+						@product.Grid(section.Products, product.GridOpts{ID: section.ID + "-products", StoreSearch: true, StoreQuery: d.Query, Spaced: true, Wishlist: d.Page.Wishlist, QuickAdd: product.FoodOrGrocery})
 					</section>
 				}
+			</div>
+			<div x-show="count === 0" style={ templ.SafeCSS(tpl.When(storeMenuCount(d) != 0, "display:none", "")) } class="py-12 text-center">
+				<h3 class="text-[20px] font-semibold text-text">No matching items</h3>
+				<p class="mt-2 text-[14px] leading-5 text-muted">Try a different item name or clear your search to browse this shop.</p>
+				<button type="button" x-on:click="active = ''; search(''); $refs.shopSearch.focus()" class="mt-4 min-h-11 rounded-full bg-strong px-5 text-[14px] font-semibold text-white">Clear search</button>
 			</div>
 			<button type="button" aria-haspopup="dialog" aria-controls="store-category-menu" x-bind:aria-expanded="menuOpen" x-on:click="openMenu()" class="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] right-5 z-40 inline-flex min-h-14 items-center gap-2 rounded-full bg-strong px-5 text-[15px] font-semibold text-white shadow-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong lg:hidden">
 				@ui.Icon("menu", "h-5 w-5")
 				Menu
 			</button>
 			<dialog id="store-category-menu" x-ref="menu" x-on:close="menuOpen = false" x-on:click="if ($event.target === $el) $el.close()" aria-labelledby="store-category-menu-title" class="store-floating-menu fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-auto right-5 top-auto m-0 max-h-none w-[min(320px,calc(100vw-48px))] max-w-none overflow-visible border-0 bg-transparent p-0 text-text backdrop:bg-black/60">
-                <div class="max-h-[calc(100dvh-140px-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-[24px] bg-surface p-3 shadow-raised">
-                    <h2 id="store-category-menu-title" class="sr-only">Browse categories</h2>
-                    <nav aria-label="Menu categories" class="flex flex-col gap-1">
-                        @storeCategoryLink("", "All items", len(d.Products), d.SelectedCategory)
-                        for _, section := range d.Sections {
-                            @storeCategoryLink(section.Name, section.Name, len(section.Products), d.SelectedCategory)
-                        }
-                    </nav>
-                </div>
-                <div class="mt-3 flex justify-end">
-                    <button type="button" aria-label="Close menu" x-on:click="$refs.menu.close()" class="inline-flex min-h-14 items-center gap-2 rounded-[18px] bg-strong px-5 text-[16px] font-semibold text-white shadow-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime">
-                        @ui.Icon("x", "h-5 w-5")
-                        Close
-                    </button>
-                </div>
-            </dialog>
+				<div class="max-h-[calc(100dvh-140px-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-[24px] bg-surface p-3 shadow-raised">
+					<h2 id="store-category-menu-title" class="sr-only">Browse categories</h2>
+					<nav aria-label="Menu categories" class="flex flex-col gap-1">
+						@storeCategoryLink("", "All items", storeAllCount(d), d.SelectedCategory, d.Query)
+						for _, section := range d.Sections {
+							@storeCategoryLink(section.Name, section.Name, storeSectionCount(section, d.Query), d.SelectedCategory, d.Query)
+						}
+					</nav>
+				</div>
+				<div class="mt-3 flex justify-end">
+					<button type="button" aria-label="Close menu" x-on:click="$refs.menu.close()" class="inline-flex min-h-14 items-center gap-2 rounded-[18px] bg-strong px-5 text-[16px] font-semibold text-white shadow-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime">
+						@ui.Icon("x", "h-5 w-5")
+						Close
+					</button>
+				</div>
+			</dialog>
 		}
 	</main>
 }
 
 // Real links keep category selection usable without JavaScript.
-templ storeCategoryLink(name, label string, count int, selected string) {
-	<a href={ templ.SafeURL(storeCategoryURL(name)) } x-on:click.prevent={ "choose(" + jsonArg(name) + ")" } aria-current={ tpl.When(selected == name, "true", "false") } x-bind:aria-current={ "active === " + jsonArg(name) + " ? 'true' : 'false'" } class="inline-flex min-h-touch items-center justify-between gap-3 rounded-small bg-surface px-4 py-2.5 text-[14px] font-medium text-strong hover:bg-strong/[.06] aria-[current=true]:bg-strong aria-[current=true]:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong">
+templ storeCategoryLink(name, label string, count int, selected, query string) {
+	<a href={ templ.SafeURL(storeCategoryURL(name, query)) } x-on:click.prevent={ "choose(" + jsonArg(name) + ")" } aria-current={ tpl.When(selected == name, "true", "false") } x-bind:aria-current={ "active === " + jsonArg(name) + " ? 'true' : 'false'" } class="inline-flex min-h-touch items-center justify-between gap-3 rounded-small bg-surface px-4 py-2.5 text-[14px] font-medium text-strong hover:bg-strong/[.06] aria-[current=true]:bg-strong aria-[current=true]:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong">
 		<span>{ label }</span>
-		<span class="text-[12px] tabular-nums">{ strconv.Itoa(count) }</span>
+		<span class="text-[12px] tabular-nums" x-text={ tpl.When(name == "", "allCount", "sectionCount("+jsonArg(name)+")") }>{ strconv.Itoa(count) }</span>
 	</a>
 }
 

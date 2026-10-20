@@ -34,19 +34,50 @@ document.addEventListener('alpine:init', () => {
   });
 
   // Storefront category navigation and the phone's native menu dialog.
-  Alpine.data('storeMenu', (initial, sections) => {
+  Alpine.data('storeMenu', (initial, sections, initialQuery = '') => {
     const visibleImages = new Set();
     let observer, slowTimer;
     return {
       active: initial,
       sections,
+      query: initialQuery,
       menuOpen: false,
       loading: false,
       slow: false,
       offline: !navigator.onLine,
+      matches(text) {
+        const haystack = text.toLowerCase();
+        return this.query.toLowerCase().trim().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
+      },
+      sectionCount(name) {
+        const section = this.sections.find((s) => s.name === name);
+        return section ? section.items.filter((text) => this.matches(text)).length : 0;
+      },
+      showSection(name) {
+        return (!this.active || this.active === name) && this.sectionCount(name) > 0;
+      },
+      get allCount() {
+        return this.sections.reduce((total, s) => total + this.sectionCount(s.name), 0);
+      },
       get count() {
-        return this.active ? (this.sections.find((s) => s.name === this.active)?.count || 0)
-          : this.sections.reduce((n, s) => n + s.count, 0);
+        return this.sections.filter((s) => !this.active || s.name === this.active)
+          .reduce((total, s) => total + this.sectionCount(s.name), 0);
+      },
+      search(value) {
+        this.query = value;
+        // A new search covers the whole shop, including categories off screen.
+        if (value.trim()) this.active = '';
+        this.updateURL(false);
+        this.$nextTick(() => this.updateLoading());
+      },
+      updateURL(push) {
+        const url = new URL(location.href);
+        if (this.active) url.searchParams.set('category', this.active);
+        else url.searchParams.delete('category');
+        if (this.query.trim()) url.searchParams.set('q', this.query.trim());
+        else url.searchParams.delete('q');
+        if (push) url.hash = 'store-menu-results';
+        history[push ? 'pushState' : 'replaceState'](null, '', url);
       },
       init() {
         this.updateLoading = () => {
@@ -78,7 +109,9 @@ document.addEventListener('alpine:init', () => {
           this.$refs.products?.querySelectorAll('img').forEach((img) => observer.observe(img));
         });
         this.onHistory = () => {
-          const category = new URL(location.href).searchParams.get('category') || '';
+          const url = new URL(location.href);
+          const category = url.searchParams.get('category') || '';
+          this.query = url.searchParams.get('q') || '';
           this.active = this.sections.find((s) => s.name.toLowerCase() === category.trim().toLowerCase())?.name || '';
           if (this.$refs.menu?.open) this.$refs.menu.close();
         };
@@ -96,11 +129,7 @@ document.addEventListener('alpine:init', () => {
       openMenu() { this.menuOpen = true; this.$refs.menu.showModal(); },
       choose(category) {
         this.active = category;
-        const url = new URL(location.href);
-        if (category) url.searchParams.set('category', category);
-        else url.searchParams.delete('category');
-        url.hash = 'store-menu-results';
-        history.pushState(null, '', url);
+        this.updateURL(true);
         if (this.$refs.menu.open) this.$refs.menu.close();
         this.$nextTick(() => {
           this.$refs.results.focus({ preventScroll: true });

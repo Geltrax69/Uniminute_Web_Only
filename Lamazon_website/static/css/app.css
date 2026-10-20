@@ -273,3 +273,6 @@ body:has(.store-floating-menu[open]) { overflow: hidden; }
 
 /* Keep a payment issue visible while its native dialog owns focus. */
 body:has(.checkout-payment-issue[open]) { overflow: hidden; }
+
+/* Use the labelled clear control consistently across search input browsers. */
+#shop-search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }

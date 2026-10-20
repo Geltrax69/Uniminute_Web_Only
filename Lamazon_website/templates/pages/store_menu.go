@@ -2,6 +2,7 @@ package pages
 
 import (
 	"lamazon/website/backend"
+	"lamazon/website/shop"
 	"net/url"
 	"sort"
 	"strconv"
@@ -72,23 +73,48 @@ func MatchStoreCategory(sections []StoreSection, category string) string {
 func storeMenuConfig(d StorePageData) []map[string]any {
 	out := make([]map[string]any, 0, len(d.Sections))
 	for _, section := range d.Sections {
-		out = append(out, map[string]any{"name": section.Name, "count": len(section.Products)})
+		items := make([]string, 0, len(section.Products))
+		for _, p := range section.Products {
+			items = append(items, shop.StoreSearchText(p))
+		}
+		out = append(out, map[string]any{"name": section.Name, "count": len(section.Products), "items": items})
 	}
 	return out
 }
 
-func storeCategoryURL(name string) string {
-	if name == "" {
-		return "?category=#store-menu-results"
+func storeCategoryURL(name string, queries ...string) string {
+	values := url.Values{"category": []string{name}}
+	if len(queries) > 0 && strings.TrimSpace(queries[0]) != "" {
+		values.Set("q", strings.TrimSpace(queries[0]))
 	}
-	return "?category=" + url.QueryEscape(name) + "#store-menu-results"
+	return "?" + values.Encode() + "#store-menu-results"
 }
 
 func storeMenuCount(d StorePageData) int {
 	for _, section := range d.Sections {
 		if section.Name == d.SelectedCategory {
-			return len(section.Products)
+			return storeSectionCount(section, d.Query)
 		}
 	}
-	return len(d.Products)
+	return storeAllCount(d)
+}
+
+func storeAllCount(d StorePageData) int {
+	count := 0
+	for _, p := range d.Products {
+		if shop.StoreSearchMatches(p, d.Query) {
+			count++
+		}
+	}
+	return count
+}
+
+func storeSectionCount(section StoreSection, query string) int {
+	count := 0
+	for _, p := range section.Products {
+		if shop.StoreSearchMatches(p, query) {
+			count++
+		}
+	}
+	return count
 }

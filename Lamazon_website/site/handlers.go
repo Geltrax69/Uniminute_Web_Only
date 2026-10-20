@@ -458,7 +458,7 @@ func (s *Site) handleStore(w http.ResponseWriter, r *http.Request) {
 	p := s.buildPage(r)
 	p.Title = name + " — Uniminute"
 	// There is no single-shop endpoint; the list carries the picture and tagline.
-	d := pages.StorePageData{Page: p, Store: backend.Shop{Name: name}}
+	d := pages.StorePageData{Page: p, Store: backend.Shop{Name: name}, Query: strings.TrimSpace(r.URL.Query().Get("q"))}
 	shops, err := s.backend.Shops(r.Context(), "")
 	if maintenance(w, r, p, err) {
 		return

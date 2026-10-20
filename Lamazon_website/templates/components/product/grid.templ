@@ -6,14 +6,19 @@ package product
 // spacing: 14): ceil(width / 164) columns, each tile twice as tall as wide
 // (productTileAspect 0.50).
 
-import "lamazon/website/backend"
+import (
+	"lamazon/website/backend"
+	"lamazon/website/shop"
+)
 
 type GridOpts struct {
-	ID        string
-	ShowStore bool
-	Wishlist  map[string]bool
-	Spaced    bool                        // 16px spacing (search) instead of 14px (home)
-	QuickAdd  func(backend.Product) bool // nil: the home rule, anything without options
+	StoreSearch bool
+	StoreQuery  string
+	ID          string
+	ShowStore   bool
+	Wishlist    map[string]bool
+	Spaced      bool                       // 16px spacing (search) instead of 14px (home)
+	QuickAdd    func(backend.Product) bool // nil: the home rule, anything without options
 }
 
 templ Grid(items []backend.Product, opts GridOpts) {
@@ -39,7 +44,7 @@ func quickAdd(p backend.Product, opts GridOpts) bool {
 // Cards is the grid's children alone, for fragments that append to a grid.
 templ Cards(items []backend.Product, opts GridOpts) {
 	for _, p := range items {
-		<div>
+		<div { storeSearchAttrs(p, opts)... }>
 			@Card(p, CardOpts{
 				ShowStore:  opts.ShowStore,
 				QuickAdd:   quickAdd(p, opts),
@@ -66,4 +71,15 @@ func equalFold(a, b string) bool {
 		}
 	}
 	return true
+}
+
+func storeSearchAttrs(p backend.Product, opts GridOpts) templ.Attributes {
+	if !opts.StoreSearch {
+		return nil
+	}
+	attrs := templ.Attributes{"data-store-search": shop.StoreSearchText(p), "x-show": "matches($el.dataset.storeSearch)"}
+	if !shop.StoreSearchMatches(p, opts.StoreQuery) {
+		attrs["style"] = "display:none"
+	}
+	return attrs
 }

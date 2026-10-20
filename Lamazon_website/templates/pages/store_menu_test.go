@@ -67,3 +67,25 @@ func TestStoreMenuUsesPipelineGroupsAndSemanticOrder(t *testing.T) {
 		t.Fatal("old category link lost its replacement group")
 	}
 }
+
+func TestStoreSearchCountsAndCategoryLinks(t *testing.T) {
+	products := []backend.Product{
+		{Name: "Aloo Cheese Burger", Category: "Burger"},
+		{Name: "Paneer Burger", Category: "Burger"},
+		{Name: "Cheese Sandwich", Category: "Sandwich"},
+	}
+	d := StorePageData{Products: products, Sections: GroupStoreProducts(products), Query: "CHEESE"}
+	if got := storeMenuCount(d); got != 2 {
+		t.Fatalf("shop matches=%d", got)
+	}
+	d.SelectedCategory = "Burger"
+	if got := storeMenuCount(d); got != 1 {
+		t.Fatalf("category matches=%d", got)
+	}
+	if got := storeAllCount(d); got != 2 {
+		t.Fatalf("all-items count inherited category filter: %d", got)
+	}
+	if got := storeCategoryURL("Burger", "cheese & corn"); got != "?category=Burger&q=cheese+%26+corn#store-menu-results" {
+		t.Fatalf("category link dropped or misencoded query: %q", got)
+	}
+}
