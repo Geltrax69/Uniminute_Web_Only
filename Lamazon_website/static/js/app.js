@@ -34,38 +34,81 @@ document.addEventListener('alpine:init', () => {
   });
 
   // Storefront category navigation and the phone's native menu dialog.
-  Alpine.data('storeMenu', (initial, sections) => ({
-    active: initial,
-    sections,
-    menuOpen: false,
-    get count() {
-      return this.active ? (this.sections.find((s) => s.name === this.active)?.count || 0)
-        : this.sections.reduce((n, s) => n + s.count, 0);
-    },
-    init() {
-      this.onHistory = () => {
-        const category = new URL(location.href).searchParams.get('category') || '';
-        this.active = this.sections.find((s) => s.name.toLowerCase() === category.trim().toLowerCase())?.name || '';
-        if (this.$refs.menu?.open) this.$refs.menu.close();
-      };
-      window.addEventListener('popstate', this.onHistory);
-    },
-    destroy() { window.removeEventListener('popstate', this.onHistory); },
-    openMenu() { this.menuOpen = true; this.$refs.menu.showModal(); },
-    choose(category) {
-      this.active = category;
-      const url = new URL(location.href);
-      if (category) url.searchParams.set('category', category);
-      else url.searchParams.delete('category');
-      url.hash = 'store-menu-results';
-      history.pushState(null, '', url);
-      if (this.$refs.menu.open) this.$refs.menu.close();
-      this.$nextTick(() => {
-        this.$refs.results.focus({ preventScroll: true });
-        this.$refs.results.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      });
-    },
-  }));
+  Alpine.data('storeMenu', (initial, sections) => {
+    const visibleImages = new Set();
+    let observer, slowTimer;
+    return {
+      active: initial,
+      sections,
+      menuOpen: false,
+      loading: false,
+      slow: false,
+      offline: !navigator.onLine,
+      get count() {
+        return this.active ? (this.sections.find((s) => s.name === this.active)?.count || 0)
+          : this.sections.reduce((n, s) => n + s.count, 0);
+      },
+      init() {
+        this.updateLoading = () => {
+          const pending = [...visibleImages].some((img) => !img.complete && img.getClientRects().length > 0);
+          if (pending && !this.loading) {
+            this.slow = false;
+            slowTimer = setTimeout(() => { this.slow = true; }, 8000);
+          } else if (!pending) {
+            clearTimeout(slowTimer);
+            this.slow = false;
+          }
+          this.loading = pending;
+        };
+        this.onConnection = () => { this.offline = !navigator.onLine; };
+        this.$el.addEventListener('load', this.updateLoading, true);
+        this.$el.addEventListener('error', this.updateLoading, true);
+        window.addEventListener('online', this.onConnection);
+        window.addEventListener('offline', this.onConnection);
+        // Track only images near the viewport; lazy images farther down must not
+        // keep the menu busy. Load and error both settle an image.
+        observer = new IntersectionObserver((entries) => {
+          entries.forEach(({ target, isIntersecting }) => {
+            if (isIntersecting) visibleImages.add(target);
+            else visibleImages.delete(target);
+          });
+          this.updateLoading();
+        }, { rootMargin: '200px 0px' });
+        this.$nextTick(() => {
+          this.$refs.products?.querySelectorAll('img').forEach((img) => observer.observe(img));
+        });
+        this.onHistory = () => {
+          const category = new URL(location.href).searchParams.get('category') || '';
+          this.active = this.sections.find((s) => s.name.toLowerCase() === category.trim().toLowerCase())?.name || '';
+          if (this.$refs.menu?.open) this.$refs.menu.close();
+        };
+        window.addEventListener('popstate', this.onHistory);
+      },
+      destroy() {
+        window.removeEventListener('popstate', this.onHistory);
+        window.removeEventListener('online', this.onConnection);
+        window.removeEventListener('offline', this.onConnection);
+        this.$el.removeEventListener('load', this.updateLoading, true);
+        this.$el.removeEventListener('error', this.updateLoading, true);
+        observer?.disconnect();
+        clearTimeout(slowTimer);
+      },
+      openMenu() { this.menuOpen = true; this.$refs.menu.showModal(); },
+      choose(category) {
+        this.active = category;
+        const url = new URL(location.href);
+        if (category) url.searchParams.set('category', category);
+        else url.searchParams.delete('category');
+        url.hash = 'store-menu-results';
+        history.pushState(null, '', url);
+        if (this.$refs.menu.open) this.$refs.menu.close();
+        this.$nextTick(() => {
+          this.$refs.results.focus({ preventScroll: true });
+          this.$refs.results.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        });
+      },
+    };
+  });
 
   // ── toasts component ─────────────────────────────────────────────────────
   // Used by ui.templ ToastRegion. The server emits HX-Trigger: {"lw:toast":
@@ -1285,6 +1328,33 @@ document.addEventListener('htmx:confirm', (e) => {
   };
   document.addEventListener('htmx:beforeRequest', () => { inFlight++; show(); });
   document.addEventListener('htmx:afterRequest', () => { inFlight = Math.max(0, inFlight - 1); if (!inFlight) hide(); });
+  let menuTimer;
+  const menuScreen = () => document.getElementById('lw-menu-navigation');
+  const dismissMenu = () => {
+    clearTimeout(menuTimer);
+    if (menuScreen()) menuScreen().hidden = true;
+  };
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest?.('a[href]');
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || !url.pathname.startsWith('/store/') || (url.pathname === location.pathname && url.search === location.search)) return;
+    if (!navigator.onLine) return;
+    const screen = menuScreen();
+    if (!screen) return;
+    screen.hidden = false;
+    screen.querySelector('[data-menu-loading-message]').textContent = 'Loading store menu…';
+    menuTimer = setTimeout(() => {
+      screen.querySelector('[data-menu-loading-message]').textContent = 'Your connection is taking a little longer…';
+    }, 8000);
+    show();
+  });
+  document.getElementById('lw-menu-cancel')?.addEventListener('click', () => {
+    window.stop();
+    dismissMenu();
+    hide();
+  });
+  window.addEventListener('pageshow', dismissMenu);
   window.addEventListener('beforeunload', show);
   window.addEventListener('pageshow', hide);
 })();

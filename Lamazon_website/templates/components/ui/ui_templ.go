@@ -59,7 +59,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.SafeCSS(TactileStyle(size, bg)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 19, Col: 168}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 19, Col: 168}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -72,7 +72,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 19, Col: 189}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 19, Col: 189}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
@@ -85,7 +85,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 19, Col: 205}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 19, Col: 205}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -119,7 +119,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.SafeCSS(TactileStyle(size, bg)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 23, Col: 187}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 23, Col: 187}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -132,7 +132,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 23, Col: 208}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 23, Col: 208}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -145,7 +145,7 @@ func TactileButton(icon, label string, size int, bg string, attrs templ.Attribut
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 23, Col: 224}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 23, Col: 224}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func ActionButtonIcon(label, icon string, primary bool, attrs templ.Attributes) 
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var9).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
@@ -244,7 +244,7 @@ func ActionButtonIcon(label, icon string, primary bool, attrs templ.Attributes) 
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 53, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 53, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -300,7 +300,7 @@ func Icon(name string, class string) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var13).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 			if templ_7745c5c3_Err != nil {
@@ -370,7 +370,7 @@ func ActionButton(label string, primary bool, attrs templ.Attributes) templ.Comp
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var16).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 			if templ_7745c5c3_Err != nil {
@@ -383,7 +383,7 @@ func ActionButton(label string, primary bool, attrs templ.Attributes) templ.Comp
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 82, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 82, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -414,7 +414,7 @@ func ActionButton(label string, primary bool, attrs templ.Attributes) templ.Comp
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var19).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 			if templ_7745c5c3_Err != nil {
@@ -427,7 +427,7 @@ func ActionButton(label string, primary bool, attrs templ.Attributes) templ.Comp
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 86, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 86, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -515,7 +515,7 @@ func Spinner(class string) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var24).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -563,7 +563,7 @@ func Skeleton(class string, label string) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var27).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 		if templ_7745c5c3_Err != nil {
@@ -576,7 +576,7 @@ func Skeleton(class string, label string) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 112, Col: 119}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 112, Col: 119}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 		if templ_7745c5c3_Err != nil {
@@ -717,7 +717,7 @@ func EmptyState(iconName string, title string, message string, actionLabel strin
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 147, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 147, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -730,7 +730,7 @@ func EmptyState(iconName string, title string, message string, actionLabel strin
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 149, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 149, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 		if templ_7745c5c3_Err != nil {
@@ -808,7 +808,7 @@ func StatusScreen(s Status) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.ResolveAttributeValue(tpl.When(s.Tone == "danger", "alert", "status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 184, Col: 156}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 184, Col: 156}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
 		if templ_7745c5c3_Err != nil {
@@ -830,7 +830,7 @@ func StatusScreen(s Status) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var36).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 		if templ_7745c5c3_Err != nil {
@@ -851,7 +851,7 @@ func StatusScreen(s Status) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(s.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 188, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 188, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -864,7 +864,7 @@ func StatusScreen(s Status) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(s.Message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 189, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 189, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -946,7 +946,7 @@ func Unavailable(message string) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 209, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 209, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -983,7 +983,7 @@ func AppStates() templ.Component {
 			templ_7745c5c3_Var42 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<div id=\"lw-progress\" class=\"pointer-events-none fixed inset-x-0 top-0 z-[90] h-[3px] origin-left scale-x-0 bg-lime opacity-0 transition-[transform,opacity] duration-300\" aria-hidden=\"true\"></div><div x-data=\"netStatus()\" x-show=\"!online\" x-cloak x-transition.opacity class=\"fixed inset-x-0 top-0 z-[85] flex items-center justify-center gap-2 bg-[#2E312E] px-4 py-2.5 text-[13px] text-[#EFF1EC]\" role=\"alert\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<div id=\"lw-menu-navigation\" hidden class=\"fixed inset-0 z-[100] bg-surface/95\"><div class=\"flex h-full flex-col items-center justify-center px-8 text-center\"><p class=\"text-[22px] font-semibold text-strong\">Opening the menu</p><p data-menu-loading-message role=\"status\" aria-live=\"polite\" class=\"mt-3 text-[14px] text-muted\">Loading store menu…</p><div role=\"progressbar\" aria-label=\"Loading store menu\" class=\"mt-6 h-1 w-full max-w-[240px] overflow-hidden rounded-full bg-strong/10\"><div class=\"lw-progress h-full w-1/3 rounded-full bg-strong\"></div></div><button id=\"lw-menu-cancel\" type=\"button\" class=\"mt-6 min-h-11 rounded-small px-5 text-[14px] font-medium text-strong underline underline-offset-4\">Cancel</button></div></div><div id=\"lw-progress\" class=\"pointer-events-none fixed inset-x-0 top-0 z-[90] h-[3px] origin-left scale-x-0 bg-lime opacity-0 transition-[transform,opacity] duration-300\" aria-hidden=\"true\"></div><div x-data=\"netStatus()\" x-show=\"!online\" x-cloak x-transition.opacity class=\"fixed inset-x-0 top-0 z-[85] flex items-center justify-center gap-2 bg-[#2E312E] px-4 py-2.5 text-[13px] text-[#EFF1EC]\" role=\"alert\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1101,7 +1101,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 294, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 304, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 		if templ_7745c5c3_Err != nil {
@@ -1114,7 +1114,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ open: $store.drawers.isOpen('" + id + "') }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 296, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 306, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
 		if templ_7745c5c3_Err != nil {
@@ -1127,7 +1127,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 297, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 307, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
 		if templ_7745c5c3_Err != nil {
@@ -1140,7 +1140,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 303, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 313, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var48)
 		if templ_7745c5c3_Err != nil {
@@ -1162,7 +1162,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var49).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 		if templ_7745c5c3_Err != nil {
@@ -1175,7 +1175,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.ResolveAttributeValue(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 311, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 321, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 		if templ_7745c5c3_Err != nil {
@@ -1188,7 +1188,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 313, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 323, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -1201,7 +1201,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 316, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 326, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 		if templ_7745c5c3_Err != nil {
@@ -1214,7 +1214,7 @@ func Drawer(id string, side string, title string, content templ.Component) templ
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.ResolveAttributeValue("Close " + title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 317, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 327, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 		if templ_7745c5c3_Err != nil {
@@ -1280,7 +1280,7 @@ func Dropdown(label string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var56 string
 		templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 340, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 350, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 		if templ_7745c5c3_Err != nil {
@@ -1336,7 +1336,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.ResolveAttributeValue(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 357, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 367, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var58)
 		if templ_7745c5c3_Err != nil {
@@ -1349,7 +1349,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var59 string
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ open: $store.drawers.isOpen('" + id + "') }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 359, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 369, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var59)
 		if templ_7745c5c3_Err != nil {
@@ -1362,7 +1362,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var60 string
 		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 360, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 370, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var60)
 		if templ_7745c5c3_Err != nil {
@@ -1375,7 +1375,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 366, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 376, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 		if templ_7745c5c3_Err != nil {
@@ -1388,7 +1388,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.ResolveAttributeValue(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 375, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 385, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var62)
 		if templ_7745c5c3_Err != nil {
@@ -1401,7 +1401,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 377, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 387, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -1414,7 +1414,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var64 string
 		templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.ResolveAttributeValue("$store.drawers.close('" + id + "')")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 380, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 390, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var64)
 		if templ_7745c5c3_Err != nil {
@@ -1427,7 +1427,7 @@ func Modal(id string, title string, content templ.Component) templ.Component {
 		var templ_7745c5c3_Var65 string
 		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.ResolveAttributeValue("Close " + title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 381, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 391, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var65)
 		if templ_7745c5c3_Err != nil {
@@ -1491,7 +1491,7 @@ func Stars(n int, class string) templ.Component {
 		var templ_7745c5c3_Var68 string
 		templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var67).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var68)
 		if templ_7745c5c3_Err != nil {
@@ -1504,7 +1504,7 @@ func Stars(n int, class string) templ.Component {
 		var templ_7745c5c3_Var69 string
 		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(n) + " out of 5 stars")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 392, Col: 114}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 402, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var69)
 		if templ_7745c5c3_Err != nil {
@@ -1527,7 +1527,7 @@ func Stars(n int, class string) templ.Component {
 			var templ_7745c5c3_Var71 string
 			templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var70).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var71)
 			if templ_7745c5c3_Err != nil {
@@ -1575,7 +1575,7 @@ func StarInput(name string, value int, label string) templ.Component {
 		var templ_7745c5c3_Var73 string
 		templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ v: " + strconv.Itoa(value) + " }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 401, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 411, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var73)
 		if templ_7745c5c3_Err != nil {
@@ -1588,7 +1588,7 @@ func StarInput(name string, value int, label string) templ.Component {
 		var templ_7745c5c3_Var74 string
 		templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 401, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 411, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var74)
 		if templ_7745c5c3_Err != nil {
@@ -1601,7 +1601,7 @@ func StarInput(name string, value int, label string) templ.Component {
 		var templ_7745c5c3_Var75 string
 		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 402, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 412, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var75)
 		if templ_7745c5c3_Err != nil {
@@ -1614,7 +1614,7 @@ func StarInput(name string, value int, label string) templ.Component {
 		var templ_7745c5c3_Var76 string
 		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 402, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 412, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var76)
 		if templ_7745c5c3_Err != nil {
@@ -1632,7 +1632,7 @@ func StarInput(name string, value int, label string) templ.Component {
 			var templ_7745c5c3_Var77 string
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.ResolveAttributeValue("v === " + strconv.Itoa(i))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 407, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 417, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var77)
 			if templ_7745c5c3_Err != nil {
@@ -1645,7 +1645,7 @@ func StarInput(name string, value int, label string) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(i) + " star" + tpl.When(i == 1, "", "s"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 408, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 418, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var78)
 			if templ_7745c5c3_Err != nil {
@@ -1658,7 +1658,7 @@ func StarInput(name string, value int, label string) templ.Component {
 			var templ_7745c5c3_Var79 string
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.ResolveAttributeValue("v = (v === " + strconv.Itoa(i) + " ? 0 : " + strconv.Itoa(i) + ")")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 409, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 419, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var79)
 			if templ_7745c5c3_Err != nil {
@@ -1671,7 +1671,7 @@ func StarInput(name string, value int, label string) templ.Component {
 			var templ_7745c5c3_Var80 string
 			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.ResolveAttributeValue("v >= " + strconv.Itoa(i) + " ? 'text-[#F2A900]' : 'text-[#D9DCD5]'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/ui/ui.templ`, Line: 411, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/ui/ui.templ`, Line: 421, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var80)
 			if templ_7745c5c3_Err != nil {

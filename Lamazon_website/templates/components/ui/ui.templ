@@ -213,6 +213,16 @@ templ Unavailable(message string) {
 // AppStates is mounted once per page: the loading bar, the offline banner,
 // the confirmation dialog and the processing overlay (see static/js/app.js).
 templ AppStates() {
+    <div id="lw-menu-navigation" hidden class="fixed inset-0 z-[100] bg-surface/95">
+        <div class="flex h-full flex-col items-center justify-center px-8 text-center">
+            <p class="text-[22px] font-semibold text-strong">Opening the menu</p>
+            <p data-menu-loading-message role="status" aria-live="polite" class="mt-3 text-[14px] text-muted">Loading store menu…</p>
+            <div role="progressbar" aria-label="Loading store menu" class="mt-6 h-1 w-full max-w-[240px] overflow-hidden rounded-full bg-strong/10">
+                <div class="lw-progress h-full w-1/3 rounded-full bg-strong"></div>
+            </div>
+            <button id="lw-menu-cancel" type="button" class="mt-6 min-h-11 rounded-small px-5 text-[14px] font-medium text-strong underline underline-offset-4">Cancel</button>
+        </div>
+    </div>
 	<div id="lw-progress" class="pointer-events-none fixed inset-x-0 top-0 z-[90] h-[3px] origin-left scale-x-0 bg-lime opacity-0 transition-[transform,opacity] duration-300" aria-hidden="true"></div>
 	<div x-data="netStatus()" x-show="!online" x-cloak x-transition.opacity class="fixed inset-x-0 top-0 z-[85] flex items-center justify-center gap-2 bg-[#2E312E] px-4 py-2.5 text-[13px] text-[#EFF1EC]" role="alert">
 		@Icon("wifi-off", "h-4 w-4 shrink-0")
