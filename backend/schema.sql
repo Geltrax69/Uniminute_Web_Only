@@ -784,3 +784,21 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS public_id TEXT NOT NULL DEFAULT re
 CREATE UNIQUE INDEX IF NOT EXISTS products_public_id_unique ON products (public_id);
 ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS public_id TEXT NOT NULL DEFAULT replace(gen_random_uuid()::text, '-', '');
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_public_id_unique ON inventory_items (public_id);
+
+-- Verified provider notifications, independent of browser checkout callbacks.
+-- Keep only reconciliation metadata; no card, contact or raw payload data.
+CREATE TABLE IF NOT EXISTS razorpay_webhook_events (
+ event_id TEXT PRIMARY KEY,
+ event_type TEXT NOT NULL,
+ payload_hash TEXT NOT NULL,
+ payment_id TEXT NOT NULL DEFAULT '',
+ order_id TEXT NOT NULL DEFAULT '',
+ refund_id TEXT NOT NULL DEFAULT '',
+ amount_paise BIGINT NOT NULL CHECK (amount_paise >= 0),
+ currency TEXT NOT NULL,
+ provider_status TEXT NOT NULL,
+ provider_created_at BIGINT NOT NULL DEFAULT 0,
+ received_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS razorpay_webhook_payment_idx ON razorpay_webhook_events(payment_id) WHERE payment_id <> '';
+CREATE INDEX IF NOT EXISTS razorpay_webhook_order_idx ON razorpay_webhook_events(order_id) WHERE order_id <> '';

@@ -227,3 +227,25 @@ the original paths, so the website and API can be rolled out independently.
 Deploy the updated backend to activate public references; its startup schema
 adds and fills the public-ID columns without changing inventory, order or cart
 IDs. These are opaque public references, not encryption or authorization.
+
+### Razorpay webhooks
+
+The public receiver is `POST https://www.uniminute.in/api/razorpay/webhook`.
+The storefront forwards the original body and signature headers to the backend.
+Set `RAZORPAY_WEBHOOK_SECRET` in the backend environment to the exact secret in
+Razorpay's webhook settings. Keep this secret private and independent of the API
+key secret. Restart `lamazon-api` after changing it; shared payment credentials
+require restarting both `lamazon-api` and `lamazon-web`.
+
+Subscribe to `payment.captured`, `payment.failed`, `order.paid`, and
+`refund.processed`. Verified deliveries are saved in `razorpay_webhook_events`,
+with duplicate event IDs acknowledged once. Unsupported signed events are
+acknowledged and ignored. Invalid signatures are rejected; storage failures
+return 503 so Razorpay can retry. The inbox stores reconciliation metadata,
+without raw payloads, card details or customer contact data.
+
+The receiver is an audit inbox, not an automatic checkout recovery worker.
+Checkout continues to verify the captured payment, basket total, stock and
+customer session before placing orders. Webhooks do not recreate an abandoned
+basket, alter fulfilment, or change existing order payment status; in particular,
+a delayed failure must not overwrite a successfully paid order.

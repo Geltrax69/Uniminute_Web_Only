@@ -125,6 +125,9 @@ func routes(s *API) http.Handler {
 		})
 	})
 
+	// Provider callbacks authenticate with their raw-body webhook signature.
+	mux.HandleFunc("POST /api/razorpay/webhook", s.handleRazorpayWebhook)
+
 	// Catalog
 	mux.HandleFunc("GET /api/policies", s.handlePolicies)
 	mux.HandleFunc("GET /api/charges", s.handleCharges)
