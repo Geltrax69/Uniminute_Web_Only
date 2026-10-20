@@ -226,6 +226,13 @@ templ AppStates() {
 			<button type="button" x-on:click="settle(true)" class="min-h-touch rounded-full px-3 text-label hover:bg-strong/[.06]" x-bind:class="danger ? 'text-danger' : 'text-strong'" x-text="ok"></button>
 		</div>
 	</dialog>
+	<dialog id="lw-result" aria-labelledby="lw-result-title" aria-describedby="lw-result-body" class="w-[min(440px,90vw)] rounded-featured bg-surface p-7 text-text shadow-raised backdrop:bg-black/40">
+		<h2 id="lw-result-title" data-result-title class="text-[22px] font-semibold leading-7"></h2>
+		<p id="lw-result-body" data-result-body class="mt-3 break-words text-body leading-relaxed text-muted"></p>
+		<form method="dialog" class="mt-6">
+			<button type="submit" autofocus class="min-h-touch w-full rounded-full bg-strong px-5 py-3 text-label text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong">Continue</button>
+		</form>
+	</dialog>
 	<div x-data="processing()" x-show="active" x-cloak class="fixed inset-0 z-[95] flex items-center justify-center bg-canvas/85 px-6 backdrop-blur-sm" role="alertdialog" aria-live="assertive" x-bind:aria-label="title">
 		<div class="w-full max-w-[360px] rounded-featured bg-surface p-7 text-center shadow-raised">
 			<span class="mx-auto block h-10 w-10 animate-spin rounded-full border-[3px] border-strong border-t-transparent motion-reduce:animate-none"></span>

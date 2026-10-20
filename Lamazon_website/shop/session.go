@@ -11,6 +11,8 @@ package shop
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"lamazon/website/backend"
 )
@@ -23,6 +25,7 @@ const (
 )
 
 func SetSessionCookies(w http.ResponseWriter, s backend.Session) {
+	sessionRevision(w)
 	http.SetCookie(w, &http.Cookie{
 		Name: AccessCookie, Value: s.Token, Path: "/",
 		MaxAge: s.ExpiresIn, HttpOnly: true, SameSite: http.SameSiteLaxMode,
@@ -34,6 +37,7 @@ func SetSessionCookies(w http.ResponseWriter, s backend.Session) {
 }
 
 func ClearSessionCookies(w http.ResponseWriter) {
+	sessionRevision(w)
 	for _, name := range []string{AccessCookie, RefreshCookie} {
 		http.SetCookie(w, &http.Cookie{
 			Name: name, Value: "", Path: "/", MaxAge: -1,
@@ -67,4 +71,9 @@ func WithSession(r *http.Request, s backend.Session) *http.Request {
 	r.AddCookie(&http.Cookie{Name: AccessCookie, Value: s.Token})
 	r.AddCookie(&http.Cookie{Name: RefreshCookie, Value: s.RefreshToken})
 	return r
+}
+
+// This non-secret marker invalidates old browser snapshots after a session change.
+func sessionRevision(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: "lw_sv", Value: strconv.FormatInt(time.Now().UnixNano(), 36), Path: "/", MaxAge: 90 * 24 * 60 * 60, SameSite: http.SameSiteLaxMode})
 }

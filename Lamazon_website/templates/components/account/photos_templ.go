@@ -36,7 +36,7 @@ func PhotoManager() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<input type=\"file\" accept=\"image/*\" multiple class=\"hidden\" x-ref=\"photos\" x-on:change=\"addFiles($event)\"><template x-if=\"!shots.length\"><button type=\"button\" x-on:click=\"$refs.photos.click()\" x-bind:disabled=\"busy\" class=\"flex h-[140px] w-full flex-col items-center justify-center rounded border border-[#DDDDD8] bg-white\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<input type=\"file\" accept=\"image/*\" multiple class=\"hidden\" x-ref=\"photos\" x-on:change=\"addFiles($event)\"><template x-if=\"!shots.length\"><button type=\"button\" x-on:click=\"$refs.photos.click()\" x-bind:disabled=\"busy || $data.saving\" class=\"flex h-[140px] w-full flex-col items-center justify-center rounded border border-[#DDDDD8] bg-white\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -44,7 +44,7 @@ func PhotoManager() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"mt-2 text-[14px] font-bold text-text\">Add photos</span> <span class=\"mt-0.5 text-[12px] text-muted\">Every photo is framed square, so the shop lines up</span></button></template><template x-if=\"shots.length\"><div><div class=\"flex gap-2.5 overflow-x-auto pb-1 no-scrollbar\"><template x-for=\"(shot, i) in shots\" :key=\"shot.url || shot.preview\"><div class=\"relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-[14px] bg-img-ground\"><img x-bind:src=\"shot.url || shot.preview\" alt=\"\" class=\"h-full w-full object-cover\"> <span x-show=\"i === 0\" class=\"absolute left-1.5 top-1.5 rounded-[10px] bg-text px-2 py-[3px] text-[10px] font-extrabold text-white\">Cover</span> <button type=\"button\" x-on:click=\"remove(i)\" x-bind:disabled=\"busy\" aria-label=\"Remove photo\" class=\"absolute right-1 top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-danger shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"mt-2 text-[14px] font-bold text-text\">Add photos</span> <span class=\"mt-0.5 text-[12px] text-muted\">JPEG, PNG, WebP or GIF · Up to 20 MB per photo</span></button></template><template x-if=\"shots.length\"><div><div class=\"flex gap-2.5 overflow-x-auto pb-1 no-scrollbar\"><template x-for=\"(shot, i) in shots\" :key=\"shot.url || shot.preview\"><div class=\"relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-[14px] bg-img-ground\"><img x-bind:src=\"shot.url || shot.preview\" alt=\"\" class=\"h-full w-full object-cover\"> <span x-show=\"i === 0\" class=\"absolute left-1.5 top-1.5 rounded-[10px] bg-text px-2 py-[3px] text-[10px] font-extrabold text-white\">Cover</span> <button type=\"button\" x-on:click=\"remove(i)\" x-bind:disabled=\"busy || $data.saving\" aria-label=\"Remove photo\" class=\"absolute right-1 top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-danger shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -52,7 +52,7 @@ func PhotoManager() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</button><div class=\"absolute inset-x-1 bottom-1 flex\"><button type=\"button\" x-show=\"i > 0\" x-on:click=\"move(i, -1)\" x-bind:disabled=\"busy\" aria-label=\"Move photo earlier\" class=\"flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-text shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</button><div class=\"absolute inset-x-1 bottom-1 flex\"><button type=\"button\" x-show=\"i > 0\" x-on:click=\"move(i, -1)\" x-bind:disabled=\"busy || $data.saving\" aria-label=\"Move photo earlier\" class=\"flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-text shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -60,7 +60,7 @@ func PhotoManager() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</button> <button type=\"button\" x-show=\"i < shots.length - 1\" x-on:click=\"move(i, 1)\" x-bind:disabled=\"busy\" aria-label=\"Move photo later\" class=\"ml-auto flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-text shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</button> <button type=\"button\" x-show=\"i < shots.length - 1\" x-on:click=\"move(i, 1)\" x-bind:disabled=\"busy || $data.saving\" aria-label=\"Move photo later\" class=\"ml-auto flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-text shadow-[0_0_4.5px_rgba(0,0,0,0.26)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -68,7 +68,7 @@ func PhotoManager() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</button></div></div></template></div><div class=\"mt-2.5 flex items-center\"><button type=\"button\" x-on:click=\"$refs.photos.click()\" x-bind:disabled=\"busy\" class=\"inline-flex min-h-touch shrink-0 items-center rounded-full px-3 text-label text-text hover:bg-strong/[.06]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</button></div></div></template></div><div class=\"mt-2.5 flex items-center\"><button type=\"button\" x-on:click=\"$refs.photos.click()\" x-bind:disabled=\"busy || $data.saving\" class=\"inline-flex min-h-touch shrink-0 items-center rounded-full px-3 text-label text-text hover:bg-strong/[.06]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -76,7 +76,7 @@ func PhotoManager() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<span class=\"ml-2\">Add photos</span></button><p class=\"ml-1 flex-1 text-[12px] text-muted\" x-text=\"busy ? 'Saving…' : 'Use the arrows to reorder — the first one is the cover.'\"></p></div></div></template>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<span class=\"ml-2\">Add photos</span></button><p class=\"ml-1 flex-1 text-[12px] text-muted\" x-text=\"busy ? 'Preparing and uploading photos…' : 'Use the arrows to reorder — the first one is the cover.'\"></p></div></div></template>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

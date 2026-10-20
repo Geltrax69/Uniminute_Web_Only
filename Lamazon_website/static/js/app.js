@@ -784,6 +784,7 @@ document.addEventListener('alpine:init', () => {
       return this.variantRows.map((row) => ({ choices: row.choices, price: this.rowPrice(row.key), mrp: this.rowMRP(row.key) }));
     },
     get blocker() {
+      if (this.busy) return 'Wait for your photos to finish';
       if (!this.shots.length) return 'Add at least one photo';
       if (!this.title.trim()) return 'Give the product a title';
       if ([...this.title.trim()].length > 250) return 'Shorten the title to 250 characters or fewer';
@@ -856,8 +857,9 @@ document.addEventListener('alpine:init', () => {
     },
     ...photoMethods('/api/seller/items'),
     async save() {
-      if (this.blocker || this.saving) return;
+      if (this.blocker || this.saving || this.busy) return;
       this.saving = true;
+      lwProcessing(this.id ? 'Saving product…' : 'Uploading product photos…');
       const fields = {
         title: this.title.trim(), description: this.description.trim(), category: this.category,
         price: this.variantRows.length ? Math.min(...this.liveVariantPrices().map((v) => v.price)) : this.priceValue,
@@ -873,13 +875,16 @@ document.addEventListener('alpine:init', () => {
           body.set('variantPrices', JSON.stringify(this.liveVariantPrices()));
           body.set('attributes', JSON.stringify(this.liveAttrs()));
           this.shots.forEach((s) => s.file && body.append('file', s.file));
-          await sellerCall('POST', '/api/seller/items', body);
+          await sellerCall('POST', '/api/seller/items', body, (percent) => lwProcessing(percent === 100 ? 'Photos uploaded. Saving product…' : `Uploading product photos… ${percent}%`));
         }
-        try { sessionStorage.setItem('lw:flash', this.id ? 'Changes saved.' : `"${fields.title}" is listed — buyers can order it now.`); } catch {}
+        this.saving = false;
+        lwProcessing('');
+        await lwResult({ title: this.id ? 'Product updated' : 'Added to inventory', body: `“${fields.title}” has been saved successfully.`, ok: 'View inventory' });
         lwLeave('/seller?pane=inventory');
       } catch (err) {
-        lwToast(err.message, 'error');
         this.saving = false;
+        lwProcessing('');
+        await lwResult({ title: 'Product could not be saved', body: `${err.message} Your form is still here. Check your inventory before retrying if the connection was interrupted.`, danger: true, ok: 'Back to product' });
       }
     },
   }));
@@ -1003,7 +1008,8 @@ document.addEventListener('alpine:init', () => {
 // The seller pages call the backend's own /api/seller routes through the
 // site's proxy, which adds the session token. Errors come back as
 // {"error": "..."} and are thrown with that sentence.
-window.sellerCall = async (method, path, body) => {
+window.sellerCall = async (method, path, body, onProgress) => {
+  if (onProgress && body instanceof FormData) return lwUpload(method, path, body, onProgress);
   const opts = { method, headers: {} };
   if (body instanceof FormData) {
     opts.body = body;
@@ -1035,13 +1041,33 @@ window.sellerCall = async (method, path, body) => {
 // ones, then send the whole order as URLs the server already knows. base is
 // the items route (the seller's own, or the admin's through its proxy).
 window.photoMethods = (base) => ({
-  addFiles(e) {
+  async addFiles(e) {
     const files = [...e.target.files];
     e.target.value = '';
-    if (files.length) this.setShots([...this.shots, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    if (!files.length || this.busy || this.saving) return;
+    this.busy = true;
+    lwProcessing('Preparing product photos…');
+    try {
+      // Validate the whole batch before changing the selected photos.
+      const prepared = [];
+      for (const file of files) prepared.push(await lwPreparePhoto(file));
+      const total = [...this.shots.filter((s) => s.file).map((s) => s.file), ...prepared].reduce((n, f) => n + f.size, 0);
+      if (total > 35 * 1024 * 1024) throw new Error('These photos are too large together. Keep the selected photos below 35 MB, or choose fewer photos.');
+      await this.setShots([...this.shots, ...prepared.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    } catch (err) {
+      lwProcessing('');
+      await lwResult({ title: 'Photo could not be added', body: err.message, danger: true, ok: 'Choose another photo' });
+    } finally {
+      this.busy = false;
+      lwProcessing('');
+    }
   },
-  remove(i) { const s = [...this.shots]; s.splice(i, 1); this.setShots(s); },
+  remove(i) {
+    if (this.busy || this.saving) return;
+    const s = [...this.shots]; s.splice(i, 1); this.setShots(s);
+  },
   move(i, step) {
+    if (this.busy || this.saving) return;
     const j = i + step;
     if (j < 0 || j >= this.shots.length) return;
     const s = [...this.shots];
@@ -1049,9 +1075,11 @@ window.photoMethods = (base) => ({
     this.setShots(s);
   },
   async setShots(next) {
+    const previous = this.shots;
     this.shots = next;
     if (!this.id) return;
     this.busy = true;
+    lwProcessing('Uploading product photos…');
     try {
       let urls = next.filter((s) => s.url).map((s) => s.url);
       const fresh = next.filter((s) => s.file);
@@ -1072,16 +1100,22 @@ window.photoMethods = (base) => ({
       const saved = await sellerCall('PUT', `${base}/${this.id}/photos`, { imageUrls: urls });
       this.shots = saved.imageUrls.map((url) => ({ url }));
       if (fresh.length > 1 && failed.length && failed.length < fresh.length) {
-        lwToast(`${fresh.length - failed.length} of ${fresh.length} photos added. ${failed.length} failed: ${lastError}`, 'error');
+        lwProcessing('');
+        await lwResult({ title: 'Some photos could not be uploaded', body: `${fresh.length - failed.length} of ${fresh.length} photos added. ${failed.length} failed: ${lastError}`, danger: true });
       } else if (failed.length) {
-        lwToast(lastError, 'error');
+        lwProcessing('');
+        await lwResult({ title: 'Photo upload failed', body: lastError, danger: true });
       } else if (fresh.length) {
         lwToast(fresh.length === 1 ? 'Photo added.' : `${fresh.length} photos added.`, 'success');
       }
     } catch (err) {
-      lwToast(err.message, 'error');
+      this.shots = previous;
+      lwProcessing('');
+      await lwResult({ title: 'Photos could not be saved', body: err.message, danger: true });
+    } finally {
+      this.busy = false;
+      lwProcessing('');
     }
-    this.busy = false;
   },
 });
 
@@ -1376,6 +1410,11 @@ document.addEventListener('htmx:beforeOnLoad', (e) => {
   const target = e.detail.xhr.getResponseHeader('HX-Redirect');
   if (!target) return;
   e.preventDefault();
+  if (e.detail.xhr.responseURL && new URL(e.detail.xhr.responseURL).pathname.startsWith('/login/')) {
+    lwProcessing('Loading your account…', false);
+    location.replace(target);
+    return;
+  }
   lwLeave(target);
 });
 
@@ -1389,3 +1428,89 @@ window.addEventListener('pageshow', (e) => {
 
 // "₹ 99,900" and "99900" are the same price.
 window.rupees = (v) => String(v ?? '').replace(/[₹,\s]/g, '');
+
+
+// A readable revision cookie contains no credentials. Compare it on Back and
+// when another tab becomes visible, after the session cookies have changed.
+const lwSessionVersion = () => document.cookie.split('; ').find((c) => c.startsWith('lw_sv=')) || '';
+const lwInitialSessionVersion = lwSessionVersion();
+const lwCheckSession = () => {
+  if (lwSessionVersion() !== lwInitialSessionVersion) location.reload();
+};
+window.addEventListener('pageshow', (e) => { if (e.persisted) lwCheckSession(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) lwCheckSession(); });
+document.addEventListener('htmx:beforeRequest', (e) => {
+  if (e.detail.requestConfig.path.startsWith('/login/')) lwProcessing('Signing in. Please wait…', false);
+});
+document.addEventListener('htmx:afterRequest', (e) => {
+  if (e.detail.requestConfig.path.startsWith('/login/') && !e.detail.xhr.getResponseHeader('HX-Redirect')) lwProcessing('');
+});
+
+// Large, persistent outcomes: users dismiss these when they have read them.
+window.lwResult = ({ title, body, danger = false, ok = 'Back to photos' }) => new Promise((resolve) => {
+  const dialog = document.getElementById('lw-result');
+  dialog.querySelector('[data-result-title]').textContent = title;
+  dialog.querySelector('[data-result-body]').textContent = body;
+  dialog.querySelector('[data-result-title]').classList.toggle('text-danger', danger);
+  dialog.querySelector('button').textContent = ok;
+  dialog.addEventListener('close', resolve, { once: true });
+  dialog.showModal();
+});
+
+// Match the API's 10 MiB image limit; leave room below its 40 MiB body cap.
+window.lwPreparePhoto = async (file) => {
+  const name = file.name || 'Photo';
+  if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+    throw new Error(`“${name}” is not a supported photo. Choose a JPEG, PNG, WebP or GIF image.`);
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    throw new Error(`“${name}” is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Choose an image under 20 MB. We resize supported photos before uploading.`);
+  }
+  const preview = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = preview;
+    try { await image.decode(); } catch { throw new Error(`“${name}” could not be read. Export it again as JPEG, PNG or WebP and try again.`); }
+    if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth * image.naturalHeight > 40000000) {
+      throw new Error(`“${name}” has dimensions that are too large. Resize it below 40 megapixels and try again.`);
+    }
+    // Preserve animation; the server still limits GIF files to 10 MiB.
+    if (file.type === 'image/gif') {
+      if (file.size > 10 * 1024 * 1024) throw new Error(`“${name}” is too large. Choose a GIF under 10 MB or export a still photo.`);
+      return file;
+    }
+    const scale = Math.min(1, 2048 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Your browser could not prepare this photo. Choose a smaller image or try another browser.');
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82));
+    if (!blob || blob.size > 10 * 1024 * 1024) throw new Error(`“${name}” is still too large after resizing. Choose a smaller image under 10 MB.`);
+    if (scale === 1 && file.size <= blob.size) return file;
+    const extension = blob.type === 'image/webp' ? 'webp' : 'png';
+    return new File([blob], name.replace(/\.[^.]+$/, '') + '.' + extension, { type: blob.type });
+  } finally { URL.revokeObjectURL(preview); }
+};
+
+window.lwUpload = (method, path, body, onProgress) => new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open(method, path);
+  xhr.timeout = 120000;
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
+  xhr.upload.onload = () => onProgress(100);
+  xhr.onerror = () => reject(new Error('The connection was interrupted. Reconnect and check your inventory before trying again.'));
+  xhr.ontimeout = () => reject(new Error('The upload took too long. Check your inventory before retrying, or use fewer photos.'));
+  xhr.onload = () => {
+    let result;
+    try { result = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status >= 200 && xhr.status < 300) {
+      if (!result) { reject(new Error('The server returned an unexpected response. Check your inventory before retrying.')); return; }
+      resolve(result);
+    } else {
+      reject(new Error(result?.error || (xhr.status === 413 ? 'These photos are too large. Choose fewer or smaller photos and try again.' : xhr.status === 401 ? 'Your session ended. Sign in again before saving.' : 'The upload failed. Your form is still here; try again in a moment.')));
+    }
+  };
+  xhr.send(body);
+});

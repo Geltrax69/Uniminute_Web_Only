@@ -113,7 +113,7 @@ func Base(title, description, canonical string, content templ.Component) templ.C
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" defer></script><script src=\"/static/js/alpine/cdn.min.js\" defer></script><script type=\"speculationrules\">\n\t\t\t\t{\"prerender\":[\n\t\t\t\t\t{\"where\":{\"selector_matches\":\"nav[aria-label^=Main] a\"},\"eagerness\":\"eager\"},\n\t\t\t\t\t{\"where\":{\"and\":[{\"href_matches\":\"/*\"},{\"not\":{\"href_matches\":[\"/logout\",\"/login*\",\"/register\",\"/admin*\",\"/delivery*\",\"/staff-api/*\",\"/api/*\",\"/seller*\"]}}]},\"eagerness\":\"moderate\"}\n\t\t\t\t]}\n\t\t\t</script></head><body class=\"min-h-screen bg-canvas font-sans text-body leading-[1.2414] text-text antialiased\"><a href=\"#main\" class=\"sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-small focus:bg-surface focus:px-4 focus:py-2 focus:shadow-raised\">Skip to content</a><div class=\"mx-auto min-h-screen w-full max-w-shell\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" defer></script><script src=\"/static/js/alpine/cdn.min.js\" defer></script></head><body class=\"min-h-screen bg-canvas font-sans text-body leading-[1.2414] text-text antialiased\"><a href=\"#main\" class=\"sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-small focus:bg-surface focus:px-4 focus:py-2 focus:shadow-raised\">Skip to content</a><div class=\"mx-auto min-h-screen w-full max-w-shell\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

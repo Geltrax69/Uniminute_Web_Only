@@ -279,6 +279,14 @@ func freshForStaff(next http.Handler) http.Handler {
 func (s *Site) keepSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/static/") {
+			// Every page and API response can depend on session cookies.
+			w.Header().Set("Cache-Control", "private, no-store")
+			// Signing out must never wait for token refresh. Login posts mint
+			// their own session and must not race an old refresh token either.
+			if r.URL.Path == "/logout" || strings.HasPrefix(r.URL.Path, "/login/") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if access, refresh := shop.SessionTokens(r); access == "" && refresh != "" {
 				if sess, err := s.backend.Refresh(r.Context(), refresh); err == nil {
 					shop.SetSessionCookies(w, sess)
