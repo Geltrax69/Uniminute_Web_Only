@@ -381,7 +381,15 @@ func Summary(d Data) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span> <span class=\"truncate\" x-show=\"busy\" x-cloak>Opening secure checkout…</span> <span class=\"truncate\" x-show=\"cashBusy\" x-cloak>Placing your order…</span></button><p class=\"mt-2 text-body text-danger\" role=\"alert\" x-show=\"error\" x-text=\"error\" x-cloak></p><div class=\"mt-3 rounded-[14px] bg-danger/[.06] p-3\" x-show=\"paymentFailed && !pendingPayment\" x-cloak><p class=\"text-[13px] font-bold text-danger\">Payment issue — no order was placed</p><p class=\"mt-1 text-[12px] leading-[1.4] text-muted\">Try Razorpay again, switch to Pay on Delivery, or cancel this checkout.</p><div class=\"mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3\"><button type=\"button\" class=\"min-h-touch rounded-full bg-strong px-3 text-[12.5px] font-bold text-white\" x-on:click=\"pay()\">Try again</button> <button type=\"button\" class=\"min-h-touch rounded-full bg-white px-3 text-[12.5px] font-bold text-strong\" x-on:click=\"chooseCash()\">Pay on Delivery</button> <button type=\"button\" class=\"min-h-touch rounded-full px-3 text-[12.5px] font-bold text-muted\" x-on:click=\"cancelFailure()\">Cancel</button></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span> <span class=\"truncate\" x-show=\"busy\" x-cloak>Opening secure checkout…</span> <span class=\"truncate\" x-show=\"cashBusy\" x-cloak>Placing your order…</span></button><p class=\"mt-2 text-body text-danger\" role=\"alert\" x-show=\"error &amp;&amp; !paymentFailed\" x-text=\"error\" x-cloak></p><dialog x-ref=\"paymentIssue\" class=\"checkout-payment-issue m-auto max-h-[calc(100dvh-40px)] w-[min(420px,calc(100vw-40px))] overflow-y-auto overscroll-contain rounded-[24px] bg-surface p-6 text-text shadow-raised backdrop:bg-black/60\" aria-labelledby=\"checkout-payment-issue-title\" aria-describedby=\"checkout-payment-issue-description\" x-on:cancel.prevent=\"cancelFailure()\"><div class=\"mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-danger/[.08] text-danger\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = ui.Icon("circle-alert", "h-6 w-6").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</div><h2 id=\"checkout-payment-issue-title\" class=\"text-[21px] font-semibold leading-7\">Payment not completed</h2><p id=\"checkout-payment-issue-description\" class=\"mt-3 text-[14px] leading-5 text-muted\" x-text=\"error || 'No order was placed. Try again or choose Pay on Delivery.'\"></p><p class=\"mt-2 text-[14px] leading-5 text-muted\">Try again, switch to Pay on Delivery, or return to your cart.</p><div class=\"mt-6 flex flex-col gap-3\"><button type=\"button\" class=\"min-h-12 rounded-full bg-strong px-5 py-3 text-[15px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong\" x-on:click=\"pay()\">Try again</button> <button type=\"button\" class=\"min-h-12 rounded-full bg-strong/[.06] px-5 py-3 text-[15px] font-semibold text-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong\" x-on:click=\"chooseCash()\">Pay on Delivery</button> <button type=\"button\" class=\"min-h-11 rounded-full px-5 py-2 text-[14px] font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\" x-on:click=\"cancelFailure()\">Cancel</button></div></dialog> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -391,7 +399,7 @@ func Summary(d Data) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -401,7 +409,7 @@ func Summary(d Data) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<a href=\"/login?next=/cart\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<a href=\"/login?next=/cart\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -414,12 +422,12 @@ func Summary(d Data) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\"><span class=\"truncate\">Sign in to place order</span></a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\"><span class=\"truncate\">Sign in to place order</span></a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -453,7 +461,7 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<div class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -466,20 +474,20 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\"><span class=\"min-w-0 flex-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\"><span class=\"min-w-0 flex-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 141, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 145, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</span> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -488,7 +496,7 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<span class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<span class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -501,20 +509,20 @@ func summaryRow(label string, value float64, bold bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\">₹")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "\">₹")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(shop.Money(value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 142, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/components/cart/summary.templ`, Line: 146, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</span></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

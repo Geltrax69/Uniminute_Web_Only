@@ -270,3 +270,6 @@ body:has(.store-floating-menu[open]) { overflow: hidden; }
 .store-floating-menu nav a > span:last-child { flex-shrink: 0; font-size: 15px; }
 .store-floating-menu nav a[aria-current="true"] { background: #E4F7B4; color: #1D4939; font-weight: 700; }
 .store-floating-menu nav a:not([aria-current="true"]):hover { background: #1D49390F; }
+
+/* Keep a payment issue visible while its native dialog owns focus. */
+body:has(.checkout-payment-issue[open]) { overflow: hidden; }

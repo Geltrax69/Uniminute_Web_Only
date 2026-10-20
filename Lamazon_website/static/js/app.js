@@ -246,6 +246,17 @@ document.addEventListener('alpine:init', () => {
     error: '',
     paymentFailed: false,
     pendingPayment: null,
+    init() {
+      this.$watch('paymentFailed', () => this.syncFailureDialog());
+      this.$watch('pendingPayment', () => this.syncFailureDialog());
+    },
+    syncFailureDialog() {
+      const dialog = this.$refs.paymentIssue;
+      if (!dialog) return;
+      if (this.paymentFailed && !this.pendingPayment) {
+        if (!dialog.open) dialog.showModal();
+      } else if (dialog.open) dialog.close();
+    },
     get buttonLabel() {
       return this.pendingPayment
         ? 'Retry order confirmation'
@@ -260,7 +271,7 @@ document.addEventListener('alpine:init', () => {
       this.paymentFailed = false;
       if (!window.Razorpay) {
         this.error = 'Secure checkout did not load. Check your connection and try again.';
-        lwToast(this.error, 'error');
+        this.paymentFailed = true;
         return;
       }
       this.busy = true;
@@ -297,10 +308,9 @@ document.addEventListener('alpine:init', () => {
           modal: {
             ondismiss: () => {
               this.busy = false;
-              if (!checkoutFailed) {
+              if (!checkoutFailed && !this.pendingPayment) {
                 this.paymentFailed = true;
                 this.error = 'Payment was cancelled. No order was placed.';
-                lwToast(this.error);
               }
             },
           },
@@ -309,9 +319,9 @@ document.addEventListener('alpine:init', () => {
         checkout.on('payment.failed', (event) => {
           checkoutFailed = true;
           this.error = event?.error?.description || 'Payment failed. Check the details and try again.';
+          checkout.close();
           this.paymentFailed = true;
           this.busy = false;
-          lwToast(this.error, 'error');
         });
         checkout.open();
       } catch (err) {
@@ -321,7 +331,7 @@ document.addEventListener('alpine:init', () => {
           : message;
         this.paymentFailed = !this.pendingPayment;
         this.busy = false;
-        lwToast(this.error, 'error');
+        if (this.pendingPayment) lwToast(this.error, 'error');
       }
     },
     place(cashForm) {
