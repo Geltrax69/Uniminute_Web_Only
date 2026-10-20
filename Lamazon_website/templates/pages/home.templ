@@ -327,7 +327,7 @@ templ shelf(title, subtitle string, items []backend.Product, wishlist map[string
 		<div class="h-5"></div>
 		<div x-ref="rail" class="bleed flex gap-3 overflow-x-auto pb-2.5 no-scrollbar">
 			for _, p := range items {
-				<div class="h-[292px] w-[166px] shrink-0">
+				<div class="h-[306px] w-[166px] shrink-0">
 					@product.Card(p, product.CardOpts{ShowStore: shop.MixesStores(items), QuickAdd: !p.HasOptions(), Wishlisted: wishlist[p.ID]})
 				</div>
 			}
