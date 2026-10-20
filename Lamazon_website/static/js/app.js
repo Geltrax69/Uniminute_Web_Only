@@ -1066,7 +1066,13 @@ document.addEventListener('alpine:init', () => {
     reason: '',
     removing: null,
     init() {
-      this.$watch('pane', (v) => history.replaceState(null, '', `?pane=${v}`));
+      this.$watch('pane', (v) => {
+        history.replaceState(null, '', `?pane=${v}`);
+        if (v === 'orders') this.$nextTick(() => {
+          const content = document.getElementById('seller-orders-content');
+          if (content) htmx.trigger(content, 'seller-orders-refresh');
+        });
+      });
     },
     async act(method, path, body, message) {
       try {
