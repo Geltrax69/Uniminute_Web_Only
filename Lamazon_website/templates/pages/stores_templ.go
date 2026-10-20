@@ -505,15 +505,7 @@ func storeBody(d StorePageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "Menu</button> <dialog id=\"store-category-menu\" x-ref=\"menu\" x-on:close=\"menuOpen = false\" x-on:click=\"if ($event.target === $el) $el.close()\" aria-labelledby=\"store-category-menu-title\" class=\"fixed inset-x-0 bottom-0 top-auto m-0 max-h-[75dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-[24px] bg-surface px-5 pb-[calc(20px+env(safe-area-inset-bottom))] pt-5 text-text shadow-raised backdrop:bg-black/40 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[360px] sm:rounded-featured\"><div class=\"mb-3 flex items-center justify-between gap-4\"><h2 id=\"store-category-menu-title\" class=\"text-[22px] font-semibold\">Browse categories</h2><button type=\"button\" aria-label=\"Close menu\" x-on:click=\"$refs.menu.close()\" class=\"flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/[.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = ui.Icon("x", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</button></div><nav aria-label=\"Menu categories\" class=\"flex flex-col gap-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "Menu</button> <dialog id=\"store-category-menu\" x-ref=\"menu\" x-on:close=\"menuOpen = false\" x-on:click=\"if ($event.target === $el) $el.close()\" aria-labelledby=\"store-category-menu-title\" class=\"store-floating-menu fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-auto right-5 top-auto m-0 max-h-none w-[min(320px,calc(100vw-48px))] max-w-none overflow-visible border-0 bg-transparent p-0 text-text backdrop:bg-black/60\"><div class=\"max-h-[calc(100dvh-140px-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-[24px] bg-surface p-3 shadow-raised\"><h2 id=\"store-category-menu-title\" class=\"sr-only\">Browse categories</h2><nav aria-label=\"Menu categories\" class=\"flex flex-col gap-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -527,7 +519,15 @@ func storeBody(d StorePageData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</nav></dialog>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</nav></div><div class=\"mt-3 flex justify-end\"><button type=\"button\" aria-label=\"Close menu\" x-on:click=\"$refs.menu.close()\" class=\"inline-flex min-h-14 items-center gap-2 rounded-[18px] bg-strong px-5 text-[16px] font-semibold text-white shadow-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = ui.Icon("x", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "Close</button></div></dialog>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -569,7 +569,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var22 templ.SafeURL
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(storeCategoryURL(name)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 144, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 147, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -582,7 +582,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue("choose(" + jsonArg(name) + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 144, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 147, Col: 103}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
 		if templ_7745c5c3_Err != nil {
@@ -595,7 +595,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(tpl.When(selected == name, "true", "false"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 144, Col: 164}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 147, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
 		if templ_7745c5c3_Err != nil {
@@ -608,7 +608,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue("active === " + jsonArg(name) + " ? 'true' : 'false'")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 144, Col: 242}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 147, Col: 242}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -621,7 +621,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 145, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 148, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -634,7 +634,7 @@ func storeCategoryLink(name, label string, count int, selected string) templ.Com
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(count))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 146, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 149, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -691,7 +691,7 @@ func storeImage(src string, width int) templ.Component {
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.URL(shop.ThumbWidth(src, width)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 157, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 160, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 			if templ_7745c5c3_Err != nil {
@@ -709,7 +709,7 @@ func storeImage(src string, width int) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.URL(src))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 159, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 162, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 			if templ_7745c5c3_Err != nil {
@@ -760,7 +760,7 @@ func infoChip(icon, label string) templ.Component {
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 166, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/stores.templ`, Line: 169, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
