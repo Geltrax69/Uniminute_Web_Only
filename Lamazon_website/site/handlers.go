@@ -474,6 +474,8 @@ func (s *Site) handleStore(w http.ResponseWriter, r *http.Request) {
 		s.handleNotFound(w, r)
 		return
 	}
+	d.Sections = pages.GroupStoreProducts(d.Products)
+	d.SelectedCategory = pages.MatchStoreCategory(d.Sections, r.URL.Query().Get("category"))
 	renderOK(w, r, pages.StorePage(d))
 }
 

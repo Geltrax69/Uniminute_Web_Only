@@ -1,0 +1,51 @@
+package pages
+
+import (
+	"lamazon/website/backend"
+	"testing"
+)
+
+func TestStoreMenuGroupsEveryProductWithoutLosingOrder(t *testing.T) {
+	products := []backend.Product{
+		{ID: "1", Category: "Burger"}, {ID: "2", Category: "Sandwich"},
+		{ID: "3", Category: " burger "}, {ID: "4", Category: ""}, {ID: "5", Category: "  "},
+	}
+	groups := GroupStoreProducts(products)
+	if len(groups) != 3 {
+		t.Fatalf("groups=%+v", groups)
+	}
+	if groups[0].Name != "Burger" || len(groups[0].Products) != 2 || groups[0].Products[1].ID != "3" {
+		t.Fatalf("burger group=%+v", groups[0])
+	}
+	if groups[1].Name != "Sandwich" || groups[2].Name != "Other items" || len(groups[2].Products) != 2 {
+		t.Fatalf("groups=%+v", groups)
+	}
+	total := 0
+	seen := map[string]bool{}
+	for _, g := range groups {
+		total += len(g.Products)
+		if seen[g.ID] {
+			t.Fatal("duplicate section ID")
+		}
+		seen[g.ID] = true
+	}
+	if total != len(products) {
+		t.Fatal("products lost from menu")
+	}
+	if got := MatchStoreCategory(groups, " BURGER "); got != "Burger" {
+		t.Fatalf("category=%q", got)
+	}
+	if got := MatchStoreCategory(groups, "Unknown"); got != "" {
+		t.Fatalf("unknown category should fall back to all: %q", got)
+	}
+	if got := storeMenuCount(StorePageData{Products: products, Sections: groups, SelectedCategory: "Burger"}); got != 2 {
+		t.Fatalf("filtered count=%d", got)
+	}
+	if got := storeMenuCount(StorePageData{Products: products, Sections: groups}); got != 5 {
+		t.Fatalf("all count=%d", got)
+	}
+
+	if len(GroupStoreProducts(nil)) != 0 {
+		t.Fatal("empty catalogue created menu entries")
+	}
+}

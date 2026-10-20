@@ -15,6 +15,7 @@ import (
 	"lamazon/website/templates/components/product"
 	"lamazon/website/templates/components/ui"
 	"lamazon/website/templates/layouts"
+	"lamazon/website/tpl"
 	"lamazon/website/viewdata"
 )
 
@@ -58,9 +59,11 @@ templ storesBody(d StoresPageData) {
 }
 
 type StorePageData struct {
-	Page     viewdata.Page
-	Store    backend.Shop
-	Products []backend.Product
+	Page             viewdata.Page
+	Store            backend.Shop
+	Products         []backend.Product
+	Sections         []StoreSection
+	SelectedCategory string
 }
 
 templ StorePage(d StorePageData) {
@@ -68,7 +71,7 @@ templ StorePage(d StorePageData) {
 }
 
 templ storeBody(d StorePageData) {
-	<main id="main" class="mx-auto w-full max-w-shell px-5 pb-6 pt-2">
+	<main id="main" class="store-menu mx-auto w-full max-w-shell px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-2" x-data={ "storeMenu(" + jsonArg(d.SelectedCategory) + "," + jsonArg(storeMenuConfig(d)) + ")" }>
 		@ui.TactileButton("arrow-left", "Back", 44, "", templ.Attributes{
 			"x-data":     "",
 			"x-on:click": "history.length > 1 ? history.back() : location.assign('/')",
@@ -83,22 +86,59 @@ templ storeBody(d StorePageData) {
 		<div class="mt-2.5 flex flex-wrap gap-2">
 			@infoChip("truck", "Local delivery")
 			@infoChip("wallet", "Online or cash")
-			@infoChip("star", "4.5")
 		</div>
-		<h2 class="editorial-heading mt-10 text-[30px] text-text">Products <span class="font-sans text-[15px] font-medium text-muted">({ strconv.Itoa(len(d.Products)) })</span></h2>
-		<div class="mt-5">
-			if len(d.Products) == 0 {
-				<p class="py-10 text-center text-[14px] text-muted">No products listed yet</p>
-			} else {
-				@product.Grid(d.Products, product.GridOpts{
-					Spaced:    true,
-					ShowStore: false,
-					Wishlist:  d.Page.Wishlist,
-					QuickAdd:  product.FoodOrGrocery,
-				})
-			}
+		<div class="mt-10 flex items-baseline gap-2">
+			<h2 id="store-menu-results" x-ref="results" tabindex="-1" class="editorial-heading scroll-mt-6 text-[30px] text-text focus:outline-none lg:scroll-mt-28">{ tpl.When(d.Store.Tab == "Food", "Menu", "Products") }</h2>
+			<span class="text-[15px] font-medium tabular-nums text-muted" x-text="'(' + count + ')'">({ strconv.Itoa(storeMenuCount(d)) })</span>
 		</div>
+		if len(d.Products) == 0 {
+			<p class="py-10 text-center text-[14px] text-muted">No products listed yet</p>
+		} else {
+			<nav aria-label="Store categories" class="mt-5 hidden flex-wrap gap-2 lg:flex">
+				@storeCategoryLink("", "All items", len(d.Products), d.SelectedCategory)
+				for _, section := range d.Sections {
+					@storeCategoryLink(section.Name, section.Name, len(section.Products), d.SelectedCategory)
+				}
+			</nav>
+			<div class="mt-8 space-y-10">
+				for _, section := range d.Sections {
+					<section id={ section.ID } aria-labelledby={ section.ID + "-title" } x-show={ "active === '' || active === " + jsonArg(section.Name) } style={ templ.SafeCSS(tpl.When(d.SelectedCategory != "" && d.SelectedCategory != section.Name, "display:none", "")) }>
+						<h3 id={ section.ID + "-title" } class="mb-4 flex items-baseline gap-2 text-[21px] font-semibold leading-7 text-text">
+							{ section.Name }
+							<span class="text-[14px] font-normal tabular-nums text-muted">({ strconv.Itoa(len(section.Products)) })</span>
+						</h3>
+						@product.Grid(section.Products, product.GridOpts{ID: section.ID + "-products", Spaced: true, Wishlist: d.Page.Wishlist, QuickAdd: product.FoodOrGrocery})
+					</section>
+				}
+			</div>
+			<button type="button" aria-haspopup="dialog" aria-controls="store-category-menu" x-bind:aria-expanded="menuOpen" x-on:click="openMenu()" class="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] right-5 z-40 inline-flex min-h-14 items-center gap-2 rounded-full bg-strong px-5 text-[15px] font-semibold text-white shadow-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong lg:hidden">
+				@ui.Icon("menu", "h-5 w-5")
+				Menu
+			</button>
+			<dialog id="store-category-menu" x-ref="menu" x-on:close="menuOpen = false" x-on:click="if ($event.target === $el) $el.close()" aria-labelledby="store-category-menu-title" class="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[75dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-[24px] bg-surface px-5 pb-[calc(20px+env(safe-area-inset-bottom))] pt-5 text-text shadow-raised backdrop:bg-black/40 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[360px] sm:rounded-featured">
+				<div class="mb-3 flex items-center justify-between gap-4">
+					<h2 id="store-category-menu-title" class="text-[22px] font-semibold">Browse categories</h2>
+					<button type="button" aria-label="Close menu" x-on:click="$refs.menu.close()" class="flex h-11 w-11 items-center justify-center rounded-full text-strong hover:bg-strong/[.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong">
+						@ui.Icon("x", "h-5 w-5")
+					</button>
+				</div>
+				<nav aria-label="Menu categories" class="flex flex-col gap-2">
+					@storeCategoryLink("", "All items", len(d.Products), d.SelectedCategory)
+					for _, section := range d.Sections {
+						@storeCategoryLink(section.Name, section.Name, len(section.Products), d.SelectedCategory)
+					}
+				</nav>
+			</dialog>
+		}
 	</main>
+}
+
+// Real links keep category selection usable without JavaScript.
+templ storeCategoryLink(name, label string, count int, selected string) {
+	<a href={ templ.SafeURL(storeCategoryURL(name)) } x-on:click.prevent={ "choose(" + jsonArg(name) + ")" } aria-current={ tpl.When(selected == name, "true", "false") } x-bind:aria-current={ "active === " + jsonArg(name) + " ? 'true' : 'false'" } class="inline-flex min-h-touch items-center justify-between gap-3 rounded-small bg-surface px-4 py-2.5 text-[14px] font-medium text-strong hover:bg-strong/[.06] aria-[current=true]:bg-strong aria-[current=true]:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong">
+		<span>{ label }</span>
+		<span class="text-[12px] tabular-nums">{ strconv.Itoa(count) }</span>
+	</a>
 }
 
 // storeImage is NetImage padded to 16:9: the whole picture, never cropped.

@@ -33,6 +33,40 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // Storefront category navigation and the phone's native menu dialog.
+  Alpine.data('storeMenu', (initial, sections) => ({
+    active: initial,
+    sections,
+    menuOpen: false,
+    get count() {
+      return this.active ? (this.sections.find((s) => s.name === this.active)?.count || 0)
+        : this.sections.reduce((n, s) => n + s.count, 0);
+    },
+    init() {
+      this.onHistory = () => {
+        const category = new URL(location.href).searchParams.get('category') || '';
+        this.active = this.sections.find((s) => s.name.toLowerCase() === category.trim().toLowerCase())?.name || '';
+        if (this.$refs.menu?.open) this.$refs.menu.close();
+      };
+      window.addEventListener('popstate', this.onHistory);
+    },
+    destroy() { window.removeEventListener('popstate', this.onHistory); },
+    openMenu() { this.menuOpen = true; this.$refs.menu.showModal(); },
+    choose(category) {
+      this.active = category;
+      const url = new URL(location.href);
+      if (category) url.searchParams.set('category', category);
+      else url.searchParams.delete('category');
+      url.hash = 'store-menu-results';
+      history.pushState(null, '', url);
+      if (this.$refs.menu.open) this.$refs.menu.close();
+      this.$nextTick(() => {
+        this.$refs.results.focus({ preventScroll: true });
+        this.$refs.results.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      });
+    },
+  }));
+
   // ── toasts component ─────────────────────────────────────────────────────
   // Used by ui.templ ToastRegion. The server emits HX-Trigger: {"lw:toast":
   // {"message":"…","undo":false}} and the HTMX hook below dispatches that
