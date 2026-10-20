@@ -1591,6 +1591,14 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 			d.Departments = append(d.Departments, c)
 		}
 	}
+	if d.Tab == "classification" {
+		if err := s.backend.Get(backend.Fresh(ctx), "/api/admin/catalog-audit", token, &d.CatalogueAudit); err != nil {
+			if adminExpired(w, r, err) {
+				return d, false
+			}
+			d.Error = apiMessage(err)
+		}
+	}
 	return d, true
 }
 

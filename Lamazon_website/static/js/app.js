@@ -768,13 +768,26 @@ document.addEventListener('alpine:init', () => {
     section: '',
     busy: false,
     saving: false,
+    classification: null,
+    classificationRequest: 0,
     init() {
       if (!this.category && this.sections.length) this.category = this.sections[0].leaves[0];
       this.section = this.sectionOf(this.category) || (this.sections[0] ? this.sections[0].name : '');
+      this.$watch('category', () => this.checkClassification());
+      if (this.title.trim()) this.checkClassification();
       // Existing single-price listings retain their price when the matrix is first edited.
       if (this.id && !(cfg.variantPrices || []).length) {
         for (const row of this.variantRows) this.variantPriceInputs[row.key] = this.price;
       }
+    },
+    async checkClassification() {
+      const request = ++this.classificationRequest;
+      this.classification = null;
+      if (!this.title.trim() || !this.category) return;
+      try {
+        const result = await sellerCall('POST', '/api/seller/classify', { title: this.title.trim(), category: this.category });
+        if (request === this.classificationRequest) this.classification = result;
+      } catch { /* Saving remains available if the preview service is offline. */ }
     },
     sectionOf(c) {
       const s = this.sections.find((s) => s.leaves.includes(c));

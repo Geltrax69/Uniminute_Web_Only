@@ -51,23 +51,35 @@ type Offer struct {
 	Price float64 `json:"price"`
 }
 
+type ProductClassification struct {
+	Category          string `json:"category"`
+	SuggestedCategory string `json:"suggestedCategory,omitempty"`
+	Group             string `json:"group"`
+	Order             int    `json:"order"`
+	Status            string `json:"status"`
+	NeedsReview       bool   `json:"needsReview"`
+	Reason            string `json:"reason"`
+	Version           string `json:"version"`
+}
+
 type Product struct {
-	PublicID       string         `json:"publicId,omitempty"`
-	AvailableStock *int           `json:"availableStock,omitempty"`
-	ID             string         `json:"id"`
-	Name           string         `json:"name"`
-	Category       string         `json:"category"`
-	Tab            string         `json:"tab"`
-	Price          float64        `json:"price"`
-	MRP            float64        `json:"mrp,omitempty"`
-	Options        []ItemOption   `json:"options,omitempty"`
-	VariantPrices  []VariantPrice `json:"variantPrices,omitempty"`
-	ImageURL       string         `json:"imageUrl"`
-	ImageURLs      []string       `json:"imageUrls"`
-	Store          string         `json:"store"`
-	Description    string         `json:"description"`
-	Offers         []Offer        `json:"offers,omitempty"`
-	CompareGroup   string         `json:"compareGroup,omitempty"`
+	Classification ProductClassification `json:"classification"`
+	PublicID       string                `json:"publicId,omitempty"`
+	AvailableStock *int                  `json:"availableStock,omitempty"`
+	ID             string                `json:"id"`
+	Name           string                `json:"name"`
+	Category       string                `json:"category"`
+	Tab            string                `json:"tab"`
+	Price          float64               `json:"price"`
+	MRP            float64               `json:"mrp,omitempty"`
+	Options        []ItemOption          `json:"options,omitempty"`
+	VariantPrices  []VariantPrice        `json:"variantPrices,omitempty"`
+	ImageURL       string                `json:"imageUrl"`
+	ImageURLs      []string              `json:"imageUrls"`
+	Store          string                `json:"store"`
+	Description    string                `json:"description"`
+	Offers         []Offer               `json:"offers,omitempty"`
+	CompareGroup   string                `json:"compareGroup,omitempty"`
 }
 
 type VariantPrice struct {
@@ -916,4 +928,18 @@ func (b *Backend) Notifications(ctx context.Context, token string) (Inbox, error
 // POST /api/notifications/read
 func (b *Backend) MarkNotificationsRead(ctx context.Context, token string) error {
 	return b.do(ctx, http.MethodPost, "/api/notifications/read", token, nil, nil)
+}
+
+type ClassificationIssue struct {
+	ID             string                `json:"id"`
+	Store          string                `json:"store"`
+	Title          string                `json:"title"`
+	Category       string                `json:"category"`
+	Classification ProductClassification `json:"classification"`
+}
+type CatalogueAudit struct {
+	Version    string                  `json:"version"`
+	Products   int                     `json:"products"`
+	Review     []ClassificationIssue   `json:"review"`
+	Duplicates [][]ClassificationIssue `json:"duplicates"`
 }

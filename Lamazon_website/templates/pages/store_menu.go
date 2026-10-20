@@ -3,23 +3,30 @@ package pages
 import (
 	"lamazon/website/backend"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 type StoreSection struct {
+	Order    int
 	Name     string
 	ID       string
 	Products []backend.Product
 }
 
-// Keep the catalogue's order within and between categories. Uncategorised
-// listings remain discoverable instead of disappearing from the menu.
+// Use the API classification pipeline for menu groups and ordering. Older
+// APIs fall back to merchant categories. Every listing remains visible.
 func GroupStoreProducts(products []backend.Product) []StoreSection {
 	var sections []StoreSection
 	index := map[string]int{}
 	for _, p := range products {
 		name := strings.TrimSpace(p.Category)
+		order := 500
+		if p.Classification.Version != "" && p.Classification.Group != "" {
+			name = p.Classification.Group
+			order = p.Classification.Order
+		}
 		if name == "" {
 			name = "Other items"
 		}
@@ -28,20 +35,38 @@ func GroupStoreProducts(products []backend.Product) []StoreSection {
 		if !ok {
 			i = len(sections)
 			index[key] = i
-			sections = append(sections, StoreSection{Name: name, ID: "store-category-" + strconv.Itoa(i+1)})
+			sections = append(sections, StoreSection{Name: name, Order: order})
 		}
 		sections[i].Products = append(sections[i].Products, p)
+	}
+	sort.SliceStable(sections, func(i, j int) bool { return sections[i].Order < sections[j].Order })
+	for i := range sections {
+		sections[i].ID = "store-category-" + strconv.Itoa(i+1)
 	}
 	return sections
 }
 
 func MatchStoreCategory(sections []StoreSection, category string) string {
+	category = strings.TrimSpace(category)
 	for _, section := range sections {
-		if strings.EqualFold(section.Name, strings.TrimSpace(category)) {
+		if strings.EqualFold(section.Name, category) {
 			return section.Name
 		}
 	}
-	return ""
+	// An old menu URL may name a merchant category now grouped by the pipeline.
+	// Resolve it only when every matching listing belongs to one new group.
+	replacement := ""
+	for _, section := range sections {
+		for _, p := range section.Products {
+			if category != "" && strings.EqualFold(strings.TrimSpace(p.Category), category) {
+				if replacement != "" && replacement != section.Name {
+					return ""
+				}
+				replacement = section.Name
+			}
+		}
+	}
+	return replacement
 }
 
 func storeMenuConfig(d StorePageData) []map[string]any {

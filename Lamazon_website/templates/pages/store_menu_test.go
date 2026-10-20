@@ -49,3 +49,21 @@ func TestStoreMenuGroupsEveryProductWithoutLosingOrder(t *testing.T) {
 		t.Fatal("empty catalogue created menu entries")
 	}
 }
+
+func TestStoreMenuUsesPipelineGroupsAndSemanticOrder(t *testing.T) {
+	products := []backend.Product{
+		{ID: "coffee", Category: "Food", Classification: backend.ProductClassification{Group: "Hot Beverages", Order: 100, Version: "test"}},
+		{ID: "burger", Category: "Burger", Classification: backend.ProductClassification{Group: "Burger", Order: 10, Version: "test"}},
+		{ID: "tea", Category: "Food", Classification: backend.ProductClassification{Group: "Hot Beverages", Order: 100, Version: "test"}},
+	}
+	groups := GroupStoreProducts(products)
+	if len(groups) != 2 || groups[0].Name != "Burger" || groups[1].Name != "Hot Beverages" || len(groups[1].Products) != 2 {
+		t.Fatalf("pipeline grouping=%+v", groups)
+	}
+	if products[0].Category != "Food" {
+		t.Fatal("grouping changed merchant categories")
+	}
+	if MatchStoreCategory(groups, "Food") != "Hot Beverages" {
+		t.Fatal("old category link lost its replacement group")
+	}
+}

@@ -72,7 +72,8 @@ templ adminField(name, label, kind, autocomplete, value string, secret bool) {
 			value={ value }
 			required
 			placeholder=" "
-			class={ "peer h-full w-full rounded-featured bg-transparent pl-5 text-[14.5px] text-text outline-none " + tpl.When(secret, "pr-12", "pr-5") }/>
+			class={ "peer h-full w-full rounded-featured bg-transparent pl-5 text-[14.5px] text-text outline-none " + tpl.When(secret, "pr-12", "pr-5") }
+		/>
 		<label for={ "admin-" + name } class="pointer-events-none absolute left-5 top-1/2 max-w-[calc(100%-40px)] -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[11px] motion-reduce:transition-none">{ label }</label>
 		if secret {
 			<button type="button" x-on:click="shown = !shown" x-bind:aria-label="shown ? 'Hide password' : 'Show password'" x-bind:title="shown ? 'Hide password' : 'Show password'" class="absolute right-0.5 top-0.5 flex h-11 w-11 items-center justify-center rounded-full text-muted">
@@ -89,27 +90,28 @@ templ adminField(name, label, kind, autocomplete, value string, secret bool) {
 
 // AdminData is everything the panel reads, and the filters in the address.
 type AdminData struct {
-	Page        viewdata.Page
-	Charges     []backend.Charge
-	Reviews     []backend.Review
-	Staff       shop.Staff
-	Tab         string
-	Q           string
-	Stage       string
-	From, To    string // yyyy-mm-dd, inclusive
-	PageNum     int
-	OpenDept    string
-	Error       string
-	Overview    map[string]any
-	Insights    map[string]any
-	Stores      []map[string]any
-	Orders      []map[string]any
-	Riders      []map[string]any
-	Items       []backend.InventoryItem
-	Groups      []backend.CompareGroup
-	Policies    []backend.Policy
-	Campaigns   []backend.Campaign
-	Departments []backend.Category
+	CatalogueAudit backend.CatalogueAudit
+	Page           viewdata.Page
+	Charges        []backend.Charge
+	Reviews        []backend.Review
+	Staff          shop.Staff
+	Tab            string
+	Q              string
+	Stage          string
+	From, To       string // yyyy-mm-dd, inclusive
+	PageNum        int
+	OpenDept       string
+	Error          string
+	Overview       map[string]any
+	Insights       map[string]any
+	Stores         []map[string]any
+	Orders         []map[string]any
+	Riders         []map[string]any
+	Items          []backend.InventoryItem
+	Groups         []backend.CompareGroup
+	Policies       []backend.Policy
+	Campaigns      []backend.Campaign
+	Departments    []backend.Category
 }
 
 type adminTab struct {
@@ -120,7 +122,7 @@ type adminTab struct {
 var adminTabs = []adminTab{
 	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
 	{"orders", "Orders", false}, {"reviews", "Reviews", false}, {"products", "Products", false}, {"insights", "Insights", false},
-	{"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
+	{"classification", "Category checks", false}, {"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
 	{"policies", "Policies", false}, {"charges", "Charges", false}, {"delivery", "Delivery", false},
 	{"people", "People", false},
 }
@@ -160,7 +162,7 @@ templ adminBody(d AdminData) {
 			<span class="mb-1 block text-[12px] text-muted">Admin section</span>
 			<select class="h-14 w-full rounded-featured bg-surface px-4 text-body text-text" x-on:change="location.assign('/admin?tab=' + $event.target.value)">
 				for _, t := range adminTabs {
-					<option value={ t.Key } selected?={ t.Key == d.Tab }>{ t.Label } ({ strconv.Itoa(counts[t.Key]) })</option>
+					<option value={ t.Key } selected?={ t.Key == d.Tab }>{ t.Label }{ tpl.When(t.Key=="classification", "", " ("+strconv.Itoa(counts[t.Key])+")") }</option>
 				}
 			</select>
 		</label>
@@ -194,7 +196,7 @@ templ chipGroup(label string, d AdminData, counts map[string]int, store bool) {
 		<div class="flex flex-1 flex-wrap gap-2" role="tablist">
 			for _, t := range adminTabs {
 				if t.Store == store {
-					<a href={ templ.SafeURL("/admin?tab=" + t.Key) } role="tab" aria-selected={ tpl.When(t.Key == d.Tab, "true", "false") } class={ "inline-flex h-8 items-center rounded-[20px] border border-track px-3 text-[13px] font-semibold text-text", templ.KV("bg-lime", t.Key == d.Tab), templ.KV("bg-surface", t.Key != d.Tab) }>{ t.Label } ({ strconv.Itoa(counts[t.Key]) })</a>
+					<a href={ templ.SafeURL("/admin?tab=" + t.Key) } role="tab" aria-selected={ tpl.When(t.Key == d.Tab, "true", "false") } class={ "inline-flex h-8 items-center rounded-[20px] border border-track px-3 text-[13px] font-semibold text-text", templ.KV("bg-lime", t.Key == d.Tab), templ.KV("bg-surface", t.Key != d.Tab) }>{ t.Label }{ tpl.When(t.Key=="classification", "", " ("+strconv.Itoa(counts[t.Key])+")") }</a>
 				}
 			}
 		</div>
@@ -261,6 +263,8 @@ templ adminSection(d AdminData) {
 			}
 		case "insights":
 			@insightsSection(d.Insights)
+		case "classification":
+			@catalogueAuditSection(d.CatalogueAudit)
 		case "products":
 			@adminNote("Every product in the shop, whichever store lists it. Stock is what is on the shelf; \"in orders\" is what is already spoken for, so a shopper sees the difference. A product with orders against it cannot be deleted — the orders are the record of those sales — so hide it from the shop instead.")
 			if len(d.Items) == 0 {
@@ -628,7 +632,8 @@ templ categoryBadge(imageURL, icon, accent string, size int, name string) {
 		x-on:click={ "pickCategoryPhoto(" + jsonArg(name) + ")" }
 		class="relative shrink-0"
 		title={ tpl.When(imageURL == "", "Add a picture", "Replace the picture") }
-		aria-label={ tpl.When(imageURL == "", "Add a picture for "+name, "Replace the picture for "+name) }>
+		aria-label={ tpl.When(imageURL == "", "Add a picture for "+name, "Replace the picture for "+name) }
+	>
 		<span class="flex items-center justify-center overflow-hidden rounded-small" style={ templ.SafeCSS("width:" + strconv.Itoa(size) + "px;height:" + strconv.Itoa(size) + "px;background-color:" + tpl.RGBA(accent, .14) + ";color:" + accent) }>
 			if imageURL != "" {
 				<img src={ templ.URL(shop.ThumbWidth(imageURL, 120)) } alt="" class="h-full w-full object-contain"/>
@@ -950,6 +955,42 @@ templ adminDialog() {
 	</dialog>
 }
 
+templ catalogueAuditSection(report backend.CatalogueAudit) {
+	@adminNote("Checks the published catalogue for unclear categories and duplicate-looking listings. Update the product title or category with the seller after reviewing it. Listings and stock are never merged automatically.")
+	if report.Version == "" {
+		@adminEmpty("The category checker could not be loaded. Refresh to try again.")
+	} else {
+		<p class="mb-5 text-[14px] text-muted">{ strconv.Itoa(report.Products) } published products checked.</p>
+		<h2 class="text-[20px] font-semibold">Categories to review</h2>
+		if len(report.Review) == 0 {
+			@adminEmpty("No uncertain categories found.")
+		}
+		for _, issue := range report.Review {
+			@classificationIssueRow(issue)
+		}
+		<h2 class="mt-8 text-[20px] font-semibold">Possible duplicate listings</h2>
+		if len(report.Duplicates) == 0 {
+			@adminEmpty("No duplicate-looking listings found.")
+		}
+		for _, set := range report.Duplicates {
+			<div class="mt-4 border-t border-track pt-3">
+				for _, issue := range set {
+					@classificationIssueRow(issue)
+				}
+			</div>
+		}
+	}
+}
+
+templ classificationIssueRow(issue backend.ClassificationIssue) {
+	<div class="mt-3 rounded-small bg-surface p-4">
+		<a href={ templ.SafeURL("/p/" + url.PathEscape(issue.ID)) } class="text-[15px] font-semibold text-strong underline underline-offset-2">{ issue.Title }</a>
+		<p class="mt-1 text-[13px] text-muted">{ issue.Store } · { issue.Category } → { issue.Classification.Group }</p>
+		<p class="mt-1 text-[14px] leading-6 text-text">{ issue.Classification.Reason }</p>
+		<p class="mt-1 text-[12px] text-muted">Listing { issue.ID }</p>
+	</div>
+}
+
 // ---- data ----
 
 func (d AdminData) Counts() map[string]int {
@@ -958,7 +999,8 @@ func (d AdminData) Counts() map[string]int {
 		"rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
 		"insights": len(lv(d.Insights, "topStores")), "banners": len(d.Campaigns),
 		"categories": len(d.Departments), "policies": len(d.Policies), "compare": len(d.Groups),
-		"charges": len(d.Charges), "reviews": len(d.Reviews),
+		"classification": len(d.CatalogueAudit.Review) + len(d.CatalogueAudit.Duplicates),
+		"charges":        len(d.Charges), "reviews": len(d.Reviews),
 		"delivery": len(d.Riders), "people": len(d.people()),
 	}
 }

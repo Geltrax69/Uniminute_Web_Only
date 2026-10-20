@@ -97,13 +97,13 @@ func sellerProductBody(d SellerProductData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue("sellerProductForm(" + jsonArg(productFormConfig(d)) + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 41, Col: 112}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 41, Col: 112}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" x-on:submit.prevent=\"save()\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" x-on:submit.prevent=\"save()\" x-on:focusout=\"if ($event.target.name === 'title') checkClassification()\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -149,7 +149,7 @@ func sellerProductBody(d SellerProductData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"h-[22px]\"></div><div x-show=\"classification\" x-cloak class=\"mb-4 text-[14px] leading-6\" role=\"status\"><p class=\"font-medium text-strong\" x-text=\"classification ? 'Shown in: ' + classification.group : ''\"></p><button type=\"button\" x-show=\"classification?.suggestedCategory\" x-on:click=\"category = classification.suggestedCategory\" class=\"mt-1 inline-flex min-h-touch items-center rounded-full px-3 text-[14px] font-semibold text-strong underline underline-offset-2\" x-text=\"classification?.suggestedCategory ? 'Use ' + classification.suggestedCategory + ' category' : ''\"></button><p class=\"text-muted\" x-show=\"classification?.needsReview\">Check the title and choose a specific category so buyers can find this product.</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -404,7 +404,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("field-" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 320, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 327, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -417,7 +417,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 321, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 328, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -430,7 +430,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 326, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 333, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -443,7 +443,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 327, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 334, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -456,7 +456,7 @@ func moneyField(name, label string) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(name + " = groupRupees(" + name + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/seller-product.templ`, Line: 328, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller-product.templ`, Line: 335, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {

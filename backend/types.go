@@ -1,16 +1,20 @@
 package main
 
-import "time"
+import (
+	"github.com/Geltrax69/Lamazon/backend/classification"
+	"time"
+)
 
 // Product is one listing in the catalog.
 type Product struct {
-	PublicID       string  `json:"publicId,omitempty"`
-	AvailableStock *int    `json:"availableStock,omitempty"`
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Category       string  `json:"category"`
-	Tab            string  `json:"tab"`
-	Price          float64 `json:"price"`
+	Classification classification.Result `json:"classification"`
+	PublicID       string                `json:"publicId,omitempty"`
+	AvailableStock *int                  `json:"availableStock,omitempty"`
+	ID             string                `json:"id"`
+	Name           string                `json:"name"`
+	Category       string                `json:"category"`
+	Tab            string                `json:"tab"`
+	Price          float64               `json:"price"`
 	// What it cost before the discount. Zero means there is no discount to
 	// show — not a free item — so the badge and the struck-through line are
 	// both driven off "is this above price", never off "is this set".

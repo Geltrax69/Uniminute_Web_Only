@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/Geltrax69/Lamazon/backend/classification"
 	"os"
 	"strconv"
 	"strings"
@@ -148,8 +149,9 @@ type productFilter struct {
 	ID       string
 }
 
-// productQuery filters and attaches offers in one round trip. Postgres does
-// the narrowing, so a search no longer ships the whole catalog through Go.
+// productQuery filters departments/search/stores and attaches offers in one
+// round trip. Customer category filtering follows classification below, so
+// related products do not stay in the wrong category just because of old labels.
 //
 // The catalog is the seeded rows *and* what real sellers have in stock: a
 // store's items are products to a shopper, and listing them anywhere else
@@ -214,7 +216,7 @@ const productQuery = `
 
 func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 	rows, err := d.sql.QueryContext(ctx, productQuery,
-		f.ID, f.Tab, f.Category, f.Q, f.Store)
+		f.ID, f.Tab, "", f.Q, f.Store)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +241,19 @@ func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 		}
 		if err := json.Unmarshal(variants, &p.VariantPrices); err != nil {
 			return nil, err
+		}
+		p.Classification = classification.Classify(p.Tab, p.Category, p.Name)
+		// Filter after classification so misfiled phone cases leave Mobile
+		// and appear under accessories, while precise merchant subcategories
+		// (e.g. Herbal Tea within Hot Beverages) remain individually browsable.
+		if f.Category != "" {
+			query := strings.TrimSpace(f.Category)
+			rawMatch := strings.EqualFold(strings.TrimSpace(p.Category), query)
+			groupMatch := strings.EqualFold(p.Classification.Group, query) || strings.EqualFold(p.Classification.Category, query)
+			expected := classification.Classify(p.Tab, query, "")
+			if !groupMatch && !(rawMatch && strings.EqualFold(expected.Group, p.Classification.Group)) {
+				continue
+			}
 		}
 		out = append(out, p)
 	}

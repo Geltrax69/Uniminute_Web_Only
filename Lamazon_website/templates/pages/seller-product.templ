@@ -38,7 +38,7 @@ templ SellerProductForm(d SellerProductData) {
 templ sellerProductBody(d SellerProductData) {
 	{{ editing := d.Item != nil }}
 	<main id="main" class="mx-auto w-full max-w-readable">
-		<form class="flex min-h-[100dvh] flex-col" x-data={ "sellerProductForm(" + jsonArg(productFormConfig(d)) + ")" } x-on:submit.prevent="save()">
+		<form class="flex min-h-[100dvh] flex-col" x-data={ "sellerProductForm(" + jsonArg(productFormConfig(d)) + ")" } x-on:submit.prevent="save()" x-on:focusout="if ($event.target.name === 'title') checkClassification()">
 			@navigation.ScreenHeader(tpl.When(editing, "Edit product", "Add product"))
 			<div class="flex-1 px-5 pb-6 pt-1">
 				<div class="pb-2.5 pl-0.5">
@@ -70,6 +70,11 @@ templ sellerProductBody(d SellerProductData) {
 					</template>
 				}
 				<div class="h-[22px]"></div>
+				<div x-show="classification" x-cloak class="mb-4 text-[14px] leading-6" role="status">
+					<p class="font-medium text-strong" x-text="classification ? 'Shown in: ' + classification.group : ''"></p>
+					<button type="button" x-show="classification?.suggestedCategory" x-on:click="category = classification.suggestedCategory" class="mt-1 inline-flex min-h-touch items-center rounded-full px-3 text-[14px] font-semibold text-strong underline underline-offset-2" x-text="classification?.suggestedCategory ? 'Use ' + classification.suggestedCategory + ' category' : ''"></button>
+                    <p class="text-muted" x-show="classification?.needsReview">Check the title and choose a specific category so buyers can find this product.</p>
+				</div>
 				@account.Section("Description", "What the buyer gets")
 				<div class="flex rounded bg-surface px-3.5 shadow-surface focus-within:ring-2 focus-within:ring-strong">
 					<span class="flex pt-[15px]">
@@ -252,7 +257,9 @@ func productFormConfig(d SellerProductData) map[string]any {
 		if it.Options != nil {
 			c["options"] = it.Options
 		}
-		if it.VariantPrices != nil { c["variantPrices"] = it.VariantPrices }
+		if it.VariantPrices != nil {
+			c["variantPrices"] = it.VariantPrices
+		}
 		if it.Attributes != nil {
 			c["attributes"] = it.Attributes
 		}

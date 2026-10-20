@@ -1,0 +1,282 @@
+[
+  {
+    "id": "item-1",
+    "name": "Aloo Tikki Burger",
+    "store": "PURE BITES",
+    "category": "Burger",
+    "tab": "Food"
+  },
+  {
+    "id": "item-10",
+    "name": "Paneer Makhni Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  },
+  {
+    "id": "item-11",
+    "name": "Mac & Cheese Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  },
+  {
+    "id": "item-12",
+    "name": "Desi Aloo Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  },
+  {
+    "id": "item-13",
+    "name": "PB's Special Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  },
+  {
+    "id": "item-14",
+    "name": "Peanut Butter Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  },
+  {
+    "id": "item-15",
+    "name": "Aloo Tikki Wrap",
+    "store": "PURE BITES",
+    "category": "Wraps",
+    "tab": "Food"
+  },
+  {
+    "id": "item-16",
+    "name": "PB Paneer Makhni Wrap",
+    "store": "PURE BITES",
+    "category": "Wraps",
+    "tab": "Food"
+  },
+  {
+    "id": "item-17",
+    "name": "Pav Bhaji",
+    "store": "PURE BITES",
+    "category": "Breakfast",
+    "tab": "Food"
+  },
+  {
+    "id": "item-18",
+    "name": "White Sauce Pasta",
+    "store": "PURE BITES",
+    "category": "Pasta",
+    "tab": "Food"
+  },
+  {
+    "id": "item-19",
+    "name": "Red Sauce Pasta",
+    "store": "PURE BITES",
+    "category": "Pasta",
+    "tab": "Food"
+  },
+  {
+    "id": "item-2",
+    "name": "Aloo Cheese Burger",
+    "store": "PURE BITES",
+    "category": "Burger",
+    "tab": "Food"
+  },
+  {
+    "id": "item-20",
+    "name": "Mix Sauce Pasta",
+    "store": "PURE BITES",
+    "category": "Pasta",
+    "tab": "Food"
+  },
+  {
+    "id": "item-22",
+    "name": "Red Sauce Pasta",
+    "store": "PURE BITES",
+    "category": "Pasta",
+    "tab": "Food"
+  },
+  {
+    "id": "item-23",
+    "name": "Butterfly Blue Pea Tea",
+    "store": "PURE BITES",
+    "category": "Herbal Tea",
+    "tab": "Food"
+  },
+  {
+    "id": "item-24",
+    "name": "Chamomile Ta",
+    "store": "PURE BITES",
+    "category": "Herbal Tea",
+    "tab": "Food"
+  },
+  {
+    "id": "item-25",
+    "name": "Lavender Tea",
+    "store": "PURE BITES",
+    "category": "Herbal Tea",
+    "tab": "Food"
+  },
+  {
+    "id": "item-26",
+    "name": "Tea",
+    "store": "PURE BITES",
+    "category": "Food",
+    "tab": "Food"
+  },
+  {
+    "id": "item-27",
+    "name": "Coffee",
+    "store": "PURE BITES",
+    "category": "Food",
+    "tab": "Food"
+  },
+  {
+    "id": "item-28",
+    "name": "Hot Chocolate",
+    "store": "PURE BITES",
+    "category": "Beverages",
+    "tab": "Food"
+  },
+  {
+    "id": "item-29",
+    "name": "Green Tea",
+    "store": "PURE BITES",
+    "category": "Beverages",
+    "tab": "Food"
+  },
+  {
+    "id": "item-3",
+    "name": "Double Cheese burger",
+    "store": "PURE BITES",
+    "category": "Burger",
+    "tab": "Food"
+  },
+  {
+    "id": "item-30",
+    "name": "Regular Cold Coffee",
+    "store": "PURE BITES",
+    "category": "Cold Coffee",
+    "tab": "Food"
+  },
+  {
+    "id": "item-31",
+    "name": "PB's Special Cold Coffee",
+    "store": "PURE BITES",
+    "category": "Cold Coffee",
+    "tab": "Food"
+  },
+  {
+    "id": "item-32",
+    "name": "Caramel Cold Coffee",
+    "store": "PURE BITES",
+    "category": "Cold Coffee",
+    "tab": "Food"
+  },
+  {
+    "id": "item-33",
+    "name": "Hazelnut Cold Coffee",
+    "store": "PURE BITES",
+    "category": "Cold Coffee",
+    "tab": "Food"
+  },
+  {
+    "id": "item-34",
+    "name": "Vanilla Cold Coffee",
+    "store": "PURE BITES",
+    "category": "Cold Coffee",
+    "tab": "Food"
+  },
+  {
+    "id": "item-35",
+    "name": "Caramel Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-36",
+    "name": "Mocha Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-37",
+    "name": "Hazelnut Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-38",
+    "name": "Oreo Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-39",
+    "name": "Kitkat Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-4",
+    "name": "Paneer Tikki burger",
+    "store": "PURE BITES",
+    "category": "Burger",
+    "tab": "Food"
+  },
+  {
+    "id": "item-40",
+    "name": "Nutella Frappe",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-41",
+    "name": "Biscoff",
+    "store": "PURE BITES",
+    "category": "Frappes",
+    "tab": "Food"
+  },
+  {
+    "id": "item-5",
+    "name": "Salted Fries",
+    "store": "PURE BITES",
+    "category": "Fries",
+    "tab": "Food"
+  },
+  {
+    "id": "item-6",
+    "name": "Masala fries",
+    "store": "PURE BITES",
+    "category": "Fries",
+    "tab": "Food"
+  },
+  {
+    "id": "item-7",
+    "name": "Cheese Loaded Fries",
+    "store": "PURE BITES",
+    "category": "Fries",
+    "tab": "Food"
+  },
+  {
+    "id": "item-8",
+    "name": "Paneer Loaded Fried",
+    "store": "PURE BITES",
+    "category": "Fries",
+    "tab": "Food"
+  },
+  {
+    "id": "item-9",
+    "name": "Cheese Corn Sandwich",
+    "store": "PURE BITES",
+    "category": "Sandwich",
+    "tab": "Food"
+  }
+]

@@ -195,3 +195,11 @@ relationships stay unchanged. PostgreSQL 13 or newer supplies `gen_random_uuid()
 
 Deploy this backend update to activate opaque links in the website. Public IDs
 reduce sequential URL guessing; authorization still belongs to server handlers.
+
+### Product classification
+
+The [classification pipeline](classification/README.md) derives consistent menu
+groups from department, title and merchant category on every catalogue read.
+It also supplies category filtering, seller previews and a protected admin
+review/duplicate queue. Use `/admin?tab=classification` or the documented
+read-only `cmd/catalog-audit` batch command to inspect results.
