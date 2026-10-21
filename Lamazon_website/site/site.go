@@ -51,7 +51,7 @@ func New(apiBase string) http.Handler {
 		razorpayKeySecret: payment.keySecret,
 		paymentProxy:      paymentProxy,
 	}
-	return recoverer(site.keepSession(freshForStaff(site.routes())))
+	return securityHeaders(recoverer(site.keepSession(freshForStaff(site.routes()))))
 }
 
 type Site struct {

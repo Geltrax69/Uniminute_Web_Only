@@ -18,13 +18,18 @@ func (a *API) allowPasswordAttempt(w http.ResponseWriter, r *http.Request, realm
 	if err != nil {
 		ip = r.RemoteAddr
 	}
+	ipBudget := 100
+	if parsed := net.ParseIP(ip); parsed != nil && parsed.IsLoopback() {
+		ipBudget = 1000
+	}
 	// Do not trust user-controlled forwarding headers. Behind a reverse proxy
 	// this is a shared proxy budget; account limits still apply independently.
+	// Keep it generous enough for a campus sharing a NAT or the website proxy.
 	for _, bucket := range []struct {
 		key   string
 		limit int
 	}{
-		{"ip:" + ip, 100}, {"account:" + realm + ":" + account, 10},
+		{"ip:" + ip, ipBudget}, {"account:" + realm + ":" + account, 10},
 	} {
 		var retry int
 		err := a.db.sql.QueryRowContext(r.Context(), `

@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"lamazon/website/backend"
 	productfrag "lamazon/website/templates/fragments/product"
@@ -1222,6 +1223,15 @@ func (s *Site) handleLoginPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Site) handleLogout(w http.ResponseWriter, r *http.Request) {
+	access, refresh := shop.SessionTokens(r)
+	if access != "" || refresh != "" {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		err := s.backend.RevokeSession(ctx, access, refresh)
+		cancel()
+		if err != nil {
+			log.Printf("session revocation unavailable: %v", err)
+		}
+	}
 	shop.ClearSessionCookies(w)
 	// The app stays on the profile screen, now signed out.
 	redirect(w, r, "/account")
@@ -1544,7 +1554,49 @@ func (s *Site) adminData(w http.ResponseWriter, r *http.Request, staff shop.Staf
 		Stage: q.Get("stage"), From: q.Get("from"), To: q.Get("to"), OpenDept: q.Get("dept")}
 	d.PageNum, _ = strconv.Atoi(q.Get("page"))
 	if d.Tab == "" {
-		d.Tab = "review"
+		d.Tab = "reports"
+	}
+	d.Month = q.Get("month")
+	d.ReportDay = q.Get("day")
+	d.StoreFilter = q.Get("store")
+	if d.Tab == "reports" || d.Tab == "security" {
+		var wg sync.WaitGroup
+		var overviewErr, sectionErr, auditErr, operationsErr error
+		loads := []func(){func() { overviewErr = s.backend.Get(ctx, "/api/admin/overview", token, &d.Overview) }, func() { _ = s.backend.Get(ctx, "/api/admin/stores", token, &d.Stores) }}
+		if d.Tab == "reports" {
+			values := url.Values{"month": {d.Month}, "day": {d.ReportDay}, "store": {d.StoreFilter}}
+			loads = append(loads, func() { sectionErr = s.backend.Get(ctx, "/api/admin/reports?"+values.Encode(), token, &d.Report) })
+		} else {
+			loads = append(loads, func() { sectionErr = s.backend.Get(ctx, "/api/admin/security/mfa", token, &d.MFA) }, func() { auditErr = s.backend.Get(ctx, "/api/admin/security/audit", token, &d.Audit) }, func() { operationsErr = s.backend.Get(ctx, "/api/admin/security/operations", token, &d.Operations) })
+		}
+		for _, load := range loads {
+			wg.Add(1)
+			go func() { defer wg.Done(); load() }()
+		}
+		wg.Wait()
+		if overviewErr != nil {
+			if adminExpired(w, r, overviewErr) {
+				return d, false
+			}
+			d.Error = apiMessage(overviewErr)
+		}
+		if auditErr != nil {
+			sectionErr = auditErr
+		}
+		if operationsErr != nil {
+			sectionErr = operationsErr
+		}
+		if sectionErr != nil {
+			if adminExpired(w, r, sectionErr) {
+				return d, false
+			}
+			d.ReportError = apiMessage(sectionErr)
+		}
+		if d.Report.Month != "" {
+			d.Month = d.Report.Month
+			d.ReportDay = d.Report.Day
+		}
+		return d, true
 	}
 	// Independent reads, each a round trip to the API: run them side by side.
 	var (
@@ -1626,7 +1678,7 @@ func (s *Site) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := strings.TrimSpace(r.FormValue("username"))
-	token, user, err := s.backend.AdminLogin(r.Context(), username, r.FormValue("password"))
+	token, user, err := s.backend.AdminLogin(r.Context(), username, r.FormValue("password"), r.FormValue("code"))
 	if err != nil {
 		p := s.buildPage(r)
 		p.Title = "Uniminute admin"
@@ -1638,6 +1690,11 @@ func (s *Site) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Site) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
+	if staff, ok := shop.ReadStaff(r, "admin"); ok {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		_ = s.backend.StaffLogout(ctx, "admin", staff.Token)
+		cancel()
+	}
 	shop.ClearStaff(w, "admin")
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
@@ -1650,6 +1707,10 @@ func (s *Site) handleAdminExport(w http.ResponseWriter, r *http.Request) {
 	}
 	d, ok := s.adminData(w, r, staff)
 	if !ok {
+		return
+	}
+	if !d.CanExportCSV() {
+		http.Error(w, "Choose a valid list to export, or use Download Excel in Reports.", 400)
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
@@ -1805,6 +1866,11 @@ func (s *Site) handleDeliveryLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Site) handleDeliveryLogout(w http.ResponseWriter, r *http.Request) {
+	if staff, ok := shop.ReadStaff(r, "rider"); ok {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		_ = s.backend.StaffLogout(ctx, "rider", staff.Token)
+		cancel()
+	}
 	shop.ClearStaff(w, "rider")
 	http.Redirect(w, r, "/delivery", http.StatusSeeOther)
 }

@@ -24,7 +24,7 @@ import (
 // PBKDF2-SHA256, per-row salt, constant-time compare. ponytail: stdlib
 // crypto/pbkdf2 instead of a bcrypt dependency; same job, no module to vet.
 const (
-	pbkdfIterations = 100_000
+	pbkdfIterations = 600_000
 	staffLifetime   = 12 * time.Hour
 )
 
@@ -131,6 +131,7 @@ func (a *API) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
+		Code     string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -154,6 +155,16 @@ func (a *API) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "wrong username or password")
 		return
 	}
+	valid, err := a.consumeAdminMFA(r, username, in.Code)
+	if err != nil {
+		writeError(w, 503, "could not verify admin authenticator")
+		return
+	}
+	if !valid {
+		writeError(w, 401, "enter an unused authenticator or recovery code")
+		return
+	}
+	a.upgradePassword(r.Context(), "admins", "username", username, hash, in.Password)
 	a.clearPasswordAttempts(r.Context(), "admin", username)
 	token, err := a.db.newStaffSession(r.Context(), "admin", username)
 	if err != nil {
@@ -200,6 +211,7 @@ func (a *API) handleRiderLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "this delivery account is switched off")
 		return
 	}
+	a.upgradePassword(r.Context(), "riders", "phone", phone, hash, in.PIN)
 	a.clearPasswordAttempts(r.Context(), "rider", phone)
 	token, err := a.db.newStaffSession(r.Context(), "rider", phone)
 	if err != nil {
@@ -903,7 +915,7 @@ func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 		SELECT o.id, o.item_title, o.units, o.amount, o.delivery_fee, o.stage, o.options, o.placed_at,
 		       o.store_name, o.receiver_name, o.receiver_phone,
 		       o.receiver_address, o.rider_phone, o.assigned_to, o.buyer_email,
-		       o.payment_method, o.payment_status
+		       o.payment_method, o.payment_status, o.reject_reason
 		FROM orders o
 		WHERE ($1::text = '' OR o.stage = $1)
 		ORDER BY o.placed_at DESC LIMIT 200`, stage)
@@ -920,7 +932,7 @@ func (a *API) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
 			&o.ReceiverAddress, &o.RiderPhone, &o.AssignedTo, &o.BuyerEmail,
-			&o.PaymentMethod, &o.PaymentStatus); err != nil {
+			&o.PaymentMethod, &o.PaymentStatus, &o.RejectReason); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1010,7 +1022,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 		       -- line beats no card at all.
 		       trim(both ', ' FROM concat_ws(', ', s.location, s.city)),
 		       CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_name ELSE '' END, CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_phone ELSE '' END, CASE WHEN o.assigned_to=$1 OR o.rider_phone=$1 THEN o.receiver_address ELSE '' END,
-		       o.rider_phone, o.assigned_to, o.payment_method, o.payment_status
+		       o.rider_phone, o.assigned_to, o.payment_method, o.payment_status, o.reject_reason
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
 		WHERE ((o.stage = 'accepted' AND o.rider_phone = ''
@@ -1033,7 +1045,7 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.RiderPhone,
-			&o.AssignedTo, &o.PaymentMethod, &o.PaymentStatus); err != nil {
+			&o.AssignedTo, &o.PaymentMethod, &o.PaymentStatus, &o.RejectReason); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1063,7 +1075,7 @@ func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 		       o.store_name,
 		       trim(both ', ' FROM concat_ws(', ', s.location, s.city)),
 		       o.receiver_name, o.receiver_phone, o.receiver_address,
-		       o.delivered_at, o.payment_method, o.payment_status
+		       o.delivered_at, o.payment_method, o.payment_status, o.reject_reason
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
 		WHERE o.stage = 'delivered' AND o.rider_phone = $1
@@ -1085,7 +1097,7 @@ func (a *API) handleRiderHistory(w http.ResponseWriter, r *http.Request) {
 			&o.Options,
 			&o.PlacedAt, &o.StoreName, &o.StoreAddress, &o.ReceiverName,
 			&o.ReceiverPhone, &o.ReceiverAddress, &o.DeliveredAt,
-			&o.PaymentMethod, &o.PaymentStatus); err != nil {
+			&o.PaymentMethod, &o.PaymentStatus, &o.RejectReason); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1296,31 +1308,7 @@ func (a *API) handleAdminItems(w http.ResponseWriter, r *http.Request) {
 // record of a sale, and deleting the product it names would take it with it.
 // Being an admin does not make that outcome any less irreversible.
 func (a *API) handleAdminDeleteItem(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-
-	var placed int
-	a.db.sql.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM orders WHERE item_id = $1`, id).Scan(&placed)
-	if placed > 0 {
-		writeError(w, http.StatusConflict, plural(placed, "order")+
-			" placed for this product. Hide it from the shop instead — "+
-			"deleting it would take the orders with it.")
-		return
-	}
-
-	// No owner in the WHERE clause: an admin is not scoped to one store, which
-	// is the whole point of the route.
-	res, err := a.db.sql.ExecContext(r.Context(),
-		`DELETE FROM inventory_items WHERE id = $1`, id)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		writeError(w, http.StatusNotFound, "no item with id "+id)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	a.deleteInventoryItem(w, r, true)
 }
 
 // PATCH /api/admin/items/{id}/listing — {"delisted": true|false}

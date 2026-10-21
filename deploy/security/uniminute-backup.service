@@ -1,0 +1,10 @@
+[Unit]
+Description=Encrypted Uniminute database backup
+After=docker.service
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/local/sbin/uniminute-backup
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=20min

@@ -47,6 +47,9 @@ templ adminLoginBody(d AdminLoginData) {
 			@adminField("username", "Username", "text", "username", d.Username, false)
 			<div class="h-3"></div>
 			@adminField("password", "Password", "password", "current-password", "", true)
+   <label class="mt-4 block text-[13px] font-semibold text-text" for="admin-code">Authenticator or recovery code</label>
+   <input id="admin-code" name="code" autocomplete="one-time-code" maxlength="24" class="mt-2 min-h-12 w-full rounded-[12px] bg-canvas px-4 text-body text-text outline-none focus:ring-2 focus:ring-strong"/>
+   <p class="mt-2 text-[12px] leading-5 text-muted">Required after you enable an authenticator in Security.</p>
 			if d.Error != "" {
 				<p class="mt-3 text-center text-[13px] leading-[17px] text-danger" role="alert">{ d.Error }</p>
 			}
@@ -90,6 +93,12 @@ templ adminField(name, label, kind, autocomplete, value string, secret bool) {
 
 // AdminData is everything the panel reads, and the filters in the address.
 type AdminData struct {
+ Operations map[string]map[string]any
+ Report backend.AdminReport
+ ReportError string
+ MFA map[string]any
+ Audit []map[string]any
+ Month,ReportDay,StoreFilter string
 	CatalogueAudit backend.CatalogueAudit
 	Page           viewdata.Page
 	Charges        []backend.Charge
@@ -120,67 +129,78 @@ type adminTab struct {
 }
 
 var adminTabs = []adminTab{
+ {"reports","Reports",false},
 	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
 	{"orders", "Orders", false}, {"reviews", "Reviews", false}, {"products", "Products", false}, {"insights", "Insights", false},
 	{"classification", "Category checks", false}, {"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
 	{"policies", "Policies", false}, {"charges", "Charges", false}, {"delivery", "Delivery", false},
-	{"people", "People", false},
+	{"people", "People", false}, {"security","Security",false},
 }
 
 templ Admin(d AdminData) {
 	@layouts.Base(d.Page.Title, d.Page.Description, "", adminBody(d))
 }
 
+// THESIS: An operational workspace puts reporting and the action queue one click apart.
+// OWN-WORLD: Existing forest, ivory and lime; Inter Tight, flat tables and clear controls.
+// STORY: Choose a month/store, understand sales and exceptions, inspect records, export.
+// FIRST VIEWPORT: Compact staff header, left navigation, report filters and sales totals.
+// FORM: Extend the incumbent admin surface; no replacement identity or concept roll.
 templ adminBody(d AdminData) {
-	{{ counts := d.Counts() }}
-	<main id="main" class="mx-auto w-full max-w-[1280px] px-5 pb-10 pt-4" x-data={ "adminPanel(" + jsonArg(d.clientConfig()) + ")" }>
-		<div class="flex items-center">
-			<div class="min-w-0 flex-1">
-				<h1 class="text-title text-text">Admin</h1>
-				if d.Staff.Subject != "" {
-					<p class="text-body text-muted">Signed in as { d.Staff.Subject }</p>
-				}
-			</div>
-			@ui.TactileButton("refresh-cw", "Refresh", 40, "", templ.Attributes{"href": d.link(d.Tab, 0)})
-			<form method="post" action="/admin/logout" class="ml-2">
-				<button type="submit" class={ ui.ButtonClass(false) }><span class="truncate">Sign out</span></button>
-			</form>
-		</div>
-		if d.Error != "" {
-			<p class="mt-3 text-[13px] text-danger">{ d.Error }</p>
-		}
-		<div class="mt-3 grid grid-cols-3 gap-2.5 md:grid-cols-6">
-			@kpiTile("People", sv(d.Overview, "users"), "", "/admin?tab=people")
-			@kpiTile("Sellers", sv(d.Overview, "sellers"), "", "/admin?tab=approved")
-			@kpiTile("To review", strconv.Itoa(counts["review"]), tpl.When(counts["review"] > 0, "#9A5B12", ""), "/admin?tab=review")
-			@kpiTile("Riders", sv(d.Overview, "riders"), "", "/admin?tab=delivery")
-			@kpiTile("Orders", sv(d.Overview, "orders"), "", "/admin?tab=orders")
-			@kpiTile("Rejected", strconv.Itoa(counts["rejected"]), "", "/admin?tab=rejected")
-		</div>
-		<div class="h-[22px]"></div>
-		<label class="block md:hidden">
-			<span class="mb-1 block text-[12px] text-muted">Admin section</span>
-			<select class="h-14 w-full rounded-featured bg-surface px-4 text-body text-text" x-on:change="location.assign('/admin?tab=' + $event.target.value)">
-				for _, t := range adminTabs {
-					<option value={ t.Key } selected?={ t.Key == d.Tab }>{ t.Label }{ tpl.When(t.Key=="classification", "", " ("+strconv.Itoa(counts[t.Key])+")") }</option>
-				}
-			</select>
-		</label>
-		<div class="hidden md:block">
-			@chipGroup("Stores", d, counts, true)
-			<div class="h-2.5"></div>
-			@chipGroup("Manage", d, counts, false)
-		</div>
-		<div class="h-5"></div>
-		if d.hasTable() && d.activeCount() > 0 {
-			@adminControls(d)
-		}
-		@adminSection(d)
-		if d.hasTable() {
-			@adminPagination(d)
-		}
-		@adminDialog()
-	</main>
+ {{ counts := d.Counts() }}
+ <main id="main" class="admin-workspace mx-auto w-full max-w-[1440px] px-4 pb-12 pt-5 sm:px-6" x-data={ "adminPanel(" + jsonArg(d.clientConfig()) + ")" }>
+  <header class="admin-workspace-header flex flex-wrap items-center justify-between gap-3 pb-5">
+   <div><a href="/admin" class="text-[13px] font-semibold text-strong">Uniminute operations</a><h1 class="mt-1 text-[26px] font-semibold leading-8 text-text">{ tabLabel(d.Tab) }</h1><p class="mt-1 text-[13px] text-muted">{ d.Staff.Subject } · Admin workspace</p></div>
+   <div class="flex items-center gap-2">
+    @ui.TactileButton("refresh-cw", "Refresh data", 44, "", templ.Attributes{"href": d.link(d.Tab, 0)})
+    <form method="post" action="/admin/logout"><button type="submit" class={ ui.ButtonClass(false) }>Sign out</button></form>
+   </div>
+  </header>
+  <label class="mb-5 block lg:hidden"><span class="mb-2 block text-[13px] font-medium text-muted">Workspace section</span><select class="min-h-12 w-full rounded-[12px] bg-surface px-4 text-body text-text" x-on:change="location.assign('/admin?tab=' + $event.target.value)">
+   for _,t:=range adminTabs {
+<option value={t.Key} selected?={t.Key==d.Tab}>{t.Label}</option>
+}
+
+  </select></label>
+  <div class="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
+   <nav aria-label="Admin sections" class="hidden self-start lg:sticky lg:top-5 lg:block">
+    <p class="mb-2 px-3 text-[12px] font-semibold text-muted">Workspace</p>
+    for _,t:=range adminTabs {
+     <a href={templ.SafeURL("/admin?tab="+t.Key)} aria-current={tpl.When(t.Key==d.Tab,"page","false")} class={"mb-1 flex min-h-11 items-center justify-between rounded-[12px] px-3 text-[14px] font-medium transition-colors hover:bg-strong/[.06]",templ.KV("bg-strong text-white hover:bg-strong",t.Key==d.Tab),templ.KV("text-text",t.Key!=d.Tab)}>
+      <span>{t.Label}</span>
+      if t.Key=="review"&&counts["review"]>0 {
+<span class="rounded-full bg-lime px-2 py-0.5 text-[11px] font-semibold text-strong">{strconv.Itoa(counts["review"])}</span>
+}
+
+     </a>
+    }
+   </nav>
+   <section class="min-w-0" aria-label={tabLabel(d.Tab)}>
+    if d.Error!="" {
+<p class="mb-4 rounded-[12px] bg-danger/[.06] p-4 text-[14px] leading-6 text-danger" role="alert">{d.Error}</p>
+}
+
+    if d.Tab!="reports"&&d.Tab!="security" {
+     <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      @kpiTile("People",sv(d.Overview,"users"),"","/admin?tab=people")
+      @kpiTile("Stores to review",strconv.Itoa(counts["review"]),"","/admin?tab=review")
+      @kpiTile("Orders",sv(d.Overview,"orders"),"","/admin?tab=orders")
+      @kpiTile("Riders",sv(d.Overview,"riders"),"","/admin?tab=delivery")
+     </div>
+    }
+    if d.hasTable()&&d.activeCount()>0 {
+@adminControls(d)
+}
+
+    @adminSection(d)
+    if d.hasTable(){
+@adminPagination(d)
+}
+
+   </section>
+  </div>
+  @adminDialog()
+ </main>
 }
 
 templ kpiTile(label, value, colour, href string) {
@@ -214,7 +234,8 @@ templ adminControls(d AdminData) {
 		<div class="mt-3 flex flex-wrap items-center gap-3">
 			if d.Tab == "orders" {
 				<select name="stage" x-on:change="$el.form.submit()" aria-label="Order status" class="h-11 w-[190px] rounded-small bg-surface px-3 text-body text-text">
-					for _, st := range []string{"All", "received", "accepted", "picked", "delivered", "rejected"} {
+					for _, st := range []string{
+"All", "received", "accepted", "picked", "delivered", "rejected"} {
 						<option value={ st } selected?={ st == d.Stage || (st == "All" && d.Stage == "") }>{ tpl.When(st == "All", "All statuses", st) }</option>
 					}
 				</select>
@@ -243,11 +264,16 @@ templ adminControls(d AdminData) {
 
 templ adminSection(d AdminData) {
 	switch d.Tab {
+ case "reports":
+ @adminReports(d)
+ case "security":
+ @adminSecurity(d)
 		case "review", "approved", "rejected":
 			@adminNote(storeNote(d.Tab))
 			if d.activeCount() == 0 {
 				@adminEmpty(storeEmpty(d.Tab))
 			} else {
+
 				for _, s := range d.PageRows() {
 					@storeCard(s, d.Tab)
 				}
@@ -257,6 +283,7 @@ templ adminSection(d AdminData) {
 			if len(d.Orders) == 0 {
 				@adminEmpty("No orders yet.")
 			} else {
+
 				for _, o := range d.PageRows() {
 					@adminOrderRow(o, d.Riders)
 				}
@@ -272,6 +299,7 @@ templ adminSection(d AdminData) {
 			} else if len(d.Filtered()) == 0 {
 				@adminEmpty("No product matches \"" + d.Q + "\".")
 			} else {
+
 				for _, it := range d.PageItems() {
 					@adminProductRow(it)
 				}
@@ -290,6 +318,7 @@ templ adminSection(d AdminData) {
 			if len(d.Groups) == 0 {
 				@adminEmpty("No comparison groups yet. Without one, Compare can only show the same product at different shops.")
 			} else {
+
 				for _, g := range d.Groups {
 					@groupCard(g)
 				}
@@ -299,6 +328,7 @@ templ adminSection(d AdminData) {
 			if len(d.Policies) == 0 {
 				@adminEmpty("No policies yet.")
 			} else {
+
 				for _, pol := range d.Policies {
 					@policyRow(pol)
 				}
@@ -317,6 +347,7 @@ templ adminSection(d AdminData) {
 			if len(d.Riders) == 0 {
 				@adminEmpty("No delivery numbers yet.")
 			} else {
+
 				for _, r := range d.PageRows() {
 					@riderRow(r)
 				}
@@ -326,6 +357,7 @@ templ adminSection(d AdminData) {
 			if len(d.people()) == 0 {
 				@adminEmpty("Nobody has signed in yet.")
 			} else {
+
 				for _, p := range d.PageRows() {
 					@personRow(p)
 				}
@@ -407,6 +439,10 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 		<p class="mt-[3px] text-[12px] text-muted">₹{ shop.Money(nv(o, "amount")) } · { sv(o, "storeName") } → { sv(o, "receiverName") } · { sv(o, "receiverPhone") }</p>
 		<p class="mt-0.5 text-[11.5px] font-semibold" style={ templ.SafeCSS("color:" + adminPaymentColour(o)) }>{ adminPaymentLabel(o) }</p>
 		<p class="text-[11.5px] text-muted">{ sv(o, "receiverAddress") }</p>
+ if sv(o,"rejectReason")!="" {
+<p class="mt-2 text-[13px] text-danger">Rejected: {sv(o,"rejectReason")}</p>
+}
+
 		<div class="mt-1.5 flex items-center">
 			<p class={ "min-w-0 flex-1 text-[12px] font-semibold " + tpl.When(carrier == "" && assigned == "", "text-muted", "text-text") }>
 				if carrier != "" {
@@ -414,6 +450,7 @@ templ adminOrderRow(o map[string]any, riders []map[string]any) {
 				} else if assigned != "" {
 					Assigned to { riderLabel(riders, assigned) }
 				} else {
+
 					Open to any rider
 				}
 			</p>
@@ -459,6 +496,7 @@ templ insightsSection(in map[string]any) {
 	if len(stores) == 0 {
 		@adminEmpty("No orders yet, so nothing to rank.")
 	} else {
+
 		for i, s := range stores {
 			@rankRow(i+1, sv(s, "name"), sv(s, "units")+" units · "+sv(s, "delivered")+" delivered", sv(s, "orders")+" orders", "₹"+shop.Money(nv(s, "revenue")), share(nv(s, "orders"), nv(stores[0], "orders")))
 		}
@@ -467,6 +505,7 @@ templ insightsSection(in map[string]any) {
 	if len(items) == 0 {
 		@adminEmpty("No orders yet, so nothing to rank.")
 	} else {
+
 		for i, it := range items {
 			@rankRow(i+1, sv(it, "title"), sv(it, "store")+" · "+sv(it, "orders")+" orders", sv(it, "units")+" units", "₹"+shop.Money(nv(it, "revenue")), share(nv(it, "units"), nv(items[0], "units")))
 		}
@@ -510,6 +549,7 @@ templ adminProductRow(it backend.InventoryItem) {
 				if len(it.ImageURLs) > 0 {
 					<img src={ templ.URL(shop.CatalogueImage(it.ImageURLs[0], 160)) } alt="" loading="lazy" class="h-full w-full object-contain"/>
 				} else {
+
 					@ui.Icon("image-off", "h-[18px] w-[18px] text-muted")
 				}
 			</span>
@@ -581,11 +621,13 @@ templ categoriesSection(d AdminData) {
 		if len(dept.Children) == 0 {
 			@adminEmpty("Nothing in here yet. Sellers list under the department itself until you add a section.")
 		} else {
+
 			for _, c := range dept.Children {
 				@sectionCard(c, tpl.When(dept.Colour == "", "#17221D", dept.Colour))
 			}
 		}
 	} else {
+
 		<div class="flex items-start">
 			<div class="flex-1">
 				@adminNote("The tabs across the top of the shop. Open one to see what sits under it — sellers pick from these, so adding one is what makes it possible to sell in.")
@@ -595,6 +637,7 @@ templ categoriesSection(d AdminData) {
 		if len(d.Departments) == 0 {
 			@adminEmpty("No departments. The shop has nothing but the All tab until you add one.")
 		} else {
+
 			<div class="grid gap-2.5 min-[600px]:grid-cols-2">
 				for _, dept := range d.Departments {
 					@departmentCard(dept)
@@ -638,6 +681,7 @@ templ categoryBadge(imageURL, icon, accent string, size int, name string) {
 			if imageURL != "" {
 				<img src={ templ.URL(shop.ThumbWidth(imageURL, 120)) } alt="" class="h-full w-full object-contain"/>
 			} else {
+
 				@ui.Icon(icon, "h-1/2 w-1/2")
 			}
 		</span>
@@ -698,6 +742,7 @@ templ bannersSection(d AdminData) {
 	if len(d.Campaigns) == 0 {
 		@ui.EmptyState("image", "Start with a story", "Create a banner for a category or your whole store.", "Create banner", "/admin/banners/new")
 	} else {
+
 		for _, c := range d.Campaigns {
 			<div class="mb-6">
 				@campaignBanner(c, "", "/admin/banners/"+url.PathEscape(c.ID))
@@ -803,11 +848,13 @@ templ adminPagination(d AdminData) {
 				if page == 0 {
 					<span class={ ui.ButtonClass(false) + " pointer-events-none opacity-50" }>Previous</span>
 				} else {
+
 					<a href={ templ.SafeURL(d.link(d.Tab, page-1)) } class={ ui.ButtonClass(false) }>Previous</a>
 				}
 				if (page+1)*adminPageSize >= total {
 					<span class={ ui.ButtonClass(false) + " pointer-events-none opacity-50" }>Next</span>
 				} else {
+
 					<a href={ templ.SafeURL(d.link(d.Tab, page+1)) } class={ ui.ButtonClass(false) }>Next</a>
 				}
 			}
@@ -960,6 +1007,7 @@ templ catalogueAuditSection(report backend.CatalogueAudit) {
 	if report.Version == "" {
 		@adminEmpty("The category checker could not be loaded. Refresh to try again.")
 	} else {
+
 		<p class="mb-5 text-[14px] text-muted">{ strconv.Itoa(report.Products) } published products checked.</p>
 		<h2 class="text-[20px] font-semibold">Categories to review</h2>
 		if len(report.Review) == 0 {
@@ -1121,7 +1169,8 @@ func (d AdminData) openDepartment() *backend.Category {
 
 func (d AdminData) link(tab string, page int) string {
 	v := url.Values{"tab": {tab}}
-	for k, val := range map[string]string{"q": d.Q, "stage": d.Stage, "from": d.From, "to": d.To, "dept": d.OpenDept} {
+	for k, val := range map[string]string{
+"month":d.Month,"day":d.ReportDay,"store":d.StoreFilter,"q": d.Q, "stage": d.Stage, "from": d.From, "to": d.To, "dept": d.OpenDept} {
 		if val != "" {
 			v.Set(k, val)
 		}
@@ -1149,7 +1198,8 @@ func (d AdminData) clientConfig() map[string]any {
 		}
 	}
 	icons := []map[string]string{}
-	for _, key := range []string{"headphones", "carrot", "utensils", "gift", "brush", "shirt", "house", "book", "dumbbell", "baby", "pill", "wrench", "cookie", "sprayCan", "cable", "tag"} {
+	for _, key := range []string{
+"headphones", "carrot", "utensils", "gift", "brush", "shirt", "house", "book", "dumbbell", "baby", "pill", "wrench", "cookie", "sprayCan", "cable", "tag"} {
 		icons = append(icons, map[string]string{"key": key, "svg": ui.IconSVG(shop.DepartmentIcon("", key), "h-[18px] w-[18px]")})
 	}
 	return map[string]any{
@@ -1180,6 +1230,7 @@ func (d AdminData) ExportCSV() string {
 	var b strings.Builder
 	write := func(cells []string) {
 		for i, c := range cells {
+ c=safeCSVCell(c)
 			if i > 0 {
 				b.WriteByte(',')
 			}
@@ -1423,6 +1474,7 @@ templ reviewsSection(list []backend.Review) {
 	if len(list) == 0 {
 		@adminEmpty("No reviews yet. They arrive once delivered orders are rated.")
 	} else {
+
 		if riders := riderScores(list); len(riders) > 0 {
 			<p class="px-1 pb-2 pt-1 text-[13px] font-extrabold text-text">Delivery riders</p>
 			<div class="mb-4 grid gap-2 sm:grid-cols-2">

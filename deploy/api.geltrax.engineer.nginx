@@ -3,6 +3,7 @@
 # stricter authenticated account budgets are enforced by PostgreSQL.
 limit_req_zone $binary_remote_addr zone=uniminute_payment_ip:10m rate=10r/s;
 limit_req_zone $server_name zone=uniminute_payment_global:1m rate=100r/s;
+limit_req_zone $server_name zone=uniminute_api_global:1m rate=200r/s;
 
 server {
     server_name api.geltrax.engineer;
@@ -67,10 +68,13 @@ server {
         default_type application/json;
         add_header Retry-After 3 always;
         add_header Cache-Control no-store always;
-        return 429 '{"error":"Too many payment requests. Please wait a moment and try again."}';
+        return 429 '{"error":"Too many requests. Please wait a moment and try again."}';
     }
 
     location /api/ {
+        limit_req zone=uniminute_api_global burst=300 nodelay;
+        limit_req_status 429;
+        error_page 429 = @payment_throttled;
         proxy_pass http://127.0.0.1:8081;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

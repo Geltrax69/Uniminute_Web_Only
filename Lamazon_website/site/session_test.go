@@ -12,16 +12,19 @@ import (
 func TestLogoutDoesNotRefreshExpiredSession(t *testing.T) {
 	calls := 0
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/login/logout" {
+			t.Error("logout must not refresh the old session")
+		}
 		calls++
-		http.Error(w, "refresh must not happen", http.StatusInternalServerError)
+		w.WriteHeader(204)
 	}))
 	defer api.Close()
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	req.AddCookie(&http.Cookie{Name: shop.RefreshCookie, Value: "old-refresh"})
 	rec := httptest.NewRecorder()
 	New(api.URL).ServeHTTP(rec, req)
-	if calls != 0 {
-		t.Fatalf("logout made %d backend calls", calls)
+	if calls != 1 {
+		t.Fatalf("logout should revoke once; made %d backend calls", calls)
 	}
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/account" {
 		t.Fatalf("logout = %d %v", rec.Code, rec.Header())

@@ -176,7 +176,7 @@ func TestSeedUserSetsAPasswordAndKeepsTheProfile(t *testing.T) {
 		t.Error("the seeded password does not verify")
 	}
 
-	// They fill in their profile, then the password gets rotated.
+	// They fill in their profile; later bootstrap changes must not reset it.
 	if _, err := db.sql.ExecContext(ctx,
 		`UPDATE users SET name = 'Lalit' WHERE email = 'seed@example.com'`); err != nil {
 		t.Fatal(err)
@@ -191,11 +191,11 @@ func TestSeedUserSetsAPasswordAndKeepsTheProfile(t *testing.T) {
 		Scan(&hash, &name); err != nil {
 		t.Fatal(err)
 	}
-	if !passwordMatches(hash, "second-pass") {
-		t.Error("rotating the password did not take")
+	if !passwordMatches(hash, "first-pass") {
+		t.Error("restart overwrote the existing password")
 	}
-	if passwordMatches(hash, "first-pass") {
-		t.Error("the old password still works")
+	if passwordMatches(hash, "second-pass") {
+		t.Error("bootstrap reset an existing credential")
 	}
 	if name != "Lalit" {
 		t.Errorf("the seed wiped the profile: name = %q", name)

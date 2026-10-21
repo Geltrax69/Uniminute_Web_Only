@@ -568,6 +568,32 @@ document.addEventListener('alpine:init', () => {
 
   // ── admin panel (AdminScreen) ────────────────────────────────────────────
   // One dialog, many decisions: `dlg` is its content, `dlg.run` its action.
+  Alpine.data('adminSecuritySettings', (cfg) => ({
+    enabled: !!cfg?.enabled, configured: !!cfg?.configured,
+    remaining: cfg?.recoveryCodesRemaining || 0,
+    password: '', code: '', secret: '', uri: '', recoveryCodes: [],
+    busy: false, error: '', notice: '',
+    async run(action) {
+      if (this.busy) return;
+      this.busy = true; this.error = ''; this.notice = '';
+      try {
+        const result = await sellerCall('POST', '/staff-api/admin/security/mfa', { action, password: this.password, code: this.code.trim() });
+        if (action === 'begin') { this.secret = result.secret; this.uri = result.uri; this.code = ''; }
+        else {
+          this.enabled = !!result.enabled; this.secret = ''; this.uri = ''; this.password = ''; this.code = '';
+          this.recoveryCodes = result.recoveryCodes || []; this.remaining = this.recoveryCodes.length;
+          this.notice = this.enabled ? 'Authenticator enabled. Save your recovery codes below.' : 'Authenticator disabled.';
+        }
+      } catch (err) { this.error = err.message || 'Could not update security settings. Try again.'; }
+      finally { this.busy = false; }
+    },
+    downloadCodes() {
+      const blob = new Blob(['Uniminute admin recovery codes. Keep these private. Each code works once.\n\n' + this.recoveryCodes.join('\n')], { type: 'text/plain' });
+      const href = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = href; a.download = 'uniminute-admin-recovery-codes.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(href), 1000);
+    },
+  }));
+
   Alpine.data('adminPanel', (cfg) => ({
     ...cfg,
     dlg: { kind: '' },

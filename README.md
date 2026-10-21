@@ -102,3 +102,13 @@ dev.sh / dev-full-stack.sh / deploy.sh / tunnel.sh   dev & deploy helpers
 
 ---
 *README written after code audit on 2026-10-08.*
+
+### Admin reports and security operations
+
+The admin panel now starts with IST daily/monthly reports, per-store status
+counts, rejection reasons, product/delivery reviews and an admin-only six-sheet
+Excel export. Revenue definitions are visible in both the UI and workbook.
+Authenticator enrollment and operational backup/health status are under
+`/admin?tab=security`. See [security operations](deploy/security/README.md) for
+installation, key handling, backup verification, limits and remaining external
+setup. Both Go modules require Go 1.26.10 or newer for the current security fixes.

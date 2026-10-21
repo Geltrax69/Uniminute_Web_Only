@@ -431,30 +431,52 @@ func optionsJSON(in []ItemOption) []byte {
 // including orders already delivered. handleDeleteCategory has always worked
 // this way; this is the same guard, one table over.
 func (a *API) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
+	a.deleteInventoryItem(w, r, false)
+}
+
+func (a *API) deleteInventoryItem(w http.ResponseWriter, r *http.Request, admin bool) {
 	id := r.PathValue("id")
-
-	// idx_orders_item makes this a cheap count.
-	var placed int
-	a.db.sql.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM orders WHERE item_id = $1`, id).Scan(&placed)
-	if placed > 0 {
-		writeError(w, http.StatusConflict, plural(placed, "order")+
-			" placed for this product. Hide it from the shop instead — "+
-			"deleting it would take the orders with it.")
-		return
-	}
-
-	res, err := a.db.sql.ExecContext(r.Context(),
-		`DELETE FROM inventory_items WHERE id = $1 AND owner = $2`, id, a.owner(r))
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save or load store data — try again")
+		writeError(w, 503, "could not delete product")
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		writeError(w, http.StatusNotFound, "no item with id "+id)
+	defer tx.Rollback()
+	// Establish ownership before exposing even an order count. The row lock also
+	// serializes deletion with checkout's inventory lock, preventing a cascade
+	// from deleting an order that was placed while the guard was checked.
+	query := `SELECT id FROM inventory_items WHERE id=$1 AND owner=$2 FOR UPDATE`
+	args := []any{id, a.owner(r)}
+	if admin {
+		query = `SELECT id FROM inventory_items WHERE id=$1 FOR UPDATE`
+		args = []any{id}
+	}
+	var found string
+	if err = tx.QueryRowContext(r.Context(), query, args...).Scan(&found); errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "product not found")
+		return
+	} else if err != nil {
+		writeError(w, 503, "could not check product")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	var placed int
+	if err = tx.QueryRowContext(r.Context(), `SELECT count(*) FROM orders WHERE item_id=$1`, id).Scan(&placed); err != nil {
+		writeError(w, 503, "could not check product orders")
+		return
+	}
+	if placed > 0 {
+		writeError(w, 409, plural(placed, "order")+" placed for this product. Hide it from the shop instead — deleting it would take the orders with it.")
+		return
+	}
+	if _, err = tx.ExecContext(r.Context(), `DELETE FROM inventory_items WHERE id=$1`, id); err != nil {
+		writeError(w, 503, "could not delete product")
+		return
+	}
+	if tx.Commit() != nil {
+		writeError(w, 503, "could not delete product")
+		return
+	}
+	w.WriteHeader(204)
 }
 
 // PATCH /api/seller/items/{id}/listing — {"delisted": true|false}

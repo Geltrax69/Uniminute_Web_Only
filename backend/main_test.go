@@ -37,7 +37,7 @@ func testDB(t *testing.T) *DB {
 
 	// Seller data is per-test; the catalog is shared read-only seed.
 	if _, err := db.sql.Exec(
-		`TRUNCATE payment_request_limits, payment_gateway_attempts, razorpay_webhook_events, storefront_campaigns, storefront_seasons, checkout_attempts, orders, inventory_items, seller_stores, login_codes,
+		`TRUNCATE security_audit_events, payment_request_limits, payment_gateway_attempts, razorpay_webhook_events, storefront_campaigns, storefront_seasons, checkout_attempts, orders, inventory_items, seller_stores, login_codes,
 		  auth_sessions, push_subscriptions, addresses, users,
 		  admins, riders, staff_sessions, password_attempts CASCADE`); err != nil {
 		t.Fatal(err)
@@ -472,6 +472,7 @@ func TestConcurrentOrdersCannotOversell(t *testing.T) {
 // not send the real request unless the preflight says that header is allowed.
 // Getting this wrong fails silently: the app catches it and shows sample data.
 func TestPreflightAllowsTheHeadersWeSend(t *testing.T) {
+	t.Setenv("ALLOWED_ORIGINS", "http://localhost:52614")
 	h := testAPI(t)
 	for _, path := range []string{
 		"/api/seller/items", "/api/push/subscribe", "/api/push/test", "/api/login",

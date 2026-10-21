@@ -1,0 +1,10 @@
+[Unit]
+Description=Verify Uniminute backup in a disposable database
+After=docker.service
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/local/sbin/uniminute-backup --verify-latest
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=30min

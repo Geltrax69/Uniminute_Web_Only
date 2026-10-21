@@ -1,0 +1,120 @@
+package pages
+
+import (
+ "net/url"
+ "strconv"
+ "strings"
+ "lamazon/website/backend"
+ "lamazon/website/shop"
+ "lamazon/website/templates/components/ui"
+ "lamazon/website/tpl"
+)
+
+func reportURL(d AdminData,owner string) string {
+ return "/admin?"+url.Values{"tab":{"reports"},"month":{d.Month},"day":{d.ReportDay},"store":{owner}}.Encode()
+}
+func reportExportURL(d AdminData)string{return "/staff-api/admin/reports/export?"+url.Values{"month":{d.Month},"day":{d.ReportDay},"store":{d.StoreFilter}}.Encode()}
+
+templ adminReports(d AdminData) {
+ <form action="/admin" method="get" class="mb-6 flex flex-wrap items-end gap-3 rounded-[16px] bg-surface p-4" x-data="{ loading: false }" x-on:submit="loading = true">
+  <input type="hidden" name="tab" value="reports"/>
+  <label class="min-w-[140px] flex-1"><span class="mb-2 block text-[13px] font-semibold text-text">Report month</span><input type="month" name="month" value={d.Month} required class="min-h-11 w-full rounded-[12px] bg-canvas px-3 text-[14px] text-text focus:outline-strong" x-on:change="$el.form.elements.day.value = $el.value + '-01'"/></label>
+  <label class="min-w-[150px] flex-1"><span class="mb-2 block text-[13px] font-semibold text-text">Compare a day</span><input type="date" name="day" value={d.ReportDay} class="min-h-11 w-full rounded-[12px] bg-canvas px-3 text-[14px] text-text focus:outline-strong"/></label>
+  <label class="min-w-[180px] flex-[2]"><span class="mb-2 block text-[13px] font-semibold text-text">Store</span><select name="store" class="min-h-11 w-full rounded-[12px] bg-canvas px-3 text-[14px] text-text focus:outline-strong"><option value="">All stores</option>
+   for _,store:=range d.Stores {
+<option value={sv(store,"owner")} selected?={sv(store,"owner")==d.StoreFilter}>{sv(store,"name")}</option>
+}
+
+  </select></label>
+  <button type="submit" class={ui.ButtonClass(true)} x-bind:disabled="loading"><span x-text="loading ? 'Loading report…' : 'Apply filters'">Apply filters</span></button>
+ </form>
+ if d.ReportError!="" {
+  <div role="alert" class="rounded-[16px] bg-surface p-6"><h2 class="text-[18px] font-semibold text-text">Report unavailable</h2><p class="mt-2 text-[14px] leading-6 text-danger">{d.ReportError}</p><p class="mt-2 text-[14px] leading-6 text-muted">Check the month and day, then apply the filters again.</p></div>
+ } else {
+
+  <div class="mb-7 flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-[19px] font-semibold text-text">Sales and order activity</h2><p class="mt-1 text-[13px] leading-5 text-muted">{d.Report.Month} · Indian Standard Time · Delivered product sales before refunds</p></div><a href={templ.SafeURL(reportExportURL(d))} class={ui.ButtonClass(true)}>@ui.Icon("download","h-[18px] w-[18px]")<span>Download Excel</span></a></div>
+  <div class="mb-7 grid gap-4 md:grid-cols-2">
+   @reportPeriodSummary("Selected day",d.Report.Day,d.Report.Daily)
+   @reportPeriodSummary("Selected month",d.Report.Month,d.Report.Monthly)
+  </div>
+  <p class="mb-7 max-w-[80ch] text-[13px] leading-6 text-muted">Sales follow delivery dates and exclude delivery fees. Order counts follow placement dates and show current status. A basket with several products creates several order records. Reviews follow their latest update date. Sales are before refunds, not profit.</p>
+  if d.Report.LegacyDates>0 {
+<p class="mb-6 rounded-[12px] bg-strong/[.06] p-4 text-[13px] leading-6 text-strong">{strconv.Itoa(d.Report.LegacyDates)} older delivered records have no delivery timestamp. Their sales use the order placement date.</p>
+}
+
+  <section class="mb-7" aria-labelledby="store-performance-title">
+ <p class="mb-2 text-[12px] leading-5 text-muted lg:hidden">Scroll tables sideways to see every column.</p>
+   <div class="mb-3 flex flex-wrap items-end justify-between gap-2"><h2 id="store-performance-title" class="text-[18px] font-semibold text-text">Store performance</h2><span class="text-[13px] text-muted">Select a store to inspect its report</span></div>
+   if len(d.Report.Stores)==0 {
+@reportEmpty("No activity in this period", "Choose another month or store. The Excel report will still include its definitions and empty registers.")
+}
+ else {
+
+    <div class="overflow-x-auto rounded-[16px] bg-surface" role="region" aria-label="Monthly store performance, scroll sideways for more columns" tabindex="0"><table class="admin-report-table w-full min-w-[760px] text-left text-[13px]"><thead><tr><th scope="col">Store</th><th scope="col" class="text-right">Delivered sales</th><th scope="col" class="text-right">Placed</th><th scope="col" class="text-right">Accepted / picked</th><th scope="col" class="text-right">Rejected</th><th scope="col" class="text-right">Product reviews</th><th scope="col" class="text-right">Delivery reviews</th></tr></thead><tbody>
+     for _,row:=range d.Report.Stores {
+<tr><th scope="row"><a href={templ.SafeURL(reportURL(d,row.Owner))} class="inline-flex min-h-11 items-center font-semibold text-strong underline-offset-4 hover:underline">{tpl.When(row.Store=="","Store unavailable",row.Store)}</a></th><td class="text-right font-semibold">₹{shop.Money(row.Sales)}</td><td class="text-right">{strconv.Itoa(row.Placed)}</td><td class="text-right">{strconv.Itoa(row.Accepted)}</td><td class="text-right"><span class={templ.KV("font-semibold text-danger",row.Rejected>0)}>{strconv.Itoa(row.Rejected)}</span></td><td class="text-right">{strconv.Itoa(row.Reviewed)}</td><td class="text-right">{strconv.Itoa(row.DeliveryReviewed)}</td></tr>
+}
+
+    </tbody></table></div>
+   }
+  </section>
+  <details class="mb-7 rounded-[16px] bg-surface p-4"><summary class="min-h-11 cursor-pointer text-[16px] font-semibold text-text">Daily breakdown for the month <span class="ml-2 text-[13px] font-normal text-muted">{strconv.Itoa(len(d.Report.Days))} store-days with activity</span></summary>
+   <div class="mt-3 overflow-x-auto" role="region" aria-label="Daily store totals" tabindex="0"><table class="admin-report-table w-full min-w-[760px] text-left text-[13px]"><thead><tr><th scope="col">Date (IST)</th><th scope="col">Store</th><th scope="col" class="text-right">Delivered sales</th><th scope="col" class="text-right">Placed</th><th scope="col" class="text-right">Delivered orders</th><th scope="col" class="text-right">Rejected</th><th scope="col" class="text-right">Delivery fees</th></tr></thead><tbody>
+    for _,row:=range d.Report.Days {
+<tr><th scope="row" class="whitespace-nowrap font-medium">{row.Date}</th><td>{row.Store}</td><td class="text-right">₹{shop.Money(row.Sales)}</td><td class="text-right">{strconv.Itoa(row.Placed)}</td><td class="text-right">{strconv.Itoa(row.Delivered)}</td><td class="text-right">{strconv.Itoa(row.Rejected)}</td><td class="text-right">₹{shop.Money(row.Fees)}</td></tr>
+}
+
+   </tbody></table></div>
+  </details>
+  <section aria-labelledby="report-register-title"><div class="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 id="report-register-title" class="text-[18px] font-semibold text-text">Order register</h2><p class="mt-1 text-[13px] leading-5 text-muted">Placed, delivered or reviewed in this month. Customer information is restricted to administrators.</p></div><a href="/admin?tab=orders" class="inline-flex min-h-11 items-center text-[13px] font-semibold text-strong">Manage orders →</a></div>
+   if d.Report.DetailsLimited {
+<p class="mb-3 text-[13px] text-muted">Showing the latest 500 relevant records. Download Excel for the complete report.</p>
+}
+
+   if len(d.Report.Orders)==0 {
+@reportEmpty("No order records", "Orders will appear here when this store has activity in the selected month.")
+}
+ else {
+
+    <div class="overflow-x-auto rounded-[16px] bg-surface" role="region" aria-label="Order register, scroll sideways for more columns" tabindex="0"><table class="admin-report-table w-full min-w-[900px] text-left text-[13px]"><thead><tr><th scope="col">Order / item</th><th scope="col">Store / customer</th><th scope="col">Current status / reason</th><th scope="col" class="text-right">Item amount</th><th scope="col">Reviews</th></tr></thead><tbody>
+     for _,o:=range d.Report.Orders {
+<tr><th scope="row" class="max-w-[270px] align-top font-normal"><p class="font-semibold">{shop.OrderRef(o.ID)}</p><p class="mt-1 line-clamp-2 leading-5" title={o.ItemTitle}>{strconv.Itoa(o.Units)} × {o.ItemTitle}</p><p class="mt-1 text-[12px] text-muted">{reportDisplayTime(o.PlacedAt)}</p></th><td class="max-w-[220px] align-top"><p class="font-semibold">{o.StoreName}</p><p class="mt-1">{o.ReceiverName}</p><details class="mt-1"><summary class="min-h-8 cursor-pointer text-[12px] text-strong">Customer / delivery details</summary><p class="mt-1 break-words leading-5">{o.ReceiverPhone}<br/>{o.ReceiverAddress}</p><p class="mt-1 leading-5 text-muted">Rider: {tpl.When(o.RiderPhone!="",o.RiderPhone,tpl.When(o.AssignedTo!="",o.AssignedTo,"Unassigned"))}</p></details></td><td class="max-w-[240px] align-top"><span class="font-semibold">{strings.Title(string(o.Stage))}</span><p class="mt-1 text-[12px] text-muted">{o.PaymentMethod} · {o.PaymentStatus}</p>
+if o.RejectReason!="" {
+<p class="mt-2 leading-5 text-danger">{o.RejectReason}</p>
+}
+</td><td class="whitespace-nowrap text-right align-top font-semibold">₹{shop.Money(o.Amount)}</td><td class="min-w-[140px] align-top"><p>Product: {ratingLabel(o.ItemRating)}</p><p class="mt-1">Delivery: {ratingLabel(o.RiderRating)}</p>
+if o.ItemText!=""||o.RiderText!=""{
+<details class="mt-1"><summary class="min-h-8 cursor-pointer text-[12px] text-strong">Read reviews</summary>
+if o.ItemText!=""{
+<p class="mt-1 max-w-[230px] leading-5">Product: {o.ItemText}</p>
+}
+if o.RiderText!=""{
+<p class="mt-1 max-w-[230px] leading-5">Delivery: {o.RiderText}</p>
+}
+</details>
+}
+</td></tr>
+}
+
+    </tbody></table></div>
+   }
+  </section>
+ }
+}
+
+templ reportPeriodSummary(label,date string,m backend.ReportMetrics){
+ <section class="rounded-[16px] bg-surface p-5" aria-label={label+" totals"}><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-[14px] font-semibold text-text">{label}</h3><span class="text-[12px] text-muted">{date}</span></div><p class="mt-5 text-[13px] text-muted">Delivered product sales</p><p class="mt-1 text-[30px] font-semibold leading-9 tabular-nums text-text">₹{shop.Money(m.Sales)}</p><p class="mt-1 text-[12px] text-muted">Delivery fees separately: ₹{shop.Money(m.Fees)}</p><dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-3 text-[13px]">
+  @reportPair("Orders placed",m.Placed)
+  @reportPair("Awaiting acceptance",m.Pending)
+  @reportPair("Accepted / picked",m.Accepted)
+  @reportPair("Delivered orders",m.Delivered)
+  @reportPair("Rejected",m.Rejected)
+  @reportPair("Product reviews",m.Reviewed)
+  @reportPair("Delivery reviews",m.DeliveryReviewed)
+ </dl></section>
+}
+templ reportPair(label string,value int){<div class="flex items-center justify-between gap-2"><dt class="text-muted">{label}</dt><dd class="font-semibold tabular-nums text-text">{strconv.Itoa(value)}</dd></div>
+}
+
+templ reportEmpty(title,body string){<div class="rounded-[16px] bg-surface p-6"><h3 class="text-[16px] font-semibold text-text">{title}</h3><p class="mt-2 max-w-[60ch] text-[14px] leading-6 text-muted">{body}</p></div>
+}

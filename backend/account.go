@@ -87,9 +87,10 @@ func (a *API) handleMe(w http.ResponseWriter, r *http.Request) {
 // PATCH /api/me — name, phone, and a password if they want one.
 func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name     *string `json:"name"`
-		Phone    *string `json:"phone"`
-		Password *string `json:"password"`
+		Name            *string `json:"name"`
+		Phone           *string `json:"phone"`
+		Password        *string `json:"password"`
+		CurrentPassword string  `json:"currentPassword"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -120,6 +121,28 @@ func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	// anyone who is only changing their name, which leaves it untouched.
 	var hash *string
 	if in.Password != nil {
+		if !a.allowPasswordAttempt(w, r, "profile-password", email) {
+			return
+		}
+		var currentHash string
+		if err := a.db.sql.QueryRowContext(r.Context(), `SELECT pass_hash FROM users WHERE email=$1`, email).Scan(&currentHash); err != nil {
+			writeError(w, 503, "could not check current password")
+			return
+		}
+		if currentHash == "" {
+			var recent bool
+			token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+			err := a.db.sql.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM auth_sessions WHERE access_hash=$1 AND created_at>now()-interval '5 minutes')`, hashCode(token)).Scan(&recent)
+			if err != nil || !recent {
+				writeError(w, 401, "sign in again with your email code before setting a password")
+				return
+			}
+		}
+		if currentHash != "" && !passwordMatches(currentHash, in.CurrentPassword) {
+			writeError(w, 401, "enter your current password, or use the email password-reset flow")
+			return
+		}
+
 		if len(*in.Password) < minPasswordLength {
 			writeError(w, http.StatusBadRequest,
 				"a password needs at least 8 characters")
@@ -133,14 +156,28 @@ func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		hash = &h
 	}
 
-	// COALESCE so a call that sends only one field leaves the others alone.
-	if _, err := a.db.sql.ExecContext(r.Context(), `
-		UPDATE users SET name = COALESCE($2, name), phone = COALESCE($3, phone),
-		                 pass_hash = COALESCE($4, pass_hash)
-		WHERE email = $1`, email, in.Name, in.Phone, hash); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "could not update profile")
 		return
 	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(r.Context(), `UPDATE users SET name=COALESCE($2,name),phone=COALESCE($3,phone),pass_hash=COALESCE($4,pass_hash) WHERE email=$1`, email, in.Name, in.Phone, hash); err != nil {
+		writeError(w, 503, "could not update profile")
+		return
+	}
+	if hash != nil {
+		current := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if _, err = tx.ExecContext(r.Context(), `DELETE FROM auth_sessions WHERE email=$1 AND access_hash<>$2`, email, hashCode(current)); err != nil {
+			writeError(w, 503, "could not revoke other sessions")
+			return
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		writeError(w, 503, "could not update profile")
+		return
+	}
+
 	u, err := a.db.user(r.Context(), email)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -361,9 +398,9 @@ func (a *API) mutateAddress(w http.ResponseWriter, r *http.Request, remove bool)
 // one is a public repo, so a password written into a seed file would be
 // published to the world and stay in the git history after it was removed.
 //
-// Runs on every boot, so changing SEED_USER_PASSWORD and restarting is how the
-// password is rotated. Only the password is touched: a name, phone or address
-// this person saved is theirs and survives.
+// Runs on boot to initialize missing credentials only. A restart must never
+// overwrite a password changed through account recovery. Rotate existing
+// passwords through the verified reset flow, not the bootstrap environment.
 func (d *DB) seedUser(ctx context.Context) error {
 	email := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_USER")))
 	pass := os.Getenv("SEED_USER_PASSWORD")
@@ -379,7 +416,7 @@ func (d *DB) seedUser(ctx context.Context) error {
 	if _, err := d.sql.ExecContext(ctx, `
 		INSERT INTO users (email, pass_hash, name, phone) VALUES ($1,$2,$3,$4)
 		ON CONFLICT (email) DO UPDATE SET
-			pass_hash = EXCLUDED.pass_hash,
+			pass_hash = CASE WHEN users.pass_hash = '' THEN EXCLUDED.pass_hash ELSE users.pass_hash END,
 			-- Only when blank. What this person typed for themselves is
 			-- theirs, and a restart is not a reason to overwrite it.
 			name = CASE WHEN users.name = '' THEN EXCLUDED.name ELSE users.name END,

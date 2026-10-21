@@ -134,6 +134,9 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(in.Email))
+	if !a.allowPaymentRequests(w, r, "identity:"+r.URL.Path+":"+email, 10, 600) {
+		return
+	}
 	if !emailPattern.MatchString(email) {
 		writeError(w, http.StatusBadRequest, "enter a valid email address")
 		return
@@ -177,6 +180,9 @@ func (a *API) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(in.Email))
+	if !a.allowPaymentRequests(w, r, "identity:"+r.URL.Path+":"+email, 10, 600) {
+		return
+	}
 	if !emailPattern.MatchString(email) {
 		writeError(w, http.StatusBadRequest, "enter a valid email address")
 		return
@@ -223,7 +229,7 @@ func (a *API) mailCode(w http.ResponseWriter, r *http.Request, email, purpose st
 	}
 	if a.mail == nil {
 		// Unconfigured is a working local setup, not an error.
-		log.Printf("no mailer: %s code for %s is %s", purpose, email, code)
+		log.Print("login email delivery is not configured")
 	} else if err := send(a.mail, r.Context(), email, code); err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
@@ -316,11 +322,25 @@ func (a *API) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if _, err := a.db.sql.ExecContext(r.Context(),
-		`UPDATE users SET pass_hash = $2 WHERE email = $1`, email, hash); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "could not reset password")
 		return
 	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(r.Context(), `UPDATE users SET pass_hash=$2 WHERE email=$1`, email, hash); err != nil {
+		writeError(w, 503, "could not reset password")
+		return
+	}
+	if _, err = tx.ExecContext(r.Context(), `DELETE FROM auth_sessions WHERE email=$1`, email); err != nil {
+		writeError(w, 503, "could not revoke older sessions")
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		writeError(w, 503, "could not reset password")
+		return
+	}
+
 	a.clearPasswordAttempts(r.Context(), "shopper", email)
 	a.issueSession(w, r, email)
 }
@@ -401,6 +421,7 @@ func (a *API) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "wrong email or password")
 		return
 	}
+	a.upgradePassword(r.Context(), "users", "email", email, stored, in.Password)
 	a.clearPasswordAttempts(r.Context(), "shopper", email)
 	a.issueSession(w, r, email)
 }

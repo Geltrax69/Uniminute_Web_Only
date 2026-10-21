@@ -255,6 +255,9 @@ type Order struct {
 	Stage             OrderStage `json:"stage"`
 	PlacedAt          time.Time  `json:"placedAt"`
 	StoreName         string     `json:"storeName,omitempty"`
+	StoreOwner        string     `json:"storeOwner,omitempty"`
+	BuyerEmail        string     `json:"buyerEmail,omitempty"`
+	DeliveredAt       *time.Time `json:"deliveredAt,omitempty"`
 	ReceiverName      string     `json:"receiverName,omitempty"`
 	ReceiverPhone     string     `json:"receiverPhone,omitempty"`
 	RejectReason      string     `json:"rejectReason,omitempty"`
@@ -309,7 +312,7 @@ type freshKey struct{}
 func Fresh(ctx context.Context) context.Context { return context.WithValue(ctx, freshKey{}, true) }
 
 func (b *Backend) do(ctx context.Context, method, path string, token string, in, out any) error {
-	if method == http.MethodGet && ctx.Value(freshKey{}) == nil {
+	if method == http.MethodGet && token == "" && ctx.Value(freshKey{}) == nil {
 		raw, err := b.cache.getRaw(token, path, func(ctx context.Context) ([]byte, error) {
 			return b.send(ctx, method, path, token, nil)
 		}, ctx)
@@ -352,7 +355,14 @@ func (b *Backend) send(ctx context.Context, method, path string, token string, i
 		return nil, err
 	}
 	defer res.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	limit := int64(1 << 20)
+	if strings.HasPrefix(path, "/api/admin/reports") {
+		limit = 8 << 20
+	}
+	raw, err := io.ReadAll(io.LimitReader(res.Body, limit+1))
+	if int64(len(raw)) > limit {
+		return nil, fmt.Errorf("API response exceeded its safe size limit")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -617,12 +627,16 @@ func (b *Backend) PatchPreferences(ctx context.Context, token string, changes ma
 // ---------- admin ----------
 
 // AdminLogin is POST /api/admin/login.
-func (b *Backend) AdminLogin(ctx context.Context, username, password string) (token, user string, err error) {
+func (b *Backend) AdminLogin(ctx context.Context, username, password string, code ...string) (token, user string, err error) {
 	var out struct {
 		Token    string `json:"token"`
 		Username string `json:"username"`
 	}
-	err = b.do(ctx, http.MethodPost, "/api/admin/login", "", map[string]string{"username": username, "password": password}, &out)
+	secondFactor := ""
+	if len(code) > 0 {
+		secondFactor = code[0]
+	}
+	err = b.do(ctx, http.MethodPost, "/api/admin/login", "", map[string]string{"username": username, "password": password, "code": secondFactor}, &out)
 	return out.Token, out.Username, err
 }
 
@@ -942,4 +956,15 @@ type CatalogueAudit struct {
 	Products   int                     `json:"products"`
 	Review     []ClassificationIssue   `json:"review"`
 	Duplicates [][]ClassificationIssue `json:"duplicates"`
+}
+
+// RevokeSession invalidates tokens on the server, as well as clearing cookies.
+func (b *Backend) RevokeSession(ctx context.Context, access, refresh string) error {
+	return b.do(ctx, http.MethodPost, "/api/login/logout", "", map[string]string{"accessToken": access, "refreshToken": refresh}, nil)
+}
+func (b *Backend) StaffLogout(ctx context.Context, role, token string) error {
+	if role == "rider" {
+		role = "delivery"
+	}
+	return b.do(ctx, http.MethodPost, "/api/"+role+"/logout", token, map[string]string{}, nil)
 }

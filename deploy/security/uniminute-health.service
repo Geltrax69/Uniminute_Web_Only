@@ -1,0 +1,6 @@
+[Unit]
+Description=Check Uniminute API and website health
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/uniminute-health-check
+TimeoutStartSec=30s

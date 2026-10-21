@@ -821,3 +821,23 @@ CREATE TABLE IF NOT EXISTS payment_gateway_attempts (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS payment_gateway_attempts_account ON payment_gateway_attempts(account_hash,created_at);
+
+CREATE TABLE IF NOT EXISTS security_audit_events (
+ id bigserial PRIMARY KEY,
+ actor text NOT NULL,
+ action text NOT NULL,
+ path_hash text NOT NULL,
+ status integer NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS security_audit_events_time ON security_audit_events(created_at);
+
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS mfa_secret text NOT NULL DEFAULT '',
+ ADD COLUMN IF NOT EXISTS mfa_pending text NOT NULL DEFAULT '',
+ ADD COLUMN IF NOT EXISTS mfa_pending_expires timestamptz,
+ ADD COLUMN IF NOT EXISTS mfa_last_counter bigint NOT NULL DEFAULT -1,
+ ADD COLUMN IF NOT EXISTS mfa_recovery_hashes text[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_orders_report_placed ON orders(placed_at);
+CREATE INDEX IF NOT EXISTS idx_orders_report_delivered ON orders(delivered_at) WHERE stage='delivered';
+CREATE INDEX IF NOT EXISTS idx_reviews_report_updated ON order_reviews(updated_at);

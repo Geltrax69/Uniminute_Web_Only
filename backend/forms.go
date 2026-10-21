@@ -135,6 +135,9 @@ func mediaBytes(r *http.Request, field string, allowed map[string]bool, limit in
 	if len(files) == 0 {
 		return nil, errors.New("attach at least one file as " + field)
 	}
+	if len(files) > 8 {
+		return nil, errors.New("upload at most 8 images at a time")
+	}
 	out := make([][]byte, 0, len(files))
 	for _, fh := range files {
 		if fh.Size > limit {
@@ -153,6 +156,13 @@ func mediaBytes(r *http.Request, field string, allowed map[string]bool, limit in
 		}
 		if kind := http.DetectContentType(buf); !allowed[strings.Split(kind, ";")[0]] {
 			return nil, errors.New(fh.Filename + " is not a supported file (" + kind + ")")
+		}
+		kind := strings.Split(http.DetectContentType(buf), ";")[0]
+		if strings.HasPrefix(kind, "image/") {
+			buf, err = sanitizeImage(buf, !allowed["video/mp4"])
+			if err != nil {
+				return nil, errors.New(fh.Filename + ": " + err.Error())
+			}
 		}
 		out = append(out, buf)
 	}

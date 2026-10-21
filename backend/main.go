@@ -72,7 +72,7 @@ func main() {
 	// Timeouts so one stalled client cannot hold a connection (and its pooled
 	// database conn) open forever.
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              "127.0.0.1:" + port,
 		Handler:           routes(api),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -156,6 +156,7 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("POST /api/login", s.handleLogin)
 	mux.HandleFunc("POST /api/login/verify", s.handleVerifyCode)
 	mux.HandleFunc("POST /api/login/password", s.handlePasswordLogin)
+	mux.HandleFunc("POST /api/login/logout", s.handleSessionLogout)
 	mux.HandleFunc("POST /api/login/forgot", s.handleForgotPassword)
 	mux.HandleFunc("POST /api/login/reset", s.handleResetPassword)
 	mux.HandleFunc("POST /api/login/refresh", s.handleRefresh)
@@ -213,7 +214,13 @@ func routes(s *API) http.Handler {
 	// Admin. Everything but the login needs an admin token, checked in
 	// withStaff below.
 	mux.HandleFunc("POST /api/admin/login", s.handleAdminLogin)
+	mux.HandleFunc("POST /api/admin/logout", s.handleStaffLogout)
+	mux.HandleFunc("POST /api/delivery/logout", s.handleStaffLogout)
 	mux.HandleFunc("GET /api/admin/overview", s.handleAdminOverview)
+	mux.HandleFunc("GET /api/admin/security/mfa", s.handleAdminMFA)
+	mux.HandleFunc("GET /api/admin/security/audit", s.handleAdminAudit)
+	mux.HandleFunc("GET /api/admin/security/operations", s.handleAdminOperations)
+	mux.HandleFunc("POST /api/admin/security/mfa", s.handleAdminMFA)
 	mux.HandleFunc("GET /api/admin/campaigns", s.handleCampaigns)
 	mux.HandleFunc("GET /api/admin/seasons", s.handleAdminSeasons)
 	mux.HandleFunc("PUT /api/admin/seasons/{id}", s.handleSaveSeason)
@@ -223,6 +230,8 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("POST /api/admin/campaign-photos", s.handleCampaignPhoto)
 	mux.HandleFunc("POST /api/admin/campaign-media", s.handleCampaignMedia)
 	mux.HandleFunc("GET /api/admin/insights", s.handleAdminInsights)
+	mux.HandleFunc("GET /api/admin/reports", s.handleAdminReport)
+	mux.HandleFunc("GET /api/admin/reports/export", s.handleAdminReportExport)
 	mux.HandleFunc("PUT /api/admin/policies/{slug}", s.handleSavePolicy)
 	mux.HandleFunc("PUT /api/admin/charges", s.handleSaveCharges)
 	mux.HandleFunc("GET /api/admin/reviews", s.handleAdminReviews)
@@ -270,7 +279,7 @@ func routes(s *API) http.Handler {
 	mux.HandleFunc("GET /app", s.handleAppRedirect)
 	mux.HandleFunc("GET /app/{rest...}", s.handleAppRedirect)
 
-	return withCORS(withGzip(s.withStaff(s.withAuth(mux))))
+	return withCORS(withGzip(s.withStaff(s.withAuth(s.securityMiddleware(mux)))))
 }
 
 // Everything under /api/seller/ belongs to one signed-in address, so the
@@ -365,9 +374,16 @@ const maxUpload = 60 << 20
 // anything that is not a plain GET.
 func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin != "" && allowedBrowserOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Add("Vary", "Origin")
+		} else if origin != "" && r.Method == http.MethodOptions {
+			writeError(w, http.StatusForbidden, "browser origin is not allowed")
+			return
+		}
 		w.Header().Set("Access-Control-Allow-Methods",
-			"GET, POST, PATCH, DELETE, OPTIONS")
+			"GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		// Authorization has to be listed or the browser refuses the preflight
 		// and the real request never leaves — which looks like the API being
 		// down, since the app catches the failure and falls back.

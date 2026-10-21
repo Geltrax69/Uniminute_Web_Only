@@ -68,6 +68,10 @@ func (a *API) handleStorePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(imgs) != 1 {
+		writeError(w, 400, "choose one store cover image")
+		return
+	}
 	url, err := a.cloud.upload(r.Context(), storeFolder(store.Name), storePhotoName, imgs[0])
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
@@ -134,6 +138,10 @@ func (a *API) handleItemPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if existing+len(imgs) > 12 {
+		writeError(w, 400, "a product can have at most 12 images")
+		return
+	}
 	urls := make([]string, 0, len(imgs))
 	for n, img := range imgs {
 		url, err := a.cloud.upload(r.Context(), storeFolder(storeName),

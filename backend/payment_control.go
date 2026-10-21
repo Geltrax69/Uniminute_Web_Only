@@ -179,7 +179,7 @@ func (a *API) allowPaymentRequests(w http.ResponseWriter, r *http.Request, key s
 		retry = seconds
 		_ = a.db.sql.QueryRowContext(r.Context(), `SELECT GREATEST(1,ceil(extract(epoch from(expires_at-now())))::int) FROM payment_request_limits WHERE key_hash=$1`, hashCode(key)).Scan(&retry)
 		w.Header().Set("Retry-After", strconv.Itoa(retry))
-		writeError(w, 429, "Too many payment requests. Please wait before trying again.")
+		writeError(w, 429, "Too many requests. Please wait before trying again.")
 		return false
 	}
 	if err != nil {

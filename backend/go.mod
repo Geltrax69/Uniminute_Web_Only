@@ -1,16 +1,17 @@
 module github.com/Geltrax69/Lamazon/backend
 
-go 1.25.6
+go 1.26.10
 
 require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/razorpay/razorpay-go v1.4.0
+	golang.org/x/image v0.47.0
 )
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )

@@ -1,0 +1,7 @@
+[Unit]
+Description=Check Uniminute services every minute
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+[Install]
+WantedBy=timers.target
