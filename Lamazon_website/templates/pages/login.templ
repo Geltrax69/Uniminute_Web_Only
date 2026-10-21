@@ -124,7 +124,7 @@ templ LoginCard(d LoginPageData) {
 }
 
 templ loginInput(id string, st loginStepText, value, model string) {
-	<div class="relative flex h-[50px] items-center rounded-featured bg-canvas pr-4 focus-within:ring-2 focus-within:ring-inset focus-within:ring-strong">
+	<div class="relative flex h-14 items-center rounded-featured bg-canvas pr-4 focus-within:ring-2 focus-within:ring-inset focus-within:ring-strong">
 		<span class="flex h-12 w-12 shrink-0 items-center justify-center">
 			@ui.Icon(st.icon, "h-[18px] w-[18px] text-muted")
 		</span>
@@ -141,8 +141,8 @@ templ loginInput(id string, st loginStepText, value, model string) {
 				autocapitalize="off"
 				spellcheck="false"
 				placeholder={ st.hint }
-				class="peer h-full w-full bg-transparent text-[16px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-transparent focus:placeholder:text-muted"/>
-			<label for={ id } class="pointer-events-none absolute left-0 top-1/2 max-w-full -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[11px] motion-reduce:transition-none">{ st.label }</label>
+				class="peer h-full w-full bg-transparent pt-4 text-[16px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-transparent focus:placeholder:text-muted"/>
+			<label for={ id } class="pointer-events-none absolute left-0 top-1/2 max-w-full -translate-y-1/2 truncate text-[14.5px] leading-[18px] text-muted transition-all duration-150 peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:leading-[14px] peer-focus:text-strong peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:leading-[14px] motion-reduce:transition-none">{ st.label }</label>
 		</div>
 	</div>
 }
