@@ -37,7 +37,7 @@ func testDB(t *testing.T) *DB {
 
 	// Seller data is per-test; the catalog is shared read-only seed.
 	if _, err := db.sql.Exec(
-		`TRUNCATE razorpay_webhook_events, storefront_campaigns, storefront_seasons, checkout_attempts, orders, inventory_items, seller_stores, login_codes,
+		`TRUNCATE payment_request_limits, payment_gateway_attempts, razorpay_webhook_events, storefront_campaigns, storefront_seasons, checkout_attempts, orders, inventory_items, seller_stores, login_codes,
 		  auth_sessions, push_subscriptions, addresses, users,
 		  admins, riders, staff_sessions, password_attempts CASCADE`); err != nil {
 		t.Fatal(err)

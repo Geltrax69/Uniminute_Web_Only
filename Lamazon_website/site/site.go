@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"lamazon/website/backend"
 	"lamazon/website/shop"
@@ -247,6 +248,9 @@ func paymentEndpointProxy(apiBase string) http.Handler {
 		log.Fatalf("PAYMENT_API_BASE %q: %v", apiBase, err)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 35 * time.Second
+	proxy.Transport = transport
 	direct := proxy.Director
 	proxy.Director = func(r *http.Request) {
 		direct(r)

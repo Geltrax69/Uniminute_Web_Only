@@ -181,7 +181,7 @@ a live token.
 
 ## Not built yet
 
-No payments. Nothing prunes expired rows from `auth_sessions` or
+Nothing prunes expired rows from `auth_sessions` or
 `login_codes`, and deleting an item leaves its Cloudinary photos behind.
 
 ### Public catalogue references
@@ -203,3 +203,43 @@ groups from department, title and merchant category on every catalogue read.
 It also supplies category filtering, seller previews and a protected admin
 review/duplicate queue. Use `/admin?tab=classification` or the documented
 read-only `cmd/catalog-audit` batch command to inspect results.
+
+
+### Payment abuse and retry protection
+
+The credentialed storefront signs `POST /api/payments/control` with the Razorpay
+API secret (HMAC-SHA256 of the exact JSON body). The API rejects unsigned or
+stale requests before touching the database. Both services must have the same
+server-side key pair; Vercel can continue proxying payment endpoints.
+
+PostgreSQL enforces account budgets: 20 start requests/minute, 5 new provider
+orders/10 minutes, and 30 confirmation requests/minute. Direct authenticated
+`/api/orders/checkout` requests (online and COD) have a separate 30/minute budget.
+Limits return HTTP 429 with `Retry-After`; database failures stop provider calls.
+Counters survive restarts and coordinate replicas. Denials do not extend expiry.
+
+A reservation binds a shopper, basket revision, destination, verified INR total
+and key ID. Concurrent requests cannot create two provider orders. Refreshes
+reuse the persisted order for 30 minutes. A provider timeout keeps the original
+receipt and reservation; after 30 seconds retries reconcile that receipt instead
+of creating another order. Missing/ambiguous results require checking payment
+status/support. Changing the basket creates a different attempt and remains
+subject to the new-order budget. Old reservations are retained for reconciliation;
+expired counters and old reservations currently need operational retention/cleanup.
+
+Captured payments can resume confirmation after a lost response. Authorised or
+otherwise pending payments block another payment window/COD selection in the
+checkout UI. These checks supplement the existing server-side captured-payment,
+signature, price and stock checks and transactional checkout/payment deduplication.
+The webhook inbox remains an audit inbox, not automatic abandoned-order recovery.
+
+`deploy/api.geltrax.engineer.nginx` adds ingress limits: 10 requests/second per
+connection IP (burst 30) and 100/second for the payment service (burst 100), across
+create, verify, payment-control and checkout routes. These protect the origin;
+Vercel and direct server access still need platform/network capacity controls for
+large-scale denial-of-service protection. Forwarded IP headers are not trusted.
+Deploy this file to `/etc/nginx/sites-enabled/lamazon-api`, run `nginx -t`, then
+reload Nginx. Both `lamazon-api` and the credentialed `lamazon-web` binary must be
+deployed for payment code changes. Browser payment requests have a 30-second
+deadline; provider SDK calls are bounded at 10 seconds and internal control RPCs
+at 4 seconds. Never test production with an actual charge as part of deployment.

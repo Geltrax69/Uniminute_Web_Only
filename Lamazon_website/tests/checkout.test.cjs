@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 // Execute the production component with a controllable provider. Callbacks are
 // deliberately delivered out of order to reproduce delayed SDK close events.
-function checkout() {
+function checkout(options = {}) {
   const source = readFileSync(new URL('../static/js/app.js', `file://${__filename}`), 'utf8');
   const begin = source.indexOf("  Alpine.data('razorpayCheckout'");
   const end = source.indexOf('  // ── sign-in card', begin);
@@ -25,14 +25,16 @@ function checkout() {
     close() { this.open = false; },
   };
   const context = {
+    AbortController, setTimeout: options.setTimeout || setTimeout, clearTimeout, setInterval, clearInterval,
+    sessionStorage: options.storage || { getItem() {}, setItem() {}, removeItem() {} },
     Alpine: { data(_name, fn) { factory = fn; } },
     Razorpay: Provider,
     window: { Razorpay: Provider },
-    fetch: async (url) => {
+    fetch: options.fetch || (async (url) => {
       requests++;
       if (url.includes('verify-payment')) return { ok: false, json: async () => ({ error: 'Confirmation delayed' }) };
       return { ok: true, json: async () => ({ order_id: `order-${requests}`, amount: 5999900, currency: 'INR', key_id: 'rzp_test_fixture' }) };
-    },
+    }),
     lwToast() {}, lwProcessing() {}, location: { assign() {} },
   };
   vm.runInNewContext(source.slice(begin, end), context);
@@ -107,4 +109,69 @@ test('successful payment callbacks suppress cancellation and retain confirmation
   assert.equal(instances.length, 1, 'confirmation retry must not open another payment');
   assert.equal(requestCount(), 3);
   assert.equal(data.pendingPayment.razorpay_payment_id, 'pay-fixture');
+});
+
+
+test('server cooldown prevents button spam and releases busy state', async () => {
+  let requests = 0;
+  const { data, instances } = checkout({ fetch: async () => {
+    requests++;
+    return { ok: false, headers: { get: () => '20' }, json: async () => ({ error: 'Too many payment requests' }) };
+  }});
+  await data.pay();
+  assert.equal(data.cooldown, 20);
+  assert.equal(data.busy, false);
+  await data.pay();
+  assert.equal(requests, 1);
+  assert.equal(instances.length, 0);
+  data.destroy();
+});
+
+test('captured payment recovered by server confirms without reopening provider', async () => {
+  const calls = [];
+  const payment = { razorpay_payment_id: 'pay-recovered', razorpay_order_id: 'order-recovered', razorpay_signature: 'signature' };
+  const { data, instances } = checkout({ fetch: async (url) => {
+    calls.push(url);
+    if (url.includes('create-order')) return { ok: true, json: async () => ({ payment }) };
+    return { ok: false, json: async () => ({ error: 'Confirmation delayed' }) };
+  }});
+  await data.pay();
+  assert.equal(instances.length, 0);
+  assert.equal(data.pendingPayment.razorpay_payment_id, 'pay-recovered');
+  assert.deepEqual(calls, ['/api/create-order', '/api/verify-payment']);
+  assert.equal(data.busy, false);
+});
+
+test('uncertain authorised payment blocks COD and another payment window', async () => {
+  const { data, instances } = checkout({ fetch: async () => ({ ok: false, json: async () => ({ error: 'Earlier payment pending', payment_pending: true }) }) });
+  await data.pay();
+  data.chooseCash();
+  assert.equal(data.method, 'razorpay');
+  assert.equal(data.pendingAttempt, true);
+  assert.equal(data.paymentFailed, false);
+  assert.equal(instances.length, 0);
+});
+
+test('confirmation proof survives refresh within its recovery window', () => {
+  const { data } = checkout({ storage: { getItem: () => JSON.stringify({ amount: 5999900, expires: Date.now() + 10000, payment: { razorpay_payment_id: 'pay-saved' } }) } });
+  data.$watch = () => {};
+  data.init();
+  assert.equal(data.pendingPayment.razorpay_payment_id, 'pay-saved');
+});
+
+
+test('slow response aborts and releases checkout without opening a second payment', async () => {
+  let expire;
+  const { data, instances } = checkout({
+    setTimeout: (fn) => { expire = fn; return undefined; },
+    fetch: (_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' })));
+    }),
+  });
+  const started = data.pay();
+  expire();
+  await started;
+  assert.equal(data.busy, false);
+  assert.equal(instances.length, 0);
+  assert.match(data.error, /same payment attempt/);
 });

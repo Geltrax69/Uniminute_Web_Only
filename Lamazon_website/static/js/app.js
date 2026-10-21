@@ -270,6 +270,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('razorpayCheckout', (amount) => {
     let activeCheckout = null;
     let attempt = 0;
+    let cooldownTimer = null;
     return {
       amount,
       method: 'razorpay',
@@ -280,13 +281,23 @@ document.addEventListener('alpine:init', () => {
       gatewayOpen: false,
       amountLimited: false,
       pendingPayment: null,
+      pendingAttempt: false,
+      cooldown: 0,
       init() {
+        try {
+          const saved = JSON.parse(sessionStorage.getItem('uniminute-pending-payment') || 'null');
+          if (saved && saved.amount === this.amount && saved.expires > Date.now()) {
+            this.pendingPayment = saved.payment;
+            this.error = 'Payment confirmation is pending. Retry order confirmation before making another payment.';
+          }
+        } catch {}
         ['paymentFailed', 'pendingPayment', 'gatewayOpen'].forEach((key) => {
           this.$watch(key, () => this.syncFailureDialog());
         });
       },
       destroy() {
         attempt++;
+        clearInterval(cooldownTimer);
         activeCheckout?.close();
         activeCheckout = null;
       },
@@ -308,15 +319,52 @@ document.addEventListener('alpine:init', () => {
           : 'Try again, switch to Pay on Delivery, or return to your cart.';
       },
       get buttonLabel() {
-        return this.pendingPayment
+        return this.cooldown > 0 && this.method === 'razorpay'
+          ? `Please wait ${this.cooldown}s`
+          : this.pendingPayment || this.pendingAttempt
           ? 'Retry order confirmation'
           : `${this.method === 'cod' ? 'Place cash order' : 'Continue with Razorpay'}  ·  ₹${(this.amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
       },
-      async responseError(response, fallback) {
-        try { return (await response.json()).error || fallback; } catch { return fallback; }
+      async request(url, body) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 30000);
+        try {
+          const response = await fetch(url, {
+            method: 'POST', signal: controller.signal,
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(body),
+          });
+          // Keep the deadline active while reading the response body as well.
+          let result;
+          try { result = await response.json(); } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            throw new Error('The payment service did not respond correctly. Wait a moment and retry to check your payment status.');
+          }
+          if (!response.ok) {
+            const retry = Number(response.headers?.get('Retry-After'));
+            if (retry > 0) {
+              this.cooldown = Math.min(600, Math.ceil(retry));
+              clearInterval(cooldownTimer);
+              cooldownTimer = setInterval(() => {
+                if (--this.cooldown <= 0) clearInterval(cooldownTimer);
+              }, 1000);
+            }
+            if (result.payment_pending) this.pendingAttempt = true;
+            throw new Error(result.error || 'Could not confirm payment status. Try again shortly.');
+          }
+          return result;
+        } catch (err) {
+          if (err.name === 'AbortError') throw new Error('The connection is taking too long. Wait a moment and retry to check the same payment attempt.');
+          throw err;
+        } finally { clearTimeout(timer); }
+      },
+      rememberPayment(payment) {
+        this.pendingPayment = payment;
+        this.pendingAttempt = false;
+        try { sessionStorage.setItem('uniminute-pending-payment', JSON.stringify({ amount: this.amount, payment, expires: Date.now() + 30 * 60 * 1000 })); } catch {}
       },
       async pay() {
-        if (this.busy || this.gatewayOpen) return;
+        if (this.busy || this.gatewayOpen || this.cooldown > 0) return;
         const current = ++attempt;
         this.error = '';
         this.paymentFailed = false;
@@ -330,15 +378,14 @@ document.addEventListener('alpine:init', () => {
             return;
           }
           if (!window.Razorpay) throw new Error('Secure checkout did not load. Check your connection and try again.');
-          const created = await fetch('/api/create-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ amount: this.amount, currency: 'INR', receipt: `cart-${Date.now()}` }),
-          });
+          const order = await this.request('/api/create-order', { amount: this.amount, currency: 'INR', receipt: `cart-${Date.now()}` });
           if (current !== attempt) return;
-          if (!created.ok) throw new Error(await this.responseError(created, 'Could not start payment. Try again.'));
-          const order = await created.json();
-          if (current !== attempt) return;
+          if (order.payment) {
+            this.rememberPayment(order.payment);
+            await this.verify(order.payment);
+            return;
+          }
+          this.pendingAttempt = false;
           let failure = '';
           let completed = false;
           const checkout = new Razorpay({
@@ -353,7 +400,7 @@ document.addEventListener('alpine:init', () => {
             handler: async (payment) => {
               if (current !== attempt || completed) return;
               completed = true;
-              this.pendingPayment = payment;
+              this.rememberPayment(payment);
               ++attempt;
               activeCheckout = null;
               this.gatewayOpen = false;
@@ -398,12 +445,14 @@ document.addEventListener('alpine:init', () => {
           if (this.pendingPayment) {
             this.error = `${message} Use “Retry order confirmation” — do not pay again.`;
             lwToast(this.error, 'error');
+          } else if (this.pendingAttempt) {
+            this.error = message;
           } else this.showFailure(message);
         }
       },
       place(cashForm) {
         this.error = '';
-        if (this.pendingPayment || this.method === 'razorpay') {
+        if (this.pendingPayment || this.pendingAttempt || this.method === 'razorpay') {
           this.pay();
           return;
         }
@@ -413,6 +462,7 @@ document.addEventListener('alpine:init', () => {
         cashForm.requestSubmit();
       },
       chooseCash() {
+        if (this.pendingPayment || this.pendingAttempt) return;
         this.method = 'cod';
         this.cancelFailure();
       },
@@ -422,14 +472,9 @@ document.addEventListener('alpine:init', () => {
         this.syncFailureDialog();
       },
       async verify(payment) {
-        const verified = await fetch('/api/verify-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(payment),
-        });
-        if (!verified.ok) throw new Error(await this.responseError(verified, 'Payment could not be verified.'));
-        const result = await verified.json();
+        const result = await this.request('/api/verify-payment', payment);
         this.pendingPayment = null;
+        try { sessionStorage.removeItem('uniminute-pending-payment'); } catch {}
         this.paymentFailed = false;
         lwProcessing('Payment confirmed. Placing your order…', false);
         location.assign(result.redirect || '/orders');

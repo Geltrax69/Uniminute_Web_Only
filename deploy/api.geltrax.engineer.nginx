@@ -1,3 +1,9 @@
+# Included from nginx.conf's http context. Use connection IPs, never arbitrary
+# browser-supplied forwarding headers. Vercel traffic shares a proxy IP budget;
+# stricter authenticated account budgets are enforced by PostgreSQL.
+limit_req_zone $binary_remote_addr zone=uniminute_payment_ip:10m rate=10r/s;
+limit_req_zone $server_name zone=uniminute_payment_global:1m rate=100r/s;
+
 server {
     server_name api.geltrax.engineer;
 
@@ -6,13 +12,62 @@ server {
     # Razorpay checkout is implemented by the storefront BFF. Keep these exact
     # routes ahead of the general backend API proxy.
     location = /api/create-order {
+        client_max_body_size 16k;
+        client_body_timeout 10s;
+        limit_req zone=uniminute_payment_ip burst=30 nodelay;
+        limit_req zone=uniminute_payment_global burst=100 nodelay;
+        limit_req_status 429;
+        error_page 429 = @payment_throttled;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 40s;
         proxy_pass http://127.0.0.1:8100;
         include proxy_params;
     }
 
     location = /api/verify-payment {
+        client_max_body_size 16k;
+        client_body_timeout 10s;
+        limit_req zone=uniminute_payment_ip burst=30 nodelay;
+        limit_req zone=uniminute_payment_global burst=100 nodelay;
+        limit_req_status 429;
+        error_page 429 = @payment_throttled;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 40s;
         proxy_pass http://127.0.0.1:8100;
         include proxy_params;
+    }
+
+    location = /api/orders/checkout {
+        client_max_body_size 128k;
+        client_body_timeout 10s;
+        limit_req zone=uniminute_payment_ip burst=30 nodelay;
+        limit_req zone=uniminute_payment_global burst=100 nodelay;
+        limit_req_status 429;
+        error_page 429 = @payment_throttled;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 40s;
+        proxy_pass http://127.0.0.1:8081;
+        include proxy_params;
+    }
+
+    location = /api/payments/control {
+        client_max_body_size 16k;
+        client_body_timeout 10s;
+        limit_req zone=uniminute_payment_ip burst=30 nodelay;
+        limit_req zone=uniminute_payment_global burst=100 nodelay;
+        limit_req_status 429;
+        error_page 429 = @payment_throttled;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 40s;
+        proxy_pass http://127.0.0.1:8081;
+        include proxy_params;
+    }
+
+    location @payment_throttled {
+        default_type application/json;
+        add_header Retry-After 3 always;
+        add_header Cache-Control no-store always;
+        return 429 '{"error":"Too many payment requests. Please wait a moment and try again."}';
     }
 
     location /api/ {

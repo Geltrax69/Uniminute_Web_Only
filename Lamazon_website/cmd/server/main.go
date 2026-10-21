@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"lamazon/website/site"
 )
@@ -15,5 +16,6 @@ func main() {
 	}
 	apiBase := site.APIBase()
 	log.Printf("Uniminute website on :%s, calling backend at %s", port, apiBase)
-	log.Fatal(http.ListenAndServe(":"+port, site.New(apiBase)))
+	server := &http.Server{Addr: ":" + port, Handler: site.New(apiBase), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second}
+	log.Fatal(server.ListenAndServe())
 }

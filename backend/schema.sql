@@ -802,3 +802,22 @@ CREATE TABLE IF NOT EXISTS razorpay_webhook_events (
 );
 CREATE INDEX IF NOT EXISTS razorpay_webhook_payment_idx ON razorpay_webhook_events(payment_id) WHERE payment_id <> '';
 CREATE INDEX IF NOT EXISTS razorpay_webhook_order_idx ON razorpay_webhook_events(order_id) WHERE order_id <> '';
+
+-- Shared payment budgets and provider-order reservations. An uncertain attempt
+-- is retained so a timed-out provider request cannot silently create another.
+CREATE TABLE IF NOT EXISTS payment_request_limits (
+ key_hash text PRIMARY KEY,
+ attempts integer NOT NULL,
+ expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS payment_request_limits_expiry ON payment_request_limits(expires_at);
+CREATE TABLE IF NOT EXISTS payment_gateway_attempts (
+ attempt_key text PRIMARY KEY,
+ account_hash text NOT NULL,
+ cart_id text NOT NULL,
+ receipt text NOT NULL UNIQUE,
+ lease text NOT NULL,
+ order_id text NOT NULL DEFAULT '',
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS payment_gateway_attempts_account ON payment_gateway_attempts(account_hash,created_at);

@@ -143,6 +143,9 @@ func (a *API) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "a checkout request ID is required")
 		return
 	}
+	if !a.allowPaymentRequests(w, r, "checkout:"+a.owner(r), 30, 60) {
+		return
+	}
 	if in.Payment != nil {
 		keyID, keySecret := os.Getenv("RAZORPAY_KEY_ID"), os.Getenv("RAZORPAY_KEY_SECRET")
 		if keyID == "" || keySecret == "" {

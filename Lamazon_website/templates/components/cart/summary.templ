@@ -63,7 +63,7 @@ templ Summary(d Data) {
 						<label
 							class="relative flex min-h-[72px] cursor-pointer items-center rounded-[12px] px-3 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-strong focus-within:ring-offset-2"
 							x-bind:class="method === 'razorpay' ? 'bg-strong text-white shadow-control' : 'bg-base text-text hover:bg-track/60'">
-							<input class="sr-only" type="radio" name="paymentMethod" value="razorpay" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment" checked/>
+							<input class="sr-only" type="radio" name="paymentMethod" value="razorpay" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment || pendingAttempt" checked/>
 							@ui.Icon("shield-check", "h-5 w-5 shrink-0")
 							<span class="ml-2.5 min-w-0">
 								<span class="block text-[14px] font-bold leading-tight">Razorpay</span>
@@ -76,7 +76,7 @@ templ Summary(d Data) {
 						<label
 							class="relative flex min-h-[72px] cursor-pointer items-center rounded-[12px] px-3 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-strong focus-within:ring-offset-2"
 							x-bind:class="method === 'cod' ? 'bg-strong text-white shadow-control' : 'bg-base text-text hover:bg-track/60'">
-							<input class="sr-only" type="radio" name="paymentMethod" value="cod" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment"/>
+							<input class="sr-only" type="radio" name="paymentMethod" value="cod" x-model="method" x-on:change="error = ''" x-bind:disabled="!!pendingPayment || pendingAttempt"/>
 							@ui.Icon("banknote", "h-5 w-5 shrink-0")
 							<span class="ml-2.5 min-w-0">
 								<span class="block text-[14px] font-bold leading-tight">Cash on Delivery</span>
@@ -103,7 +103,7 @@ templ Summary(d Data) {
 					type="button"
 					class={ ui.ButtonClass(true) + " mt-3.5 w-full" }
 					x-on:click="place($refs.cashForm)"
-					x-bind:disabled={ tplWhen(short > 0 || d.Address == nil, "true", "busy || cashBusy") }
+					x-bind:disabled={ tplWhen(short > 0 || d.Address == nil, "true", "busy || cashBusy || (method === 'razorpay' && cooldown > 0)") }
 					disabled?={ short > 0 || d.Address == nil }
 					x-bind:aria-busy="busy || cashBusy">
 					<span class="h-[15px] w-[15px] shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" x-show="busy" x-cloak></span>
@@ -111,7 +111,7 @@ templ Summary(d Data) {
 					<span x-show="!busy && !cashBusy && method === 'razorpay'">@ui.Icon("shield-check", "h-[17px] w-[17px]")</span>
 					<span x-show="!busy && !cashBusy && method === 'cod'" x-cloak>@ui.Icon("banknote", "h-[17px] w-[17px]")</span>
 					<span class="truncate whitespace-pre" x-show="!busy && !cashBusy" x-text="buttonLabel">Continue with Razorpay  ·  ₹{ shop.Money(total) }</span>
-					<span class="truncate" x-show="busy" x-cloak>Opening secure checkout…</span>
+					<span class="truncate" x-show="busy" x-text="pendingPayment || pendingAttempt ? 'Checking payment status…' : 'Opening secure checkout…'" x-cloak>Opening secure checkout…</span>
 					<span class="truncate" x-show="cashBusy" x-cloak>Placing your order…</span>
 				</button>
                 <p class="mt-2 text-body text-danger" role="alert" x-show="error &amp;&amp; !paymentFailed" x-text="error" x-cloak></p>
@@ -123,7 +123,7 @@ templ Summary(d Data) {
                     <p id="checkout-payment-issue-description" class="mt-3 text-[14px] leading-5 text-muted" x-text="error || 'No order was placed. Try again or choose Pay on Delivery.'"></p>
                     <p class="mt-2 text-[14px] leading-5 text-muted" x-text="failureHelp">Try again, switch to Pay on Delivery, or return to your cart.</p>
                     <div class="mt-6 flex flex-col gap-3">
-                        <button type="button" class="min-h-12 rounded-full bg-strong px-5 py-3 text-[15px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-show="!amountLimited" x-bind:disabled="busy || gatewayOpen" x-on:click="pay()">Try again</button>
+                        <button type="button" class="min-h-12 rounded-full bg-strong px-5 py-3 text-[15px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-show="!amountLimited" x-bind:disabled="busy || gatewayOpen || cooldown > 0" x-on:click="pay()" x-text="cooldown > 0 ? 'Please wait ' + cooldown + 's' : 'Try again'">Try again</button>
                         <button type="button" class="min-h-12 rounded-full bg-strong/[.06] px-5 py-3 text-[15px] font-semibold text-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-strong" x-on:click="chooseCash()">Pay on Delivery</button>
                         <button type="button" class="min-h-11 rounded-full px-5 py-2 text-[14px] font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-strong" x-on:click="cancelFailure()" x-text="amountLimited ? 'Return to cart' : 'Cancel'">Cancel</button>
                     </div>

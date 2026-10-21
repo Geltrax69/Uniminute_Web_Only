@@ -204,6 +204,7 @@ func routes(s *API) http.Handler {
 	// alias so an app mid-update keeps working.
 	mux.HandleFunc("POST /api/orders", s.handlePlaceOrder)
 	mux.HandleFunc("POST /api/orders/checkout", s.handleCheckout)
+	mux.HandleFunc("POST /api/payments/control", s.handlePaymentControl)
 	mux.HandleFunc("POST /api/seller/orders", s.handlePlaceOrder)
 	mux.HandleFunc("GET /api/orders", s.handleMyOrders)
 	mux.HandleFunc("POST /api/orders/{id}/cancel", s.handleCancelOrder)

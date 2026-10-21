@@ -1,6 +1,7 @@
 package site
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -115,19 +116,26 @@ func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	order, err := s.razorpay.Create(map[string]interface{}{
-		"amount":   amount,
-		"currency": razorpayCurrency,
-		"receipt":  in.Receipt,
-	}, nil)
+	fingerprint, cartID := paymentBasket(r, p.User.Email, p.Address.ID, s.razorpayKeyID, amount)
+	control := paymentControlRequest{Operation: "reserve", Account: p.User.Email, Fingerprint: fingerprint, CartID: cartID, Amount: amount}
+	reservation, err := s.paymentControl(r.Context(), control)
+	if err != nil {
+		paymentControlFailure(w, err)
+		return
+	}
+	order, err := s.reservedRazorpayOrder(r.Context(), control, reservation)
 	if err != nil {
 		var badRequest *rzperrors.BadRequestError
-		message := strings.ToLower(err.Error())
-		if errors.As(err, &badRequest) && (strings.Contains(message, "auth") || strings.Contains(message, "api key")) {
-			paymentError(w, http.StatusUnauthorized, "Razorpay rejected the configured API credentials.")
-			return
+		// Provider validation rejection is definite; transport failures retain the
+		// reservation because the provider could have accepted the request.
+		if reservation.State == "create" && errors.As(err, &badRequest) {
+			control.Operation = "release"
+			control.Lease = reservation.Lease
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 4*time.Second)
+			_, _ = s.paymentControl(ctx, control)
+			cancel()
 		}
-		paymentError(w, http.StatusInternalServerError, "Could not start online payment. Try again in a moment.")
+		paymentError(w, http.StatusBadGateway, "Could not confirm the payment attempt. Wait a moment and retry; your earlier attempt will be checked first.")
 		return
 	}
 
@@ -139,10 +147,32 @@ func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cartID := shop.CheckoutRequestID(r)
-	if _, err := r.Cookie(shop.CartRIDCookie); err != nil {
-		shop.WriteCookie(w, shop.CartRIDCookie, cartID)
+	control.Operation = "finish"
+	control.Lease = reservation.Lease
+	control.OrderID = orderID
+	// Persist success even if the browser disconnected while Razorpay responded.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 4*time.Second)
+	_, err = s.paymentControl(ctx, control)
+	cancel()
+	if err != nil {
+		paymentControlFailure(w, err)
+		return
 	}
+
+	var recovered *verifyPaymentRequest
+	status, _ := order["status"].(string)
+	if status == "paid" || status == "attempted" {
+		var pending bool
+		recovered, pending, err = s.existingRazorpayPayment(orderID, amount)
+		if err != nil || (recovered == nil && (pending || status == "paid")) {
+			paymentJSON(w, http.StatusConflict, map[string]any{"error": "Your earlier payment is still being checked. Check your orders and bank status, then retry confirmation. Do not pay again yet.", "payment_pending": true})
+			return
+		}
+	}
+
+	cartID = reservation.CartID
+	shop.WriteCookie(w, shop.CartRIDCookie, cartID)
+
 	state := paymentState{
 		OrderID: orderID,
 		Amount:  amount,
@@ -159,6 +189,7 @@ func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request)
 		"amount":   amount,
 		"currency": razorpayCurrency,
 		"key_id":   s.razorpayKeyID,
+		"payment":  recovered,
 	})
 }
 
@@ -206,6 +237,10 @@ func (s *Site) handleVerifyRazorpayPayment(w http.ResponseWriter, r *http.Reques
 	p := s.buildPage(r)
 	if p.User == nil {
 		paymentError(w, http.StatusUnauthorized, "Your session ended. Sign in and contact support with your payment ID.")
+		return
+	}
+	if _, err := s.paymentControl(r.Context(), paymentControlRequest{Operation: "verify", Account: p.User.Email}); err != nil {
+		paymentControlFailure(w, err)
 		return
 	}
 	amount, ok := s.cartAmountPaise(r)
