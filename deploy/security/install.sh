@@ -6,6 +6,9 @@ getent passwd uniminute >/dev/null || useradd --system --home-dir /nonexistent -
 install -d -m 0700 /etc/uniminute
 install -d -m 0710 -o root -g uniminute /var/backups/uniminute
 install -d -m 0755 /var/lib/uniminute-health
+# The former root-only working directory must be traversable by the new group.
+chgrp uniminute /var/www/Lamazon /var/www/Lamazon/bin
+chmod 0750 /var/www/Lamazon /var/www/Lamazon/bin
 python3 - <<'PY'
 import base64,os,pathlib,secrets,shutil
 key=pathlib.Path('/etc/uniminute/backup.key')
