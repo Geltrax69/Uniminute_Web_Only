@@ -26,7 +26,7 @@ import (
 // the endpoint cannot be used to mail-bomb someone.
 const (
 	codeLifetime = 10 * time.Minute
-	codeCooldown = 60 * time.Second
+	codeCooldown = 30 * time.Second
 	maxAttempts  = 5
 
 	// Short access token, long refresh token: a leaked access token stops
@@ -44,7 +44,7 @@ type Mailer struct {
 }
 
 // mailerFromEnv returns nil when unconfigured, which is how local development
-// runs without sending anything: the code goes to the log instead.
+// fails code delivery explicitly rather than claiming an email was sent.
 func mailerFromEnv() *Mailer {
 	m := &Mailer{
 		key:  os.Getenv("RESEND_API_KEY"),
@@ -121,8 +121,8 @@ func hashCode(code string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// POST /api/login — mails a fresh sign-in code, unless the address has a
-// password: then it says so and the app asks which they want. {"code": true}
+// POST /api/login — mails a fresh sign-in code for new/incomplete accounts.
+// Completed password accounts are offered password login first. {"code": true}
 // is "email me a code instead".
 func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var in struct {
@@ -155,11 +155,18 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var hasPassword bool
-	a.db.sql.QueryRowContext(r.Context(),
-		`SELECT pass_hash <> '' FROM users WHERE email = $1`, email).
-		Scan(&hasPassword)
-	if hasPassword && !in.Code {
+	var hasPassword, complete bool
+	err := a.db.sql.QueryRowContext(r.Context(),
+		`SELECT pass_hash <> '', name <> '' AND phone <> '' AND
+		 EXISTS(SELECT 1 FROM addresses WHERE email=users.email)
+		 FROM users WHERE email=$1`, email).Scan(&hasPassword, &complete)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 503, "Could not check your account. Please try again.")
+		return
+	}
+	// An interrupted signup always resumes with proof of email ownership,
+	// even if a password was saved before the rest of setup finished.
+	if hasPassword && complete && !in.Code {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"email":         email,
 			"needsPassword": true,
@@ -193,6 +200,10 @@ func (a *API) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 // mailCode mints a code for purpose ("login" or "reset"), stores its hash and
 // emails it.
 func (a *API) mailCode(w http.ResponseWriter, r *http.Request, email, purpose string) {
+	if a.mail == nil {
+		writeError(w, http.StatusServiceUnavailable, "Email sign-in is temporarily unavailable. Please try again later.")
+		return
+	}
 	code, err := sixDigits()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -214,8 +225,17 @@ func (a *API) mailCode(w http.ResponseWriter, r *http.Request, email, purpose st
 		fmt.Sprintf("%d seconds", int(codeLifetime.Seconds())),
 		fmt.Sprintf("%d seconds", int(codeCooldown.Seconds())), purpose).Scan(&expires)
 	if errors.Is(err, sql.ErrNoRows) {
-		writeError(w, http.StatusTooManyRequests,
-			"a code was just sent — check your inbox, or try again in a minute")
+		var retry int
+		var pending bool
+		_ = a.db.sql.QueryRowContext(r.Context(), `SELECT GREATEST(1,ceil(extract(epoch FROM(sent_at + $2::interval-now())))::int),purpose=$3 AND expires_at>now() AND attempts<$4 FROM login_codes WHERE email=$1`, email, fmt.Sprintf("%d seconds", int(codeCooldown.Seconds())), purpose, maxAttempts).Scan(&retry, &pending)
+		if retry < 1 {
+			retry = int(codeCooldown.Seconds())
+		}
+		w.Header().Set("Retry-After", fmt.Sprint(retry))
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{
+			"error":      fmt.Sprintf("Please wait %d seconds before requesting another code.", retry),
+			"retryAfter": retry, "codePending": pending,
+		})
 		return
 	}
 	if err != nil {
@@ -227,16 +247,23 @@ func (a *API) mailCode(w http.ResponseWriter, r *http.Request, email, purpose st
 	if purpose == "reset" {
 		send = (*Mailer).sendResetCode
 	}
-	if a.mail == nil {
-		// Unconfigured is a working local setup, not an error.
-		log.Print("login email delivery is not configured")
-	} else if err := send(a.mail, r.Context(), email, code); err != nil {
-		writeError(w, http.StatusBadGateway, err.Error())
+	if err := send(a.mail, r.Context(), email, code); err != nil {
+		// Failed delivery must not strand the shopper behind a cooldown.
+		// Match this hash so a late response cannot remove a newer code.
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 3*time.Second)
+		_, _ = a.db.sql.ExecContext(cleanup, `DELETE FROM login_codes WHERE email=$1 AND code_hash=$2`, email, hashCode(code))
+		cancel()
+		log.Print("sign-in email delivery failed")
+		writeError(w, http.StatusBadGateway, "We could not send your email. Please try sending a new code.")
 		return
 	}
+	var hasPassword bool
+	_ = a.db.sql.QueryRowContext(r.Context(), `SELECT pass_hash<>'' FROM users WHERE email=$1`, email).Scan(&hasPassword)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"email":     email,
-		"expiresAt": expires,
+		"hasPassword": hasPassword,
+		"email":       email,
+		"expiresAt":   expires,
+		"resendAfter": int(codeCooldown.Seconds()),
 	})
 }
 

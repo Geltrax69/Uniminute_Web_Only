@@ -286,7 +286,7 @@ func TestLocationOnlyServesCampus(t *testing.T) {
 }
 
 func TestLoginValidatesEmail(t *testing.T) {
-	h := testAPI(t)
+	h, _ := mailAPI(t)
 	if code, _ := call(t, h, http.MethodPost, "/api/login",
 		map[string]string{"email": "lalit@lpu.in"}); code != http.StatusOK {
 		t.Fatalf("valid email: want 200, got %d", code)

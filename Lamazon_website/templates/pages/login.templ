@@ -19,6 +19,7 @@ type LoginPageData struct {
 	Next              string // where to go afterwards; always a local path
 	Email             string
 	Step              string // "email" | "code" | "password" | "reset"
+	ResendAt          int64 // epoch milliseconds; server owns the actual send limit
 	HasPassword       bool   // on the code step: offer the password back
 	Error             string
 	Notice            string // shown above the card, e.g. an expired session
@@ -75,7 +76,7 @@ templ LoginCard(d LoginPageData) {
 	<div
 		id="login-card"
 		class="rounded-featured bg-surface px-[18px] py-5 shadow-raised"
-		x-data={ "login(" + jsonArg(d.Step) + "," + jsonArg(d.Email) + "," + jsonArg(d.Error) + ")" }>
+		x-data={ "login(" + jsonArg(d.Step) + "," + jsonArg(d.Email) + "," + jsonArg(d.Error) + "," + strconv.FormatInt(d.ResendAt, 10) + ")" }>
 		<h1 class="text-center text-section text-text">{ tpl.When(d.Step == "reset", "Reset your password", "Log in or sign up") }</h1>
 		<form
 			class="mt-3.5"
@@ -87,6 +88,7 @@ templ LoginCard(d LoginPageData) {
 			x-on:htmx:after-request="busy = false">
 			<input type="hidden" name="next" value={ d.Next }/>
 			<input type="hidden" name="from" value={ d.Step }/>
+			<input type="hidden" name="resendAt" value={ strconv.FormatInt(d.ResendAt, 10) }/>
 			if d.Step != "email" {
 				<input type="hidden" name="email" value={ d.Email }/>
 			}
@@ -104,6 +106,13 @@ templ LoginCard(d LoginPageData) {
 				<span class="truncate" x-text={ "busy ? 'Please wait…' : " + jsonArg(st.button) }>{ st.button }</span>
 			</button>
 			<p class="mt-3 text-center text-[13px] leading-[17px] tracking-[0.2px]" x-bind:class="error ? 'text-danger' : 'text-muted'" aria-live="polite" x-text="helper"></p>
+			if d.Step == "code" || d.Step == "reset" {
+				<div class="mt-2 flex justify-center">
+					<button type="button" hx-post="/login/start" hx-vals={ tpl.When(d.Step == "reset", `{"mode":"reset"}`, `{"mode":"code"}`) } x-bind:disabled="busy || remaining > 0" class="inline-flex min-h-touch items-center rounded-full px-3 text-[13px] font-semibold text-strong underline disabled:opacity-50">
+						<span x-text="remaining > 0 ? 'Resend code in ' + remaining + 's' : 'Resend code'">Resend code</span>
+					</button>
+				</div>
+			}
 			// Other ways in. They post the form's email along with them.
 			<div class="mt-1 flex flex-wrap items-center justify-center">
 				switch d.Step {

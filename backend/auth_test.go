@@ -314,6 +314,14 @@ func TestPasswordReset(t *testing.T) {
 		t.Fatalf("new password: want 200, got %d", code)
 	}
 
+	// A completed account with a password is asked for it; incomplete
+	// signups are covered separately and resume through email verification.
+	if _, err := db.sql.Exec(`UPDATE users SET name='Buyer',phone='9876543210' WHERE email=$1;`, email); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.sql.Exec(`INSERT INTO addresses(email,label,line,city) VALUES($1,'home','Room 1','LPU')`, email); err != nil {
+		t.Fatal(err)
+	}
 	// With a password set: asked for it, no mail. Asking for a code still works.
 	before := sent.count
 	if _, body := call(t, h, http.MethodPost, "/api/login", map[string]string{"email": email}); body["needsPassword"] != true || sent.count != before {

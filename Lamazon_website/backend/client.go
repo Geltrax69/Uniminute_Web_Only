@@ -272,7 +272,9 @@ type Order struct {
 type LoginStart struct {
 	Email         string `json:"email"`
 	NeedsPassword bool   `json:"needsPassword"`
+	HasPassword   bool   `json:"hasPassword"`
 	ExpiresAt     string `json:"expiresAt"`
+	ResendAfter   int    `json:"resendAfter"`
 	// Set only by a server running with the code switched off.
 	Token        string `json:"token,omitempty"`
 	RefreshToken string `json:"refreshToken,omitempty"`
@@ -294,8 +296,9 @@ type Session struct {
 // shopper ("not enough stock for …"), so it is shown as-is rather than
 // paraphrased here.
 type APIError struct {
-	Status int
-	Body   string
+	Status     int
+	Body       string
+	RetryAfter int
 }
 
 func (e *APIError) Error() string {
@@ -367,7 +370,7 @@ func (b *Backend) send(ctx context.Context, method, path string, token string, i
 		return nil, err
 	}
 	if res.StatusCode >= 300 {
-		return nil, &APIError{Status: res.StatusCode, Body: strings.TrimSpace(string(raw))}
+		return nil, &APIError{Status: res.StatusCode, Body: strings.TrimSpace(string(raw)), RetryAfter: retryAfterSeconds(res.Header.Get("Retry-After"))}
 	}
 	return raw, nil
 }
@@ -456,9 +459,10 @@ func (b *Backend) StartLogin(ctx context.Context, email string, code bool) (Logi
 }
 
 // POST /api/login/forgot — mails a password-reset code.
-func (b *Backend) ForgotPassword(ctx context.Context, email string) error {
+func (b *Backend) ForgotPassword(ctx context.Context, email string) (LoginStart, error) {
 	var out LoginStart
-	return b.do(ctx, http.MethodPost, "/api/login/forgot", "", map[string]string{"email": email}, &out)
+	err := b.do(ctx, http.MethodPost, "/api/login/forgot", "", map[string]string{"email": email}, &out)
+	return out, err
 }
 
 // POST /api/login/verify
@@ -967,4 +971,16 @@ func (b *Backend) StaffLogout(ctx context.Context, role, token string) error {
 		role = "delivery"
 	}
 	return b.do(ctx, http.MethodPost, "/api/"+role+"/logout", token, map[string]string{}, nil)
+}
+
+func retryAfterSeconds(value string) int {
+	var n int
+	_, _ = fmt.Sscan(value, &n)
+	if n < 0 {
+		return 0
+	}
+	if n > 600 {
+		return 600
+	}
+	return n
 }

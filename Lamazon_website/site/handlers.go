@@ -1106,23 +1106,37 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 	// and "reset" for "Forgot password?" (a separate reset code).
 	mode := r.FormValue("mode")
 	sendTo := tpl.When(mode == "reset", "reset", "code")
-	d := pages.LoginPageData{Next: next, Email: email, Step: loginStep(r.FormValue("from")), HasPassword: mode != ""}
+	d := pages.LoginPageData{Next: next, Email: email, Step: loginStep(r.FormValue("from")), HasPassword: r.FormValue("hasPassword") == "1" || loginStep(r.FormValue("from")) == "password"}
 
 	var result backend.LoginStart
 	var err error
 	if mode == "reset" {
-		err = s.backend.ForgotPassword(r.Context(), email)
+		result, err = s.backend.ForgotPassword(r.Context(), email)
 	} else {
 		result, err = s.backend.StartLogin(r.Context(), email, mode == "code")
 	}
 	var apiErr *backend.APIError
 	if errors.As(err, &apiErr) && apiErr.Status == http.StatusTooManyRequests {
-		// A code went out moments ago and is still good: ask for it.
-		d.Step, d.Error = sendTo, loginError(err, "")
+		// A general rate limit does not mean a code was sent. Only the
+		// code cooldown may move an email/password form to verification.
+		var detail struct {
+			CodePending bool `json:"codePending"`
+		}
+		_ = json.Unmarshal([]byte(apiErr.Body), &detail)
+		if detail.CodePending {
+			d.Step = sendTo
+		}
+		d.Error = loginError(err, "")
+		if apiErr.RetryAfter > 0 {
+			d.ResendAt = time.Now().UnixMilli() + int64(apiErr.RetryAfter)*1000
+		}
 		renderOK(w, r, pages.LoginCard(d))
 		return
 	}
 	if err != nil {
+		if d.Step == "code" || d.Step == "reset" {
+			d.ResendAt = resendDeadline(r)
+		}
 		d.Error = loginError(err, "Could not reach the server, so no code went out. Try again, or use Browse the shop to look around.")
 		renderOK(w, r, pages.LoginCard(d))
 		return
@@ -1140,7 +1154,25 @@ func (s *Site) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 		d.Email = result.Email
 	}
 	d.Step = sendTo
+	d.HasPassword = result.HasPassword || result.NeedsPassword || mode == "reset"
+	if sendTo == "code" || sendTo == "reset" {
+		d.ResendAt = time.Now().UnixMilli() + int64(result.ResendAfter)*1000
+	}
 	renderOK(w, r, pages.LoginCard(d))
+}
+
+// Carry the original deadline through validation errors; a wrong code must
+// not restart the resend countdown. This value only controls UI, not rate limits.
+func resendDeadline(r *http.Request) int64 {
+	n, _ := strconv.ParseInt(r.FormValue("resendAt"), 10, 64)
+	now := time.Now().UnixMilli()
+	if n < now {
+		return 0
+	}
+	if n > now+600000 {
+		return now + 600000
+	}
+	return n
 }
 
 // handleLoginStep switches the card without calling the backend: "Use
@@ -1176,7 +1208,7 @@ func (s *Site) handleLoginReset(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.backend.ResetPassword(r.Context(), email,
 		strings.TrimSpace(r.FormValue("code")), r.FormValue("password"))
 	if err != nil {
-		d := pages.LoginPageData{Email: email, Step: "reset", Next: next, Error: loginError(err, offlineMessage)}
+		d := pages.LoginPageData{Email: email, Step: "reset", Next: next, Error: loginError(err, offlineMessage), ResendAt: resendDeadline(r)}
 		renderOK(w, r, pages.LoginCard(d))
 		return
 	}
@@ -1195,7 +1227,7 @@ func (s *Site) handleLoginVerify(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := s.backend.VerifyCode(r.Context(), email, code)
 	if err != nil {
-		d := pages.LoginPageData{Email: email, Step: "code", Next: next, Error: loginError(err, offlineMessage), HasPassword: r.FormValue("hasPassword") != ""}
+		d := pages.LoginPageData{Email: email, Step: "code", Next: next, Error: loginError(err, offlineMessage), HasPassword: r.FormValue("hasPassword") != "", ResendAt: resendDeadline(r)}
 		renderOK(w, r, pages.LoginCard(d))
 		return
 	}

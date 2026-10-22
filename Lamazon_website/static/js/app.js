@@ -485,7 +485,17 @@ document.addEventListener('alpine:init', () => {
   // ── sign-in card (LoginScreen) ───────────────────────────────────────────
   // One field per step; the button only wakes for something that could be
   // right, and the line under it says why it will not.
-  Alpine.data('login', (step, email, error) => ({
+  Alpine.data('login', (step, email, error, resendAt = 0) => ({
+    now: Date.now(),
+    timer: null,
+    init() {
+      if (resendAt > this.now) this.timer = setInterval(() => {
+        this.now = Date.now();
+        if (this.now >= resendAt) { clearInterval(this.timer); this.timer = null; }
+      }, 250);
+    },
+    destroy() { if (this.timer) clearInterval(this.timer); },
+    get remaining() { return Math.max(0, Math.ceil((resendAt - this.now) / 1000)); },
     value: step === 'email' ? email : '',
     password: '', // the new one, on the reset step
     busy: false,
