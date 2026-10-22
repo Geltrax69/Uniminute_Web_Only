@@ -113,6 +113,11 @@ func commit() string {
 func routes(s *API) http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /api/availability", s.handleDeliveryAvailability)
+	mux.HandleFunc("GET /api/seller/availability", s.handleStoreAvailabilityState)
+	mux.HandleFunc("GET /api/delivery/availability", s.handleRiderAvailabilityState)
+	mux.HandleFunc("PUT /api/seller/availability", s.handleStoreAvailability)
+	mux.HandleFunc("PUT /api/delivery/availability", s.handleRiderAvailability)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{
 			"status": "ok",

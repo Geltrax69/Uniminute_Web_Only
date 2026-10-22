@@ -83,7 +83,7 @@ templ Heart(id string, filled bool, class string) {
 // successful add it shows a tick for 1.4s, greyed like the app's disabled
 // state; sold out, it is grey from the start.
 templ QuickAdd(p backend.Product) {
-	{{ out := p.AvailableStock != nil && *p.AvailableStock == 0 }}
+	{{ out := p.StoreClosed || (p.AvailableStock != nil && *p.AvailableStock == 0) }}
 	<button
 		type="button"
 		class="flex h-11 w-11 items-center justify-center rounded-full disabled:cursor-not-allowed"
@@ -95,8 +95,8 @@ templ QuickAdd(p backend.Product) {
 		x-on:htmx:after-request="$event.detail.successful ? setTimeout(() => added = false, 1400) : added = false"
 		x-bind:disabled={ tplWhen(out, "true", "added") }
 		disabled?={ out }
-		aria-label={ tplWhen(out, "Out of stock", "Add "+p.Name+" to cart") }
-		title={ tplWhen(out, "Out of stock", "Add "+p.Name+" to cart") }>
+		aria-label={ tplWhen(out, tplWhen(p.StoreClosed,"Store closed today","Out of stock"), "Add "+p.Name+" to cart") }
+		title={ tplWhen(out, tplWhen(p.StoreClosed,"Store closed today","Out of stock"), "Add "+p.Name+" to cart") }>
 		<span class={ "qa-disc " + tplWhen(out, "is-out", "") } x-bind:class="added && 'is-added'">
 			<span class="flex" x-show="!added">
 				@ui.Icon("plus", "h-[17px] w-[17px]")
@@ -112,6 +112,7 @@ type note struct{ Text, Class string }
 
 // stockNote is the app's _note: only exceptions get a line.
 func stockNote(p backend.Product) note {
+ if p.StoreClosed {return note{"Store closed today","text-warning"}}
 	if p.AvailableStock == nil {
 		return note{}
 	}

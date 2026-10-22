@@ -69,6 +69,9 @@ templ sellerDashboardBody(d SellerDashboardData) {
 						<span class="rounded bg-white px-3 py-1.5 text-[12px] font-semibold text-text">{ c }</span>
 					}
 				</div>
+				if d.Store.Approved() {
+ @dailyAvailability(d.Store.ClosedToday,"store")
+ }
 				{{ restock := needsRestock(d.Items) }}
 				<div class="mt-[18px] flex gap-2.5">
 					@statTile("Products", strconv.Itoa(len(d.Items)), "")

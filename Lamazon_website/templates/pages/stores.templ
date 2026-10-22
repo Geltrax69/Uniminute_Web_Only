@@ -46,7 +46,7 @@ templ storesBody(d StoresPageData) {
 							<span class="mt-[3px] line-clamp-2 text-[12px] leading-[1.3] text-muted">{ s.Tagline }</span>
 							<span class="mt-1.5 flex items-center text-muted">
 								@ui.Icon("timer", "h-3 w-3")
-								<span class="ml-1 text-[11.5px]">{ shop.DeliveryETA }</span>
+								<span class="ml-1 text-[11.5px]">{ tpl.When(s.ClosedToday,"Closed today · back tomorrow",shop.DeliveryETA) }</span>
 							</span>
 						</span>
 						@ui.Icon("chevron-right", "ml-2 h-[18px] w-[18px] shrink-0 text-muted")
@@ -84,6 +84,9 @@ templ storeBody(d StorePageData) {
 		if d.Store.Tagline != "" {
 			<p class="mt-2 max-w-[65ch] text-[16px] leading-[24px] text-muted">{ d.Store.Tagline }</p>
 		}
+		if d.Store.ClosedToday {
+ <p role="status" class="mt-4 rounded-small bg-surface p-4 text-[14px] font-semibold text-warning">Closed today. Browse the menu and come back tomorrow to order.</p>
+ }
 		<div class="mt-2.5 flex flex-wrap gap-2">
 			@infoChip("truck", "Local delivery")
 			@infoChip("wallet", "Online or cash")

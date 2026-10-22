@@ -123,6 +123,20 @@ func (s *Site) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request)
 		paymentControlFailure(w, err)
 		return
 	}
+	// A brand-new payment must not start while its shop is closed or all
+	// riders are off. Existing provider attempts still need recovery, and a
+	// captured payment must be recorded even if availability later changes.
+	if reservation.State == "create" {
+		if err := s.checkNewPaymentAvailability(r); err != nil {
+			control.Operation = "release"
+			control.Lease = reservation.Lease
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 4*time.Second)
+			_, _ = s.paymentControl(ctx, control)
+			cancel()
+			paymentError(w, http.StatusConflict, err.Error())
+			return
+		}
+	}
 	order, err := s.reservedRazorpayOrder(r.Context(), control, reservation)
 	if err != nil {
 		var badRequest *rzperrors.BadRequestError
@@ -393,4 +407,29 @@ func paymentJSON(w http.ResponseWriter, status int, body any) {
 
 func paymentError(w http.ResponseWriter, status int, message string) {
 	paymentJSON(w, status, map[string]string{"error": message})
+}
+
+// Re-read authoritative availability before creating a provider order. Cached
+// discovery cards may be a few seconds old; a charge cannot rely on them.
+func (s *Site) checkNewPaymentAvailability(r *http.Request) error {
+	ctx := backend.Fresh(r.Context())
+	var availability struct {
+		DeliveryAvailable bool `json:"deliveryAvailable"`
+	}
+	if err := s.backend.Get(ctx, "/api/availability", "", &availability); err != nil {
+		return errors.New("Could not check delivery availability. Please try again.")
+	}
+	if !availability.DeliveryAvailable {
+		return errors.New("Delivery is unavailable while all riders are off. Please try again when a rider is online.")
+	}
+	for _, line := range shop.ReadCart(r) {
+		product, err := s.cartProduct(ctx, line.ID)
+		if err != nil {
+			return errors.New("An item is no longer available. Refresh your cart before paying.")
+		}
+		if product.StoreClosed {
+			return errors.New(product.Store + " is closed today. Come back tomorrow or choose another store.")
+		}
+	}
+	return nil
 }

@@ -1254,6 +1254,64 @@ document.addEventListener('alpine:init', () => {
   }));
 
   // ── seller: dashboard actions (SellerDashboardScreen) ────────────────────
+  Alpine.data('dailyAvailability', (off, kind) => ({
+    off, kind, busy: false, error: '', saved: '', revision: 0, resetTimer: null, onReturn: null,
+    get path() { return this.kind === 'store' ? '/api/seller/availability' : '/staff-api/delivery/availability'; },
+    init() {
+      this.onReturn = () => { if (document.visibilityState === 'visible') return this.refresh(); };
+      document.addEventListener('visibilitychange', this.onReturn);
+      window.addEventListener('online', this.onReturn);
+      this.scheduleReset();
+    },
+    destroy() {
+      clearTimeout(this.resetTimer);
+      document.removeEventListener('visibilitychange', this.onReturn);
+      window.removeEventListener('online', this.onReturn);
+    },
+    scheduleReset(retry = false) {
+      clearTimeout(this.resetTimer);
+      const now = Date.now(), ist = new Date(now + 19800000);
+      const midnight = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1) - 19800000;
+      this.resetTimer = setTimeout(async () => {
+        const refreshed = await this.refresh();
+        this.scheduleReset(!refreshed);
+      }, retry ? 30000 : Math.max(1000, midnight - now + 1000));
+    },
+    async refresh() {
+      if (this.busy) return false;
+      const revision = ++this.revision;
+      try {
+        const out = await sellerCall('GET', this.path);
+        if (!this.busy && revision === this.revision) {
+          this.off = this.kind === 'store' ? out.closedToday : out.dayOffToday;
+          this.saved = ''; this.error = '';
+        }
+        return true;
+      } catch (err) {
+        if (!this.busy && revision === this.revision) this.error = 'Could not refresh availability. Check your connection and refresh this page.';
+        return false;
+      }
+    },
+    get onTitle() { return this.kind === 'store' ? 'Store is open' : 'You are online'; },
+    get offTitle() { return this.kind === 'store' ? 'Closed today' : 'Day off today'; },
+    get onHelp() { return this.kind === 'store' ? 'Accepting new orders.' : 'Ready to collect packages from shops.'; },
+    get offHelp() { return this.kind === 'store' ? 'New orders are paused until midnight IST.' : 'New assignments are paused until midnight IST.'; },
+    async toggle() {
+      if (this.busy) return;
+      this.busy = true; this.revision++; this.error = ''; this.saved = '';
+      try {
+        const out = await sellerCall('PUT', this.path, {available: this.off});
+        this.off = this.kind === 'store' ? out.closedToday : out.dayOffToday;
+        this.saved = this.off ? 'Saved. Back ON at midnight IST.' : 'Saved. You are back ON.';
+        if (this.kind === 'rider') {
+          const orders = document.getElementById('delivery-orders');
+          if (orders && window.htmx) htmx.trigger(orders, 'delivery-orders-refresh');
+        }
+      } catch (err) { this.error = err.message || 'Could not save availability. Please try again.'; }
+      finally { this.busy = false; }
+    }
+  }));
+
   Alpine.data('sellerDashboard', (pane) => ({
     pane,
     shownOrders: 8,

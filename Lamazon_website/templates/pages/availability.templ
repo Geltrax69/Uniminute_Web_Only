@@ -1,0 +1,25 @@
+package pages
+
+import "lamazon/website/tpl"
+
+// Daily availability extends the operational dashboards: explicit ON/OFF,
+// immediate saving/error feedback, and the next-day reset explained in place.
+templ dailyAvailability(off bool, kind string) {
+	<section aria-label="Daily availability" class="my-4 rounded-small bg-surface p-4" x-data={ "dailyAvailability(" + jsonArg(off) + "," + jsonArg(kind) + ")" }>
+		<div class="flex items-start justify-between gap-4">
+			<div class="min-w-0 flex-1">
+				<h2 class="text-[15px] font-bold text-text" x-text="off ? offTitle : onTitle">{ tpl.When(kind=="store",tpl.When(off,"Closed today","Store is open"),tpl.When(off,"Day off today","You are online")) }</h2>
+				<p class="mt-1 text-[13px] leading-5 text-muted" x-text="off ? offHelp : onHelp"></p>
+			</div>
+			<button type="button" role="switch" aria-label={ tpl.When(kind == "store", "Accept new orders", "Accept new deliveries") } aria-checked={ tpl.When(off, "false", "true") } x-bind:aria-checked="!off" x-bind:aria-busy="busy" x-bind:disabled="busy" x-on:click="toggle()" class="flex min-h-touch shrink-0 items-center gap-2 rounded-full px-1 outline-none focus-visible:ring-2 focus-visible:ring-strong focus-visible:ring-offset-2 disabled:cursor-wait">
+				<span aria-hidden="true" class="text-[12px] font-bold text-strong" x-text="busy ? 'Saving…' : (off ? 'OFF' : 'ON')">{ tpl.When(off,"OFF","ON") }</span>
+				<span aria-hidden="true" class="flex h-7 w-12 items-center rounded-full px-1 transition-colors duration-150 motion-reduce:transition-none" x-bind:class="off ? 'bg-muted' : 'bg-strong'">
+					<span class="h-5 w-5 rounded-full bg-white transition-transform duration-150 motion-reduce:transition-none" x-bind:class="!off && 'translate-x-5'"></span>
+				</span>
+			</button>
+		</div>
+		<p class="mt-3 text-[12px] leading-5 text-muted">{ tpl.When(kind=="store","Close for today to pause new orders. Existing orders still need to be completed.","Take today off to pause new assignments. Uncollected packages return to the available riders; finish any delivery already on your run.") } Back ON automatically at midnight IST. You can turn it on sooner.</p>
+		<p role="status" aria-live="polite" x-show="saved" x-cloak class="mt-2 text-[12px] font-semibold text-strong" x-text="saved"></p>
+		<p role="alert" x-show="error" x-cloak class="mt-2 text-[13px] text-danger" x-text="error"></p>
+	</section>
+}

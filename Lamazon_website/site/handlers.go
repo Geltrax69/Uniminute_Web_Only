@@ -967,6 +967,12 @@ func (s *Site) handleCartAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if prod.StoreClosed {
+		errorToast(w, "This store is closed today. Come back tomorrow or choose another store.")
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
+
 	// Every option the product has must be picked, from what the shop offers;
 	// the picks become part of the line, so each colour is its own line.
 	var picked []backend.Choice
@@ -1546,6 +1552,7 @@ func (s *Site) offerProduct(ctx context.Context, id string) (backend.Product, er
 			p.ID, p.Store, p.Price, p.MRP = p.ID+"@"+store, store, o.Price, 0
 			p.VariantPrices = nil
 			p.AvailableStock, p.Offers = nil, nil
+			p.StoreClosed = false // Closed vendors are excluded from the live offer list.
 			return p, nil
 		}
 	}

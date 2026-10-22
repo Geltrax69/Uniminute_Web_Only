@@ -846,3 +846,7 @@ CREATE INDEX IF NOT EXISTS idx_reviews_report_updated ON order_reviews(updated_a
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS interest TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS setup_request_id TEXT NOT NULL DEFAULT '';
+
+-- Self-service day off is separate from administrator suspension/disablement.
+ALTER TABLE seller_stores ADD COLUMN IF NOT EXISTS closed_until TIMESTAMPTZ;
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS day_off_until TIMESTAMPTZ;

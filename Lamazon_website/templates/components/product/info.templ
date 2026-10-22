@@ -158,6 +158,8 @@ templ offers(p backend.Product) {
 
 func availability(p backend.Product) string {
 	switch {
+ case p.StoreClosed:
+ return "Store closed today · opens again tomorrow"
 	case p.AvailableStock == nil:
 		return "Availability confirmed at checkout"
 	case *p.AvailableStock == 0:

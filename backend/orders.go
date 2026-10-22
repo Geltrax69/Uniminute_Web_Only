@@ -266,11 +266,11 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 	}
 	{
 		var available bool
-		if err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM riders WHERE active)`).Scan(&available); err != nil {
+		if err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM riders WHERE active AND (day_off_until IS NULL OR day_off_until<=now()))`).Scan(&available); err != nil {
 			writeError(w, 503, "could not check delivery availability")
 			return
 		}
-		if !available {
+		if !available && payment == nil {
 			writeError(w, 503, "delivery is currently unavailable — please try again when riders are available")
 			return
 		}
@@ -298,16 +298,21 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		var title, storeOwner, storeName, status string
 		var price float64
 		var stock, reserved int
+		var closed bool
 		var offeredRaw, variantsRaw []byte
-		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status,i.options,i.variant_prices
+		err = tx.QueryRowContext(r.Context(), `SELECT i.title,i.price,i.stock,s.owner,s.name,s.status,i.options,i.variant_prices,COALESCE(s.closed_until>now(),false)
    FROM inventory_items i JOIN seller_stores s ON s.owner=i.owner
-   WHERE i.id=$1 FOR UPDATE OF i`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status, &offeredRaw, &variantsRaw)
+   WHERE i.id=$1 FOR UPDATE OF i FOR SHARE OF s`, line.ItemID).Scan(&title, &price, &stock, &storeOwner, &storeName, &status, &offeredRaw, &variantsRaw, &closed)
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, 404, "an item is no longer available")
 			return
 		}
 		if err != nil {
 			writeError(w, 500, "could not check item availability")
+			return
+		}
+		if closed && payment == nil {
+			writeError(w, 409, storeName+" is closed today. Please try again tomorrow or choose another store.")
 			return
 		}
 		if status != "approved" {
@@ -495,14 +500,22 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 	// Accepting is the moment there is something to carry, so this is where a
 	// rider gets it. With nobody signed up the order stays open to whoever
 	// turns up, which is also what happens if every rider is switched off.
-	rider, err := a.db.pickRider(r.Context())
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "Could not accept the order.")
+		return
+	}
+	defer tx.Rollback()
+	rider, err := a.db.pickRider(r.Context(), tx)
 	if err != nil {
 		log.Printf("order %s: choosing a rider: %v", r.PathValue("id"), err)
+		writeError(w, 503, "Could not check available riders.")
+		return
 	}
 
 	id := r.PathValue("id")
 	var buyer string
-	row := a.db.sql.QueryRowContext(r.Context(), `
+	row := tx.QueryRowContext(r.Context(), `
 		UPDATE orders SET stage = 'accepted', accepted_at = now(), delivery_code = $3,
 			-- An admin who already put a name on it wins; otherwise take the
 			-- one drawn above.
@@ -517,7 +530,13 @@ func (a *API) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
 		&o.PlacedAt, &o.StoreOwner, &o.StoreName, &o.ReceiverName, &o.ReceiverPhone,
 		&o.ReceiverAddress, &o.RejectReason, &o.RiderPhone, &o.AssignedTo, &o.Options,
 		&o.PaymentMethod, &o.PaymentStatus, &o.RazorpayOrderID, &o.RazorpayPaymentID, &buyer)
-	if !a.orderMoved(w, r, id, err) {
+	if err != nil {
+		tx.Rollback()
+		a.orderMoved(w, r, id, err)
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		writeError(w, 503, "Could not save order acceptance.")
 		return
 	}
 	a.notifyOrderLater(buyer, "Order "+orderReference(o.ID)+" is confirmed",

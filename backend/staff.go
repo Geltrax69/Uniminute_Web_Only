@@ -422,7 +422,7 @@ func (a *API) handleAdminStores(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.sql.QueryContext(r.Context(), `
 		SELECT s.owner, s.name, s.location, s.city,
 		       array_to_string(s.categories, ','), s.photo_url, s.status,
-		       s.reject_reason, COALESCE(u.phone, ''),
+		       s.reject_reason, COALESCE(s.closed_until>now(),false), COALESCE(u.phone, ''),
 		       (SELECT count(*) FROM inventory_items i WHERE i.owner = s.owner)
 		FROM seller_stores s
 		LEFT JOIN users u ON u.email = s.owner
@@ -444,7 +444,7 @@ func (a *API) handleAdminStores(w http.ResponseWriter, r *http.Request) {
 		var s storeRow
 		var categories string
 		if err := rows.Scan(&s.Owner, &s.Name, &s.Location, &s.City, &categories,
-			&s.PhotoURL, &s.Status, &s.RejectReason, &s.Phone, &s.Items); err != nil {
+			&s.PhotoURL, &s.Status, &s.RejectReason, &s.ClosedToday, &s.Phone, &s.Items); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -575,7 +575,7 @@ func (a *API) reviewStore(w http.ResponseWriter, r *http.Request, status, reason
 // GET /api/admin/riders
 func (a *API) handleListRiders(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.sql.QueryContext(r.Context(), `
-		SELECT r.phone, r.name, r.active, r.delivered, r.created_at,
+		SELECT r.phone, r.name, r.active, r.delivered, r.created_at, COALESCE(r.day_off_until>now(),false),
 		       (SELECT count(*) FROM orders o
 		        WHERE o.rider_phone = r.phone AND o.stage = 'picked')
 		FROM riders r ORDER BY r.created_at DESC`)
@@ -586,18 +586,19 @@ func (a *API) handleListRiders(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type rider struct {
-		Phone     string    `json:"phone"`
-		Name      string    `json:"name"`
-		Active    bool      `json:"active"`
-		Delivered int       `json:"delivered"`
-		Carrying  int       `json:"carrying"`
-		AddedAt   time.Time `json:"addedAt"`
+		Phone       string    `json:"phone"`
+		Name        string    `json:"name"`
+		Active      bool      `json:"active"`
+		DayOffToday bool      `json:"dayOffToday"`
+		Delivered   int       `json:"delivered"`
+		Carrying    int       `json:"carrying"`
+		AddedAt     time.Time `json:"addedAt"`
 	}
 	out := make([]rider, 0)
 	for rows.Next() {
 		var v rider
 		if err := rows.Scan(&v.Phone, &v.Name, &v.Active, &v.Delivered,
-			&v.AddedAt, &v.Carrying); err != nil {
+			&v.AddedAt, &v.DayOffToday, &v.Carrying); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -890,16 +891,16 @@ func (a *API) deleteRider(w http.ResponseWriter, r *http.Request, phone string) 
 //
 // ponytail: no shifts, no zones, no distance. Add those the day this campus
 // is too big for "whoever is free".
-func (d *DB) pickRider(ctx context.Context) (string, error) {
+func (d *DB) pickRider(ctx context.Context, tx *sql.Tx) (string, error) {
 	var phone string
-	err := d.sql.QueryRowContext(ctx, `
+	err := tx.QueryRowContext(ctx, `
 		SELECT r.phone FROM riders r
-		WHERE r.active
+		WHERE r.active AND (r.day_off_until IS NULL OR r.day_off_until<=now())
 		ORDER BY (SELECT count(*) FROM orders o
 		          WHERE o.stage IN ('accepted', 'picked')
 		            AND (o.rider_phone = r.phone OR o.assigned_to = r.phone)),
 		         random()
-		LIMIT 1`).Scan(&phone)
+		LIMIT 1 FOR SHARE OF r SKIP LOCKED`).Scan(&phone)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
@@ -957,10 +958,16 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	phone := normalisePhone(in.Phone)
 
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "Could not assign rider.")
+		return
+	}
+	defer tx.Rollback()
 	if phone != "" {
 		var active bool
-		err := a.db.sql.QueryRowContext(r.Context(),
-			`SELECT active FROM riders WHERE phone = $1`, phone).Scan(&active)
+		err := tx.QueryRowContext(r.Context(),
+			`SELECT active AND (day_off_until IS NULL OR day_off_until<=now()) FROM riders WHERE phone = $1 FOR SHARE`, phone).Scan(&active)
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "no rider on "+phone)
 			return
@@ -970,21 +977,21 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !active {
-			writeError(w, http.StatusConflict, "that rider is switched off")
+			writeError(w, http.StatusConflict, "that rider is switched off or taking today off")
 			return
 		}
 	}
 
 	id := r.PathValue("id")
 	var stage string
-	err := a.db.sql.QueryRowContext(r.Context(), `
+	err = tx.QueryRowContext(r.Context(), `
 		UPDATE orders SET assigned_to = $2
 		WHERE id = $1 AND stage IN ('received', 'accepted')
 		  AND (payment_method = 'cod' OR payment_status = 'paid')
 		RETURNING stage`, id, phone).Scan(&stage)
 	if errors.Is(err, sql.ErrNoRows) {
 		var exists string
-		if scanErr := a.db.sql.QueryRowContext(r.Context(),
+		if scanErr := tx.QueryRowContext(r.Context(),
 			`SELECT stage FROM orders WHERE id = $1`, id).Scan(&exists); scanErr == nil {
 			writeError(w, http.StatusConflict,
 				"that order is already "+exists+" — too late to reassign it")
@@ -995,6 +1002,10 @@ func (a *API) handleAssignOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		writeError(w, 503, "Could not save rider assignment.")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
@@ -1026,7 +1037,8 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 		FROM orders o
 		LEFT JOIN seller_stores s ON s.owner = o.store_owner
 		WHERE ((o.stage = 'accepted' AND o.rider_phone = ''
-		       AND (o.assigned_to = '' OR o.assigned_to = $1))
+		       AND (o.assigned_to = '' OR o.assigned_to = $1)
+ AND EXISTS(SELECT 1 FROM riders r WHERE r.phone=$1 AND r.active AND (r.day_off_until IS NULL OR r.day_off_until<=now())) )
 		   OR (o.stage = 'picked' AND o.rider_phone = $1))
 		  AND (o.payment_method = 'cod' OR o.payment_status = 'paid')
 		-- Yours first, then the open pool.
@@ -1052,13 +1064,22 @@ func (a *API) handleRiderOrders(w http.ResponseWriter, r *http.Request) {
 		out = append(out, o)
 	}
 
+	if err := rows.Err(); err != nil {
+		writeError(w, 503, "Could not read delivery orders.")
+		return
+	}
+	rows.Close()
 	var name string
 	var delivered int
-	a.db.sql.QueryRowContext(r.Context(),
-		`SELECT name, delivered FROM riders WHERE phone = $1`, phone).
-		Scan(&name, &delivered)
+	var off bool
+	if err := a.db.sql.QueryRowContext(r.Context(),
+		`SELECT name, delivered, COALESCE(day_off_until>now(),false) FROM riders WHERE phone = $1`, phone).
+		Scan(&name, &delivered, &off); err != nil {
+		writeError(w, 503, "Could not read rider availability.")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"rider":     map[string]any{"phone": phone, "name": name, "delivered": delivered},
+		"rider":     map[string]any{"phone": phone, "name": name, "delivered": delivered, "dayOffToday": off},
 		"orders":    out,
 		"carrying":  countStage(out, StagePicked),
 		"available": countStage(out, StageAccepted),
@@ -1131,8 +1152,19 @@ func countStage(orders []Order, stage OrderStage) int {
 func (a *API) handleRiderPick(w http.ResponseWriter, r *http.Request) {
 	phone := a.staffOf(r)
 	id := r.PathValue("id")
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "Could not collect order.")
+		return
+	}
+	defer tx.Rollback()
+	var available bool
+	if err = tx.QueryRowContext(r.Context(), `SELECT active AND (day_off_until IS NULL OR day_off_until<=now()) FROM riders WHERE phone=$1 FOR SHARE`, phone).Scan(&available); err != nil || !available {
+		writeError(w, 409, "You are taking today off. Go online before collecting a new package.")
+		return
+	}
 	var o Order
-	err := a.db.sql.QueryRowContext(r.Context(), `
+	err = tx.QueryRowContext(r.Context(), `
 		UPDATE orders SET stage = 'picked', rider_phone = $2, picked_at = now()
 		WHERE id = $1 AND stage = 'accepted' AND rider_phone = ''
 		  AND (assigned_to = '' OR assigned_to = $2)
@@ -1145,11 +1177,16 @@ func (a *API) handleRiderPick(w http.ResponseWriter, r *http.Request) {
 			&o.StoreName, &o.ReceiverName, &o.ReceiverPhone, &o.ReceiverAddress,
 			&o.BuyerEmail, &o.AssignedTo)
 	if errors.Is(err, sql.ErrNoRows) {
+		tx.Rollback()
 		a.explainFailedPick(w, r, id, phone)
 		return
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		writeError(w, 503, "Could not save pickup.")
 		return
 	}
 	a.notifyOrderLater(o.BuyerEmail, "Order "+orderReference(o.ID)+" is on its way",

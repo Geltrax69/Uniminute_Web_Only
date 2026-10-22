@@ -29,7 +29,7 @@ templ Stepper() {
 }
 
 templ BuyBar(p backend.Product) {
-	{{ out := p.AvailableStock != nil && *p.AvailableStock == 0 }}
+	{{ out := p.StoreClosed || (p.AvailableStock != nil && *p.AvailableStock == 0) }}
 	<div class="fixed inset-x-0 bottom-0 z-40 border-t border-transparent bg-surface shadow-raised">
 		<div class="mx-auto flex max-w-[1100px] items-center px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5">
 			<p class="display-price hidden flex-1 text-[26px] text-text min-[900px]:block" x-text="'₹' + t('price')">₹{ shop.Money(p.Price) }</p>
@@ -45,7 +45,7 @@ templ BuyBar(p backend.Product) {
 			</div>
 			<div class="ml-2.5 min-w-0 flex-1">
 				<button type="button" class={ ui.ButtonClass(true) + " w-full" } hx-post="/cart/add" hx-include="#buy-id,#buy-qty,.buy-opt" hx-vals={ `{"buy": "1"}` } hx-swap="none" disabled?={ out } x-bind:disabled={ tplWhen(out, "true", "!!missing") }>
-					<span class="truncate">Buy Now</span>
+					<span class="truncate">{ tplWhen(p.StoreClosed,"Closed today","Buy Now") }</span>
 				</button>
 			</div>
 		</div>

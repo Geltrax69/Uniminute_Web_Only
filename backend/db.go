@@ -202,7 +202,7 @@ const productQuery = `
 	       p.image_url, p.store, p.description, p.photos,
 	       COALESCE((SELECT json_agg(json_build_object('store', o.store, 'price', o.price)
 	                                 ORDER BY o.store)
-	                 FROM offers o WHERE o.product_id = p.id AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND s.status='suspended')), '[]'), p.available_stock, p.public_id
+	                 FROM offers o WHERE o.product_id = p.id AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND (s.status='suspended' OR s.closed_until>now()))), '[]'), p.available_stock, p.public_id, EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=p.store AND s.closed_until>now())
 	FROM catalogue p
 	WHERE ($1::text = '' OR p.id = $1 OR p.public_id = $1)
 	  AND ($2::text = '' OR p.tab ILIKE $2)
@@ -212,7 +212,7 @@ const productQuery = `
 	                     OR p.store ILIKE '%' || $4 || '%')
 	  AND ($5::text = '' OR p.store ILIKE $5
 	       OR EXISTS (SELECT 1 FROM offers o
-	                  WHERE o.product_id = p.id AND o.store ILIKE $5 AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND s.status='suspended')))
+	                  WHERE o.product_id = p.id AND o.store ILIKE $5 AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND (s.status='suspended' OR s.closed_until>now()))))
 	ORDER BY p.id`
 
 func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
@@ -230,7 +230,7 @@ func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
 		var photos string
 		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Tab, &p.Price,
 			&p.MRP, &options, &variants, &p.ImageURL, &p.Store, &p.Description, &photos,
-			&offers, &p.AvailableStock, &p.PublicID); err != nil {
+			&offers, &p.AvailableStock, &p.PublicID, &p.StoreClosed); err != nil {
 			return nil, err
 		}
 		p.ImageURLs = splitURLs(photos)
@@ -277,13 +277,13 @@ func (d *DB) product(ctx context.Context, id string) (Product, error) {
 // store someone opens shows up next to the sample ones rather than nowhere.
 func (d *DB) shops(ctx context.Context) ([]Shop, error) {
 	rows, err := d.sql.QueryContext(ctx, `
-		SELECT sh.name, sh.tagline, sh.image_url, sh.tab FROM shops sh
+		SELECT sh.name, sh.tagline, sh.image_url, sh.tab, EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=sh.name AND s.closed_until>now()) AS closed_today FROM shops sh
         WHERE NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=sh.name AND s.status='suspended')
 		UNION ALL
 		SELECT s.name,
 		       COALESCE(NULLIF(array_to_string(s.categories, ', '), ''), s.location),
 		       s.photo_url,
-		       COALESCE(s.categories[1], 'All')
+		       COALESCE(s.categories[1], 'All'), COALESCE(s.closed_until>now(),false)
 		FROM seller_stores s
 		WHERE s.status = 'approved'
 		  AND NOT EXISTS (SELECT 1 FROM shops sh WHERE sh.name = s.name)
@@ -296,7 +296,7 @@ func (d *DB) shops(ctx context.Context) ([]Shop, error) {
 	var out []Shop
 	for rows.Next() {
 		var s Shop
-		if err := rows.Scan(&s.Name, &s.Tagline, &s.ImageURL, &s.Tab); err != nil {
+		if err := rows.Scan(&s.Name, &s.Tagline, &s.ImageURL, &s.Tab, &s.ClosedToday); err != nil {
 			return nil, err
 		}
 		out = append(out, s)
@@ -314,10 +314,10 @@ func (d *DB) store(ctx context.Context, owner string) (SellerStore, error) {
 	var categories string
 	err := d.sql.QueryRowContext(ctx, `
 		SELECT owner, name, location, city, array_to_string(categories, ','),
-		       photo_url, status, reject_reason
+		       photo_url, status, reject_reason, COALESCE(closed_until>now(),false)
 		FROM seller_stores WHERE owner = $1`, owner).
 		Scan(&s.Owner, &s.Name, &s.Location, &s.City, &categories, &s.PhotoURL,
-			&s.Status, &s.RejectReason)
+			&s.Status, &s.RejectReason, &s.ClosedToday)
 	if err != nil {
 		return s, err
 	}

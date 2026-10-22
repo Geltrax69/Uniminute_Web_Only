@@ -183,7 +183,7 @@ func (a *API) handleCompare(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(i.image_urls[1], ''), s.name
 		FROM inventory_items i
 		JOIN seller_stores s ON s.owner = i.owner
-		WHERE i.compare_group = $1 AND i.stock > 0 AND s.status = 'approved'
+		WHERE i.compare_group = $1 AND i.stock > 0 AND s.status = 'approved' AND (s.closed_until IS NULL OR s.closed_until<=now())
 		ORDER BY i.price`, group)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

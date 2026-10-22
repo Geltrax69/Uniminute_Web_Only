@@ -63,6 +63,7 @@ type ProductClassification struct {
 }
 
 type Product struct {
+	StoreClosed    bool                  `json:"storeClosed"`
 	Classification ProductClassification `json:"classification"`
 	PublicID       string                `json:"publicId,omitempty"`
 	AvailableStock *int                  `json:"availableStock,omitempty"`
@@ -169,10 +170,11 @@ func (p Product) Images() []string {
 }
 
 type Shop struct {
-	Name     string `json:"name"`
-	Tagline  string `json:"tagline"`
-	ImageURL string `json:"imageUrl"`
-	Tab      string `json:"tab"`
+	ClosedToday bool   `json:"closedToday"`
+	Name        string `json:"name"`
+	Tagline     string `json:"tagline"`
+	ImageURL    string `json:"imageUrl"`
+	Tab         string `json:"tab"`
 }
 
 type Category struct {
@@ -677,8 +679,9 @@ type RiderOrder struct {
 // RiderPanel is GET /api/delivery/orders.
 type RiderPanel struct {
 	Rider struct {
-		Name      string `json:"name"`
-		Delivered int    `json:"delivered"`
+		DayOffToday bool   `json:"dayOffToday"`
+		Name        string `json:"name"`
+		Delivered   int    `json:"delivered"`
 	} `json:"rider"`
 	Orders []RiderOrder `json:"orders"`
 }
@@ -726,6 +729,7 @@ func (b *Backend) RiderDeliver(ctx context.Context, token, id, code string) erro
 
 // SellerStore is GET /api/seller/store: the signed-in seller's own store.
 type SellerStore struct {
+	ClosedToday  bool     `json:"closedToday"`
 	Name         string   `json:"name"`
 	Location     string   `json:"location"`
 	City         string   `json:"city"`

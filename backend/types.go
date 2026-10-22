@@ -7,6 +7,7 @@ import (
 
 // Product is one listing in the catalog.
 type Product struct {
+	StoreClosed    bool                  `json:"storeClosed"`
 	Classification classification.Result `json:"classification"`
 	PublicID       string                `json:"publicId,omitempty"`
 	AvailableStock *int                  `json:"availableStock,omitempty"`
@@ -39,19 +40,21 @@ type Offer struct {
 }
 
 type Shop struct {
-	Name     string `json:"name"`
-	Tagline  string `json:"tagline"`
-	ImageURL string `json:"imageUrl"`
-	Tab      string `json:"tab"`
+	ClosedToday bool   `json:"closedToday"`
+	Name        string `json:"name"`
+	Tagline     string `json:"tagline"`
+	ImageURL    string `json:"imageUrl"`
+	Tab         string `json:"tab"`
 }
 
 type SellerStore struct {
-	Owner      string   `json:"owner"` // email the seller signed in with
-	Name       string   `json:"name"`
-	Location   string   `json:"location"`
-	City       string   `json:"city"`
-	Categories []string `json:"categories"`
-	PhotoURL   string   `json:"photoUrl"` // Cloudinary, empty until uploaded
+	ClosedToday bool     `json:"closedToday"`
+	Owner       string   `json:"owner"` // email the seller signed in with
+	Name        string   `json:"name"`
+	Location    string   `json:"location"`
+	City        string   `json:"city"`
+	Categories  []string `json:"categories"`
+	PhotoURL    string   `json:"photoUrl"` // Cloudinary, empty until uploaded
 	// pending until an admin looks at it, then approved or rejected with a
 	// reason. Only an approved store is visible to shoppers or may hold stock.
 	Status       string `json:"status"`

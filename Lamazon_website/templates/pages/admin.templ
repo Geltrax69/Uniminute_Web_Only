@@ -401,6 +401,9 @@ templ storeCard(s map[string]any, tab string) {
 		</div>
 		<p class="mt-1 text-[12px] text-muted">{ joinNonEmpty(" · ", owner, sv(s, "phone")) }</p>
 		<p class="text-[12px] text-muted">{ sv(s, "location") }, { sv(s, "city") } · { strings.Join(strs(s["categories"]), ", ") } · { sv(s, "items") } { tpl.When(sv(s, "items") == "1", "product", "products") }</p>
+ if s["closedToday"] == true && status == "approved" {
+ <p class="mt-2 text-[12px] font-semibold text-warning">Closed today · opens at midnight IST</p>
+ }
 		if sv(s, "rejectReason") != "" {
 			<p class="mt-1 text-[12px] text-danger">Reason: { sv(s, "rejectReason") }</p>
 		}
@@ -812,6 +815,9 @@ templ riderRow(r map[string]any) {
 		<div class="min-w-0 flex-1">
 			<p class="text-[13.5px] font-bold text-text">{ tpl.When(sv(r, "name") == "", "Rider", sv(r, "name")) } · { phone }</p>
 			<p class="text-[12px] text-muted">{ sv(r, "delivered") } delivered · { sv(r, "carrying") } carrying</p>
+			if r["dayOffToday"] == true && active {
+ <p class="text-[12px] font-semibold text-warning">Day off today · back at midnight IST</p>
+ }
 			if !active {
 				<p class="text-[11.5px] text-warning">Switched off — not signed in, and not being handed orders</p>
 			}

@@ -269,7 +269,7 @@ var _ = strings.TrimSpace
 // freshForStaff makes admin and seller screens read live data, never the cache.
 func freshForStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if p := r.URL.Path; strings.HasPrefix(p, "/admin") || strings.HasPrefix(p, "/seller") {
+		if p := r.URL.Path; strings.HasPrefix(p, "/admin") || strings.HasPrefix(p, "/seller") || strings.HasPrefix(p, "/delivery") {
 			r = r.WithContext(backend.Fresh(r.Context()))
 		}
 		next.ServeHTTP(w, r)
