@@ -34,3 +34,22 @@ test('preexisting passwords are omitted and the profile save has a stable retry 
  Object.assign(data,{step:4,name:'Buyer',phone:'9876543210',line:'BH-9',password:'should-not-send',hasPassword:true});
  await data.advance();assert.equal(payload.has('password'),false);assert.equal(payload.get('setupRequestId'),'fixture-profile-123456');
 });
+
+test('mobile input keeps ten digits, normalizes pasted country codes, and masks the card',()=>{
+ const {data}=component();
+ data.setPhone('70008679961234567890');assert.equal(data.phone,'7000867996');assert.equal(data.displayPhone,'+91 70XXXX7996');
+ data.setPhone('+91 70008 67996');assert.equal(data.phone,'7000867996');
+ data.setPhone('917000867996');assert.equal(data.phone,'7000867996');
+ data.setPhone('ab70-0086.7996');assert.equal(data.phone,'7000867996');
+ data.setPhone('700');assert.equal(data.displayPhone,'+91 70X');
+ data.setPhone('');assert.equal(data.displayPhone,'');
+});
+test('pasting replaces the selected digits before the browser maxlength can truncate a +91 number',()=>{
+ const {data}=component();data.setPhone('9876543210');let prevented=false,caret;
+ const input={selectionStart:0,selectionEnd:10,value:data.phone,setSelectionRange(start,end){caret=[start,end]}};
+ data.pastePhone({target:input,clipboardData:{getData:()=>'+91 70008 67996'},preventDefault(){prevented=true}});
+ assert.equal(prevented,true);assert.equal(input.value,'7000867996');assert.deepEqual(caret,[10,10]);assert.equal(data.displayPhone,'+91 70XXXX7996');
+ input.selectionStart=2;input.selectionEnd=6;data.pastePhone({target:input,clipboardData:{getData:()=> '1234'},preventDefault(){}});
+ assert.equal(data.phone,'7012347996');assert.equal(data.displayPhone,'+91 70XXXX7996');
+ data.step=2;data.setPhone('1234567890');assert.match(data.validation(),/valid 10-digit/);
+});

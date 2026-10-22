@@ -80,8 +80,8 @@ templ profileSetupBody(d ProfileSetupData) {
     </div>
     <div x-show="step === 2" class="setup-step" x-cloak>
      <label class="setup-field-label" for="setup-phone">Mobile number</label>
-     <div class="setup-phone-input"><span>+91</span><input x-bind:disabled="saving" class="setup-input" id="setup-phone" x-ref="phoneInput" name="phone" x-model="phone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="18" placeholder="Your 10-digit mobile number" x-bind:aria-invalid="!!error" aria-describedby="setup-error"/></div>
-     <p class="setup-field-hint">Used for delivery updates and calls from your rider.</p>
+     <div class="setup-phone-input"><span>+91</span><input x-bind:disabled="saving" class="setup-input" id="setup-phone" x-ref="phoneInput" name="phone" x-bind:value="phone" x-on:input="setPhone($event.target.value); $event.target.value = phone" x-on:paste="pastePhone($event)" type="tel" inputmode="numeric" autocomplete="tel-national" minlength="10" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="Your 10-digit mobile number" x-bind:aria-invalid="!!error" aria-describedby="setup-error"/></div>
+     <p class="setup-field-hint">Enter 10 digits. +91 is added automatically for delivery updates and calls from your rider.</p>
     </div>
     <div x-show="step === 3" class="setup-step" x-cloak>
      <div x-show="!hasPassword">

@@ -537,6 +537,7 @@ document.addEventListener('alpine:init', () => {
     step: 0, password: '', revealPassword: false, saving: false, complete: false,
     error: '', saveKey: '',
     init() {
+      this.setPhone(this.phone);
       if (!this.groups.some(g => g.id === this.interest)) this.interest = 'everyday';
       if (!this.options.some(a => a.id === this.avatar)) this.avatar = this.options[0].id;
       this.$watch('avatar', () => this.$nextTick(() => {
@@ -558,8 +559,29 @@ document.addEventListener('alpine:init', () => {
       'Add a password to sign in without waiting for an email code.',
       'The last detail. Tell us where to bring your favourites.',
     ][this.step]; },
-    get mobile() { let p = this.phone.replace(/[\s-]/g,''); if (p.startsWith('+91')) p=p.slice(3); else if (p.length===12 && p.startsWith('91')) p=p.slice(2); return p; },
-    get displayPhone() { return this.mobile ? '+91 ' + this.mobile : ''; },
+    phoneDigits(value) {
+      const raw = String(value || '').trim();
+      let digits = raw.replace(/\D/g, '');
+      if (raw.startsWith('+91') || (digits.length === 12 && digits.startsWith('91'))) digits = digits.slice(2);
+      return digits;
+    },
+    setPhone(value) { this.phone = this.phoneDigits(value).slice(0, 10); },
+    pastePhone(event) {
+      if (!event.clipboardData) return;
+      event.preventDefault();
+      const input = event.target, start = input.selectionStart ?? 0, end = input.selectionEnd ?? this.phone.length;
+      const digits = this.phoneDigits(event.clipboardData.getData('text'));
+      this.setPhone(this.phone.slice(0, start) + digits + this.phone.slice(end));
+      input.value = this.phone;
+      const caret = Math.min(start + digits.length, this.phone.length);
+      input.setSelectionRange(caret, caret);
+    },
+    get mobile() { return this.phoneDigits(this.phone); },
+    get displayPhone() {
+      const digits = this.mobile.slice(0, 10);
+      if (!digits) return '';
+      return '+91 ' + digits.slice(0, 2) + 'X'.repeat(Math.min(4, Math.max(0, digits.length - 2))) + digits.slice(6);
+    },
     chooseInterest(id) {
       if (this.saving) return;
       const group = this.groups.find(g => g.id === id);

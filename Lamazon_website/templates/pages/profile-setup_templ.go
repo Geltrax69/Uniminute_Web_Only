@@ -78,7 +78,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileSetupState(d))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 17, Col: 114}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 17, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -99,7 +99,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(profileSetupEmail(d))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 36, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 36, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -112,7 +112,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileAvatarURL(profileSetupAvatar(d)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 39, Col: 109}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 39, Col: 109}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -138,7 +138,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue("interest === " + jsonArg(group.ID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 64, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -151,7 +151,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("chooseInterest(" + jsonArg(group.ID) + ")")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 168}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 64, Col: 168}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -164,7 +164,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(group.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 184}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 64, Col: 184}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -183,7 +183,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></button></template></div></div><div x-show=\"step === 1\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-name\">Full name</label> <input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-name\" x-ref=\"nameInput\" name=\"name\" x-model=\"name\" autocomplete=\"name\" maxlength=\"100\" placeholder=\"What should we call you?\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><div x-show=\"step === 2\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-phone\">Mobile number</label><div class=\"setup-phone-input\"><span>+91</span><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-phone\" x-ref=\"phoneInput\" name=\"phone\" x-model=\"phone\" type=\"tel\" inputmode=\"tel\" autocomplete=\"tel-national\" maxlength=\"18\" placeholder=\"Your 10-digit mobile number\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><p class=\"setup-field-hint\">Used for delivery updates and calls from your rider.</p></div><div x-show=\"step === 3\" class=\"setup-step\" x-cloak><div x-show=\"!hasPassword\"><label class=\"setup-field-label\" for=\"setup-password\">Password <span>Optional</span></label><div class=\"setup-password-input\"><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-password\" x-ref=\"passwordInput\" name=\"password\" x-model=\"password\" x-bind:type=\"revealPassword ? 'text' : 'password'\" type=\"password\" autocomplete=\"new-password\" minlength=\"8\" maxlength=\"200\" placeholder=\"At least 8 characters\" aria-describedby=\"setup-error\"><button class=\"setup-reveal\" type=\"button\" x-on:click=\"revealPassword = !revealPassword\" x-bind:aria-label=\"revealPassword ? 'Hide password' : 'Show password'\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></button></template></div></div><div x-show=\"step === 1\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-name\">Full name</label> <input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-name\" x-ref=\"nameInput\" name=\"name\" x-model=\"name\" autocomplete=\"name\" maxlength=\"100\" placeholder=\"What should we call you?\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><div x-show=\"step === 2\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-phone\">Mobile number</label><div class=\"setup-phone-input\"><span>+91</span><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-phone\" x-ref=\"phoneInput\" name=\"phone\" x-bind:value=\"phone\" x-on:input=\"setPhone($event.target.value); $event.target.value = phone\" x-on:paste=\"pastePhone($event)\" type=\"tel\" inputmode=\"numeric\" autocomplete=\"tel-national\" minlength=\"10\" maxlength=\"10\" pattern=\"[6-9][0-9]{9}\" placeholder=\"Your 10-digit mobile number\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><p class=\"setup-field-hint\">Enter 10 digits. +91 is added automatically for delivery updates and calls from your rider.</p></div><div x-show=\"step === 3\" class=\"setup-step\" x-cloak><div x-show=\"!hasPassword\"><label class=\"setup-field-label\" for=\"setup-password\">Password <span>Optional</span></label><div class=\"setup-password-input\"><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-password\" x-ref=\"passwordInput\" name=\"password\" x-model=\"password\" x-bind:type=\"revealPassword ? 'text' : 'password'\" type=\"password\" autocomplete=\"new-password\" minlength=\"8\" maxlength=\"200\" placeholder=\"At least 8 characters\" aria-describedby=\"setup-error\"><button class=\"setup-reveal\" type=\"button\" x-on:click=\"revealPassword = !revealPassword\" x-bind:aria-label=\"revealPassword ? 'Hide password' : 'Show password'\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -229,7 +229,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("label === " + jsonArg(label))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 128}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 100, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 			if templ_7745c5c3_Err != nil {
@@ -242,7 +242,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("label = " + jsonArg(label) + "; saveKey = ''")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 190}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 100, Col: 190}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 			if templ_7745c5c3_Err != nil {
@@ -255,7 +255,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 200}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 100, Col: 200}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -289,7 +289,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileAvatarURL(profileSetupAvatar(d)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 113, Col: 110}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 113, Col: 110}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
@@ -310,7 +310,7 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 		var templ_7745c5c3_Var14 templ.SafeURL
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(d.Next))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 117, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 117, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
