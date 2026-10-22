@@ -167,7 +167,7 @@ ALTER TABLE seller_stores
     ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE seller_stores DROP CONSTRAINT IF EXISTS seller_stores_status_check;
 ALTER TABLE seller_stores ADD CONSTRAINT seller_stores_status_check
-    CHECK (status IN ('pending', 'approved', 'rejected'));
+    CHECK (status IN ('pending', 'approved', 'rejected', 'suspended'));
 
 -- Whoever runs Lamazon. Passwords are PBKDF2-SHA256 with a per-row salt, so
 -- the table never holds anything usable. Seeded from ADMIN_USER /

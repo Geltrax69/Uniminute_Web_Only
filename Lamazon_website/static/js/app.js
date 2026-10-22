@@ -722,6 +722,30 @@ document.addEventListener('alpine:init', () => {
     confirm(title, body, action, run, danger = false, cancel = 'Cancel') {
       this.open({ kind: 'confirm', title, body, action, run, danger, cancel });
     },
+    openBuyerDelete(id, email) {
+      this.open({kind:'delete-buyer',title:'Delete this buyer account?',id,email,confirmEmail:'',password:'',error:'',danger:true,action:'Delete user',busyLabel:'Deleting…',
+        ready:()=>this.dlg.confirmEmail.trim()===this.dlg.email && this.dlg.password.length>0,
+        run:()=>this.deleteBuyer(),
+      });
+    },
+    async deleteBuyer() {
+      if (this.dlg.busy || !this.dlg.ready()) return;
+      this.dlg.busy=true;this.dlg.error='';
+      try {
+        await sellerCall('DELETE',`/staff-api/admin/people/${encodeURIComponent(this.dlg.id)}`,{email:this.dlg.confirmEmail.trim(),password:this.dlg.password});
+        this.dlg.password='';this.$refs.dlg.close();lwReload('Buyer account deleted. Their next sign-in starts a new profile.');
+      } catch(err) {this.dlg.error=err.message;this.dlg.password='';}
+      finally {this.dlg.busy=false;}
+    },
+    suspendStore(owner, name) {
+      this.open({kind:'suspend-store',title:'Suspend this store?',body:`${name} and its products will be hidden from shoppers. New products and uploads will be blocked. The account, stock and existing orders remain available.`,value:'',danger:true,action:'Suspend store',busyLabel:'Suspending…',
+        ready:()=>this.dlg.value.trim().length>0,
+        run:()=>this.done('POST',`/stores/${encodeURIComponent(owner)}/suspend`,{reason:this.dlg.value.trim()},'Store suspended.'),
+      });
+    },
+    restoreStore(owner, name) {
+      this.confirm('Restore this store?',`${name} will be visible to shoppers again and its owner can add products. The existing inventory is retained.`,'Restore store',()=>this.done('POST',`/stores/${encodeURIComponent(owner)}/restore`,{},'Store restored.'));
+    },
     approve(owner, name) {
       this.confirm('Publish this store?', `${name || owner} will be visible to shoppers and able to list products.`,
         'Approve store', () => this.done('POST', `/stores/${encodeURIComponent(owner)}/approve`));

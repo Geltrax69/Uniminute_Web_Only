@@ -602,7 +602,7 @@ func reviewBanner(s backend.SellerStore) templ.Component {
 			templ_7745c5c3_Var20 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		rejected := s.Status == "rejected"
+		rejected := s.Status == "rejected" || s.Status == "suspended"
 		colour := tpl.When(rejected, "#B93643", "#9A5B12")
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<div class=\"mb-3 flex items-start rounded p-3.5\" style=\"")
 		if templ_7745c5c3_Err != nil {
@@ -656,9 +656,9 @@ func reviewBanner(s backend.SellerStore) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var24 string
-		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(tpl.When(rejected, "Your store was not approved", "Your store has been sent for review"))
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(tpl.When(s.Status == "suspended", "Your store is suspended", tpl.When(rejected, "Your store was not approved", "Your store has been sent for review")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller.templ`, Line: 185, Col: 176}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller.templ`, Line: 185, Col: 238}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -669,9 +669,9 @@ func reviewBanner(s backend.SellerStore) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(tpl.When(rejected, s.RejectReason+"\n\nFix that and save the store again to send it back for review.", "An admin is looking at it. You can add products as soon as it is approved — shoppers see it then too."))
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(tpl.When(s.Status == "suspended", s.RejectReason+"\n\nYour store and products are hidden. New products and uploads are blocked. Contact the admin to restore your store; editing it will not lift the suspension.", tpl.When(rejected, s.RejectReason+"\n\nFix that and save the store again to send it back for review.", "An admin is looking at it. You can add products as soon as it is approved — shoppers see it then too.")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller.templ`, Line: 186, Col: 290}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/seller.templ`, Line: 186, Col: 505}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {

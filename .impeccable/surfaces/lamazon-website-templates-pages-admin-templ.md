@@ -20,3 +20,13 @@ order-line counting definitions must remain visible. Private exports require
 admin authentication. Preview data is explicitly labelled synthetic/example.
 MFA requires human authenticator enrollment; never claim it is enabled before
 confirmation. Off-site automation/notification destinations remain external setup.
+
+People actions: buyer-only deletion requires exact email confirmation and the
+current admin password, with inline recoverable errors and a native modal.
+Revoke sessions and erase live profile data atomically; keep completed sale
+amounts with buyer details removed. Block deletion during active orders or
+recent unsettled payments. Store owners can only be suspended or restored:
+hide their store/products across public catalogues and block new products and
+uploads; retain accounts, inventory and operational order access. Record the
+suspension reason and show suspended stores in their own admin destination.
+Keep destructive actions explicitly labelled and separate from normal rows.

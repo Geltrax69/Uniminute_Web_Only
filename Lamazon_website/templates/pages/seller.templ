@@ -175,15 +175,15 @@ templ sellerDashboardBody(d SellerDashboardData) {
 
 // reviewBanner is _ReviewBanner: pending in amber, rejected in red with why.
 templ reviewBanner(s backend.SellerStore) {
-	{{ rejected := s.Status == "rejected" }}
+	{{ rejected := s.Status == "rejected" || s.Status == "suspended" }}
 	{{ colour := tpl.When(rejected, "#B93643", "#9A5B12") }}
 	<div class="mb-3 flex items-start rounded p-3.5" style={ templ.SafeCSS("background-color:" + tpl.RGBA(colour, .10)) }>
 		<span class="flex" style={ templ.SafeCSS("color:" + colour) }>
 			@ui.Icon(tpl.When(rejected, "circle-alert", "clock"), "h-[18px] w-[18px] shrink-0")
 		</span>
 		<div class="ml-2.5 min-w-0">
-			<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + colour) }>{ tpl.When(rejected, "Your store was not approved", "Your store has been sent for review") }</p>
-			<p class="mt-1 whitespace-pre-line text-[12.5px] leading-[1.4] text-text">{ tpl.When(rejected, s.RejectReason + "\n\nFix that and save the store again to send it back for review.", "An admin is looking at it. You can add products as soon as it is approved — shoppers see it then too.") }</p>
+			<p class="text-[13.5px] font-extrabold" style={ templ.SafeCSS("color:" + colour) }>{ tpl.When(s.Status == "suspended", "Your store is suspended", tpl.When(rejected, "Your store was not approved", "Your store has been sent for review")) }</p>
+			<p class="mt-1 whitespace-pre-line text-[12.5px] leading-[1.4] text-text">{ tpl.When(s.Status == "suspended", s.RejectReason + "\n\nYour store and products are hidden. New products and uploads are blocked. Contact the admin to restore your store; editing it will not lift the suspension.", tpl.When(rejected, s.RejectReason + "\n\nFix that and save the store again to send it back for review.", "An admin is looking at it. You can add products as soon as it is approved — shoppers see it then too.")) }</p>
 		</div>
 	</div>
 }

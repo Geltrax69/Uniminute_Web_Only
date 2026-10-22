@@ -220,6 +220,9 @@ func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if !a.lockAccountWrite(w, r, tx) {
+		return
+	}
 	if _, err = tx.ExecContext(r.Context(), `UPDATE users SET name=COALESCE($2,name),phone=COALESCE($3,phone),pass_hash=COALESCE($4,pass_hash),avatar=COALESCE($5,avatar),interest=COALESCE($6,interest),setup_request_id=CASE WHEN $7<>'' THEN $7 ELSE setup_request_id END WHERE email=$1`, email, in.Name, in.Phone, hash, in.Avatar, interest, in.SetupRequestID); err != nil {
 		writeError(w, 503, "could not update profile")
 		return
@@ -359,6 +362,9 @@ func (a *API) handleAddAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
+	if !a.lockAccountWrite(w, r, tx) {
+		return
+	}
 
 	// Serialize every address mutation for this owner, including the first save.
 	if _, err := tx.ExecContext(r.Context(), `SELECT 1 FROM users WHERE email=$1 FOR UPDATE`, email); err != nil {
@@ -479,6 +485,13 @@ func (d *DB) seedUser(ctx context.Context) error {
 	email := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_USER")))
 	pass := os.Getenv("SEED_USER_PASSWORD")
 	if email == "" || pass == "" {
+		return nil
+	}
+	var disabled bool
+	if err := d.sql.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM storefront_migrations WHERE id='shopper-bootstrap-disabled')`).Scan(&disabled); err != nil {
+		return err
+	}
+	if disabled {
 		return nil
 	}
 	hash, err := hashPassword(pass)

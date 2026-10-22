@@ -177,6 +177,7 @@ const productQuery = `
 		       p.image_url, p.store,
 		       p.description, p.image_url AS photos, NULL::int AS available_stock, p.public_id
 		FROM products p
+        WHERE NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=p.store AND s.status='suspended')
 		UNION ALL
 		SELECT i.id, i.title, COALESCE(NULLIF(i.category, ''), 'Food'),
 		       -- The department, not the category. These used to be the same
@@ -201,7 +202,7 @@ const productQuery = `
 	       p.image_url, p.store, p.description, p.photos,
 	       COALESCE((SELECT json_agg(json_build_object('store', o.store, 'price', o.price)
 	                                 ORDER BY o.store)
-	                 FROM offers o WHERE o.product_id = p.id), '[]'), p.available_stock, p.public_id
+	                 FROM offers o WHERE o.product_id = p.id AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND s.status='suspended')), '[]'), p.available_stock, p.public_id
 	FROM catalogue p
 	WHERE ($1::text = '' OR p.id = $1 OR p.public_id = $1)
 	  AND ($2::text = '' OR p.tab ILIKE $2)
@@ -211,7 +212,7 @@ const productQuery = `
 	                     OR p.store ILIKE '%' || $4 || '%')
 	  AND ($5::text = '' OR p.store ILIKE $5
 	       OR EXISTS (SELECT 1 FROM offers o
-	                  WHERE o.product_id = p.id AND o.store ILIKE $5))
+	                  WHERE o.product_id = p.id AND o.store ILIKE $5 AND NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=o.store AND s.status='suspended')))
 	ORDER BY p.id`
 
 func (d *DB) products(ctx context.Context, f productFilter) ([]Product, error) {
@@ -276,7 +277,8 @@ func (d *DB) product(ctx context.Context, id string) (Product, error) {
 // store someone opens shows up next to the sample ones rather than nowhere.
 func (d *DB) shops(ctx context.Context) ([]Shop, error) {
 	rows, err := d.sql.QueryContext(ctx, `
-		SELECT name, tagline, image_url, tab FROM shops
+		SELECT sh.name, sh.tagline, sh.image_url, sh.tab FROM shops sh
+        WHERE NOT EXISTS(SELECT 1 FROM seller_stores s WHERE s.name=sh.name AND s.status='suspended')
 		UNION ALL
 		SELECT s.name,
 		       COALESCE(NULLIF(array_to_string(s.categories, ', '), ''), s.location),

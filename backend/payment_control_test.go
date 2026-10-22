@@ -31,6 +31,9 @@ func controlCall(h http.Handler, in paymentControl, secret string) (int, map[str
 func TestPaymentReservationConcurrentRefreshAndRestart(t *testing.T) {
 	t.Setenv("RAZORPAY_KEY_SECRET", "fixture-secret")
 	db := testDB(t)
+	if _, err := db.sql.Exec(`INSERT INTO users(email) VALUES('buyer@example.test')`); err != nil {
+		t.Fatal(err)
+	}
 	h := routes(&API{db: db})
 	in := paymentControl{Operation: "reserve", Account: "buyer@example.test", Fingerprint: strings.Repeat("a", 64), CartID: "cart-fixture", Amount: 100}
 	var wg sync.WaitGroup
@@ -73,6 +76,9 @@ func TestPaymentReservationConcurrentRefreshAndRestart(t *testing.T) {
 func TestPaymentControlAuthenticationLimitsAndUnknownAttempt(t *testing.T) {
 	t.Setenv("RAZORPAY_KEY_SECRET", "fixture-secret")
 	db := testDB(t)
+	if _, err := db.sql.Exec(`INSERT INTO users(email) VALUES('buyer@example.test')`); err != nil {
+		t.Fatal(err)
+	}
 	h := routes(&API{db: db})
 	in := paymentControl{Operation: "reserve", Account: "buyer@example.test", Fingerprint: strings.Repeat("b", 64), CartID: "cart-fixture", Amount: 100}
 	if status, _, _ := controlCall(h, in, "forged"); status != 401 {

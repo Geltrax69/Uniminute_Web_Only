@@ -211,6 +211,9 @@ func (a *API) placeBasket(w http.ResponseWriter, r *http.Request, lines []checko
 		return
 	}
 	defer tx.Rollback()
+	if !a.lockAccountWrite(w, r, tx) {
+		return
+	}
 	// Deterministic locks prevent baskets with reversed item order deadlocking.
 	sort.Slice(lines, func(i, j int) bool { return lines[i].ItemID < lines[j].ItemID })
 	fingerprintBytes, _ := json.Marshal(struct {

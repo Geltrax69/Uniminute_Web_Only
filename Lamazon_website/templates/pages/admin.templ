@@ -130,7 +130,7 @@ type adminTab struct {
 
 var adminTabs = []adminTab{
  {"reports","Reports",false},
-	{"review", "To review", true}, {"approved", "Approved", true}, {"rejected", "Rejected", true},
+	{"review", "To review", true}, {"approved", "Approved", true}, {"suspended", "Suspended", true}, {"rejected", "Rejected", true},
 	{"orders", "Orders", false}, {"reviews", "Reviews", false}, {"products", "Products", false}, {"insights", "Insights", false},
 	{"classification", "Category checks", false}, {"categories", "Categories", false}, {"banners", "Banners", false}, {"compare", "Compare", false},
 	{"policies", "Policies", false}, {"charges", "Charges", false}, {"delivery", "Delivery", false},
@@ -268,7 +268,7 @@ templ adminSection(d AdminData) {
  @adminReports(d)
  case "security":
  @adminSecurity(d)
-		case "review", "approved", "rejected":
+		case "review", "approved", "suspended", "rejected":
 			@adminNote(storeNote(d.Tab))
 			if d.activeCount() == 0 {
 				@adminEmpty(storeEmpty(d.Tab))
@@ -353,7 +353,7 @@ templ adminSection(d AdminData) {
 				}
 			}
 		case "people":
-			@adminNote("Everyone who has signed in. Selling is not a setting — it follows from owning a store.")
+			@adminNote("Delete buyer-only accounts to restart their signup. Store owners can be suspended or restored; their accounts and business records stay intact.")
 			if len(d.people()) == 0 {
 				@adminEmpty("Nobody has signed in yet.")
 			} else {
@@ -397,7 +397,7 @@ templ storeCard(s map[string]any, tab string) {
 	<div class="mb-2.5 rounded-featured bg-white p-3.5">
 		<div class="flex items-center">
 			<p class="min-w-0 flex-1 text-[15px] font-extrabold text-text">{ name }</p>
-			@pill(tpl.When(status == "approved", "Live in the shop", tpl.When(status == "rejected", "Rejected", "Waiting for review")), colour)
+			@pill(tpl.When(status == "approved", "Live in the shop", tpl.When(status == "suspended", "Suspended", tpl.When(status == "rejected", "Rejected", "Waiting for review"))), colour)
 		</div>
 		<p class="mt-1 text-[12px] text-muted">{ joinNonEmpty(" · ", owner, sv(s, "phone")) }</p>
 		<p class="text-[12px] text-muted">{ sv(s, "location") }, { sv(s, "city") } · { strings.Join(strs(s["categories"]), ", ") } · { sv(s, "items") } { tpl.When(sv(s, "items") == "1", "product", "products") }</p>
@@ -405,14 +405,19 @@ templ storeCard(s map[string]any, tab string) {
 			<p class="mt-1 text-[12px] text-danger">Reason: { sv(s, "rejectReason") }</p>
 		}
 		<div class="mt-3 flex flex-wrap gap-2.5">
-			if tab != "approved" {
+			if status == "suspended" {
+				<button type="button" x-on:click={ "restoreStore(" + jsonArg(owner) + ", " + jsonArg(name) + ")" } class="min-h-touch rounded-full bg-strong px-5 text-label text-white">Restore store</button>
+			} else if tab != "approved" {
 				<button type="button" x-on:click={ "approve(" + jsonArg(owner) + ", " + jsonArg(name) + ")" } class="h-10 rounded-full bg-strong px-6 text-[14px] font-medium text-white hover:brightness-110">Approve</button>
 			}
-			if tab != "rejected" {
+			if tab != "rejected" && status != "suspended" {
 				<button type="button" x-on:click={ "openReject(" + jsonArg(owner) + ")" } class="h-10 rounded-full border border-track px-6 text-[14px] font-medium text-danger hover:bg-danger/[.04]">Reject</button>
 			}
 		</div>
 		<div class="mt-1 flex flex-wrap items-center gap-1">
+            if status == "approved" {
+                <button type="button" class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-danger" x-on:click={ "suspendStore(" + jsonArg(owner) + ", " + jsonArg(name) + ")" }>Suspend store</button>
+            }
 			<a href={ templ.SafeURL("/admin/stores/" + url.PathEscape(owner) + "/photos?name=" + url.QueryEscape(name)) } class="inline-flex min-h-touch items-center rounded-full px-3 text-label text-text hover:bg-strong/[.06]">
 				@ui.Icon("images", "h-[15px] w-[15px]")
 				<span class="ml-2">Photos</span>
@@ -826,16 +831,32 @@ templ riderRow(r map[string]any) {
 }
 
 templ personRow(p map[string]any) {
-	{{ seller := sv(p, "storeName") != "" }}
-	<div class="mb-2 rounded bg-white p-3">
-		<div class="flex items-start">
-			<p class="min-w-0 flex-1 text-[13px] font-semibold text-text">{ sv(p, "email") }</p>
-			<span class="ml-2">
-				@pill(tpl.When(seller, "Buyer + Seller", "Buyer"), tpl.When(seller, "#1D4939", "#66716A"))
-			</span>
-		</div>
-		<p class="mt-[3px] text-[11.5px] text-muted">{ joinNonEmpty(" · ", sv(p, "id"), sv(p, "name"), sv(p, "phone"), tpl.When(seller, sv(p, "storeName")+" ("+sv(p, "storeStatus")+")", "")) }</p>
-	</div>
+ {{ seller := sv(p,"storeName") != "" }}
+ {{ status := sv(p,"storeStatus") }}
+ <div class="mb-2 rounded bg-white p-3" data-person-id={ sv(p,"id") }>
+  <div class="flex items-start gap-2">
+   <p class="min-w-0 flex-1 break-all text-[13px] font-semibold text-text">{ sv(p,"email") }</p>
+   @pill(tpl.When(seller,"Buyer + Seller","Buyer"),tpl.When(seller,"#1D4939","#66716A"))
+  </div>
+  <p class="mt-1 break-words text-[11.5px] text-muted">{ joinNonEmpty(" · ",sv(p,"id"),sv(p,"name"),sv(p,"phone"),tpl.When(seller,sv(p,"storeName")+" ("+status+")","")) }</p>
+  <div class="mt-2 flex flex-wrap items-center justify-end gap-2">
+   if seller {
+    if status == "suspended" {
+     <span class="mr-auto text-[12px] font-semibold text-danger">Store suspended</span>
+     <button type="button" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-on:click={ "restoreStore("+jsonArg(sv(p,"email"))+","+jsonArg(sv(p,"storeName"))+")" }>Restore store</button>
+    } else if status == "approved" {
+     <button type="button" class="min-h-touch rounded-full px-3 text-label text-danger hover:bg-danger/[.04]" x-on:click={ "suspendStore("+jsonArg(sv(p,"email"))+","+jsonArg(sv(p,"storeName"))+")" }>Suspend store</button>
+    } else {
+     <span class="text-[12px] text-muted">Store already hidden · { status }</span>
+    }
+   } else {
+    <button type="button" class="inline-flex min-h-touch items-center gap-2 rounded-full px-3 text-label text-danger hover:bg-danger/[.04]" x-on:click={ "openBuyerDelete("+jsonArg(sv(p,"id"))+","+jsonArg(sv(p,"email"))+")" }>
+     @ui.Icon("trash-2","h-4 w-4")
+     <span>Delete user</span>
+    </button>
+   }
+  </div>
+ </div>
 }
 
 templ adminPagination(d AdminData) {
@@ -864,8 +885,28 @@ templ adminPagination(d AdminData) {
 
 // adminDialog is the panel's one AlertDialog; `dlg.kind` decides its body.
 templ adminDialog() {
-	<dialog x-ref="dlg" class="max-h-[90vh] w-[min(460px,92vw)] overflow-y-auto rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40" x-on:close="dlg.kind = ''">
-		<p class="text-[22px] leading-7 text-text" x-text="dlg.title"></p>
+	<dialog x-ref="dlg" aria-labelledby="admin-dialog-title" class="max-h-[90dvh] w-[min(460px,92vw)] overflow-y-auto rounded-[28px] bg-surface p-6 text-text backdrop:bg-black/40" x-on:close="dlg.password = ''; dlg.kind = ''" x-on:cancel="if (dlg.busy) $event.preventDefault()">
+		<h2 id="admin-dialog-title" class="text-[22px] leading-7 text-text" x-text="dlg.title"></h2>
+        <template x-if="dlg.kind === 'delete-buyer'">
+         <div>
+          <p class="mt-4 break-words text-[14px] font-semibold" x-text="dlg.email"></p>
+          <p class="mt-3 text-[13px] leading-5 text-muted">Deletes the live profile, password, avatar, addresses, sessions, notifications and reviews. Their next sign-in starts with email verification and profile setup.</p>
+          <p class="mt-2 text-[12px] leading-5 text-muted">Completed sales keep their amounts with buyer details removed. Active orders or recent unsettled payments block deletion. Existing backups expire under the backup retention policy.</p>
+          <label for="delete-buyer-confirm" class="mt-4 block text-[13px] font-semibold">Type the buyer’s email to confirm</label>
+          <input id="delete-buyer-confirm" type="email" autocomplete="off" x-model="dlg.confirmEmail" x-bind:disabled="dlg.busy" class="mt-2 h-12 w-full rounded-small bg-canvas px-3 text-body outline-none focus:ring-2 focus:ring-strong"/>
+          <label for="delete-buyer-password" class="mt-4 block text-[13px] font-semibold">Your admin password</label>
+          <input id="delete-buyer-password" type="password" autocomplete="current-password" x-model="dlg.password" x-bind:disabled="dlg.busy" class="mt-2 h-12 w-full rounded-small bg-canvas px-3 text-body outline-none focus:ring-2 focus:ring-strong"/>
+          <p role="alert" x-show="dlg.error" x-text="dlg.error" class="mt-3 text-[13px] text-danger"></p>
+         </div>
+        </template>
+        <template x-if="dlg.kind === 'suspend-store'">
+         <div>
+          <p class="mt-4 break-words text-[13px] leading-5 text-muted" x-text="dlg.body"></p>
+          <label for="store-suspension-reason" class="mt-4 block text-[13px] font-semibold">Reason shown to the seller</label>
+          <textarea id="store-suspension-reason" x-model="dlg.value" maxlength="500" rows="3" class="mt-2 w-full rounded-small bg-canvas p-3 text-body outline-none focus:ring-2 focus:ring-strong"></textarea>
+         </div>
+        </template>
+
 		<template x-if="dlg.kind === 'confirm'">
 			<p class="mt-4 whitespace-pre-line text-[13.5px] leading-[1.4] text-muted" x-text="dlg.body"></p>
 		</template>
@@ -996,8 +1037,8 @@ templ adminDialog() {
 			<p class="mt-4 whitespace-pre-line text-[15px] leading-[1.5] text-text" x-text="dlg.body"></p>
 		</template>
 		<div class="mt-6 flex flex-wrap justify-end gap-2">
-			<button type="button" x-show="dlg.cancel" x-on:click="$refs.dlg.close()" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-text="dlg.cancel"></button>
-			<button type="button" x-show="dlg.action" x-on:click="dlg.run()" x-bind:disabled="!!(dlg.busy || (dlg.ready && !dlg.ready()))" class="min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40" x-bind:class="dlg.danger ? 'bg-danger' : 'bg-forest'" x-text="dlg.action"></button>
+			<button type="button" x-show="dlg.cancel" x-on:click="$refs.dlg.close()" x-bind:disabled="!!dlg.busy" class="min-h-touch rounded-full px-3 text-label text-strong hover:bg-strong/[.06]" x-text="dlg.cancel"></button>
+			<button type="button" x-show="dlg.action" x-on:click="dlg.run()" x-bind:disabled="!!(dlg.busy || (dlg.ready && !dlg.ready()))" class="min-h-10 rounded-full px-6 text-[14px] font-medium text-white disabled:opacity-40" x-bind:class="dlg.danger ? 'bg-danger' : 'bg-forest'" x-bind:aria-busy="!!dlg.busy" x-text="dlg.busy ? (dlg.busyLabel || 'Please wait…') : dlg.action"></button>
 		</div>
 	</dialog>
 }
@@ -1044,7 +1085,7 @@ templ classificationIssueRow(issue backend.ClassificationIssue) {
 func (d AdminData) Counts() map[string]int {
 	return map[string]int{
 		"review": len(d.storesWith("pending")), "approved": len(d.storesWith("approved")),
-		"rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
+		"suspended": len(d.storesWith("suspended")), "rejected": len(d.storesWith("rejected")), "orders": len(d.Orders), "products": len(d.Items),
 		"insights": len(lv(d.Insights, "topStores")), "banners": len(d.Campaigns),
 		"categories": len(d.Departments), "policies": len(d.Policies), "compare": len(d.Groups),
 		"classification": len(d.CatalogueAudit.Review) + len(d.CatalogueAudit.Duplicates),
@@ -1067,7 +1108,7 @@ func (d AdminData) people() []map[string]any { return maps(lv(d.Overview, "peopl
 
 func (d AdminData) hasTable() bool {
 	switch d.Tab {
-	case "products", "review", "approved", "rejected", "orders", "delivery", "people":
+	case "products", "review", "approved", "suspended", "rejected", "orders", "delivery", "people":
 		return true
 	}
 	return false
@@ -1080,6 +1121,8 @@ func (d AdminData) activeRows() []map[string]any {
 		return d.storesWith("pending")
 	case "approved":
 		return d.storesWith("approved")
+	case "suspended":
+		return d.storesWith("suspended")
 	case "rejected":
 		return d.storesWith("rejected")
 	case "orders":
@@ -1267,6 +1310,8 @@ func storeNote(tab string) string {
 	switch tab {
 	case "approved":
 		return "Live on the shop page and taking orders."
+	case "suspended":
+		return "Hidden from shoppers and blocked from adding products. Existing orders and stock are preserved. Only an admin can restore a suspended store."
 	case "rejected":
 		return "The seller sees the reason and can edit their store to send it back for another look."
 	}
@@ -1277,6 +1322,8 @@ func storeEmpty(tab string) string {
 	switch tab {
 	case "approved":
 		return "No approved stores yet."
+	case "suspended":
+		return "No suspended stores."
 	case "rejected":
 		return "Nothing rejected."
 	}

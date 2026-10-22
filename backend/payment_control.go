@@ -101,6 +101,18 @@ func (a *API) handlePaymentControl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	var accountLocked bool
+	if err = tx.QueryRowContext(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1,0))`, "account-lifecycle:"+in.Account).Scan(&accountLocked); err != nil || !accountLocked {
+		w.Header().Set("Retry-After", "2")
+		writeError(w, 409, "The account is being updated. Wait a moment and try again.")
+		return
+	}
+	var accountExists bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)`, in.Account).Scan(&accountExists); err != nil || !accountExists {
+		writeError(w, 401, "This payment account is no longer available. Sign in again.")
+		return
+	}
+
 	// Try rather than queue on a busy account. Aborted HTTP requests cannot leave
 	// a process mutex or a leased database connection locked.
 	var locked bool

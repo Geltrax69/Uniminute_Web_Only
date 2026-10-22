@@ -63,7 +63,7 @@ func (c *readCache) getRaw(token, path string, fetch func(context.Context) ([]by
 			c.mu.Unlock()
 			return e.raw, nil
 		}
-		if age < stale {
+		if age < stale && !catalogVisibilityRead(path) {
 			if !e.refreshing {
 				e.refreshing = true
 				// Detached: the refresh must outlive the request that noticed it.
@@ -94,4 +94,10 @@ func (c *readCache) getRaw(token, path string, fetch func(context.Context) ([]by
 	}
 	c.mu.Unlock()
 	return raw, nil
+}
+
+// Visibility decisions must not be served from the ten-minute stale window.
+// Other instances may have suspended a store since this instance last read it.
+func catalogVisibilityRead(path string) bool {
+	return strings.HasPrefix(path, "/api/products") || strings.HasPrefix(path, "/api/shops") || strings.HasPrefix(path, "/api/compare?")
 }

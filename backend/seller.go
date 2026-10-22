@@ -48,11 +48,21 @@ func (a *API) handleCreateStore(w http.ResponseWriter, r *http.Request) {
 		in.PhotoURL = url
 	}
 
+	tx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "Could not save store.")
+		return
+	}
+	defer tx.Rollback()
+	if !a.lockAccountWrite(w, r, tx) {
+		return
+	}
+
 	// COALESCE keeps an existing photo when this call did not carry one.
 	//
 	// Editing a store that was rejected sends it back for review; editing an
 	// approved one does not, so a live shop is not taken down by a typo fix.
-	if err := a.db.sql.QueryRowContext(r.Context(), `
+	if err := tx.QueryRowContext(r.Context(), `
 		INSERT INTO seller_stores (owner, name, location, city, categories, photo_url)
 		VALUES ($1,$2,$3,$4,$5,$6)
 		ON CONFLICT (owner) DO UPDATE SET
@@ -69,6 +79,11 @@ func (a *API) handleCreateStore(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not save or load store data — try again")
 		return
 	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, 503, "Could not commit store.")
+		return
+	}
+
 	if in.Status == "pending" {
 		a.notify(r.Context(), in.Owner, in.Name+" has been sent for review",
 			"Thanks for opening "+in.Name+" on Uniminute. An admin is looking at it "+
@@ -113,8 +128,15 @@ func (a *API) requireApprovedStore(w http.ResponseWriter, r *http.Request) (Sell
 		writeError(w, http.StatusForbidden,
 			"your store was not approved: "+store.RejectReason)
 		return store, false
+	case "approved":
+		return store, true
+	case "suspended":
+		writeError(w, 403, "Your store is suspended. New products and uploads are blocked until an admin restores it.")
+		return store, false
+	default:
+		writeError(w, 403, "Your store is not approved for new products.")
+		return store, false
 	}
-	return store, true
 }
 
 // GET /api/seller/items — inventory plus the derived summary.
@@ -221,8 +243,20 @@ func (a *API) handleAddItem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	itemTx, err := a.db.sql.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, 503, "Could not save product.")
+		return
+	}
+	defer itemTx.Rollback()
+	var liveStatus string
+	if err = itemTx.QueryRowContext(r.Context(), `SELECT status FROM seller_stores WHERE owner=$1 FOR SHARE`, a.owner(r)).Scan(&liveStatus); err != nil || liveStatus != "approved" {
+		writeError(w, 403, "Your store is not approved for new products. Reload your store dashboard.")
+		return
+	}
+
 	// The id comes from the sequence, so concurrent adds cannot collide.
-	err = a.db.sql.QueryRowContext(r.Context(), `
+	err = itemTx.QueryRowContext(r.Context(), `
 		INSERT INTO inventory_items
 			(owner, title, description, category, price, mrp, options, variant_prices,
 			 compare_group, attributes, stock, image_urls)
@@ -241,6 +275,11 @@ func (a *API) handleAddItem(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not save or load store data — try again")
 		return
 	}
+	if err = itemTx.Commit(); err != nil {
+		writeError(w, 503, "Could not commit product.")
+		return
+	}
+
 	in.Status = stockStatus(in.Stock)
 	writeJSON(w, http.StatusCreated, in)
 }

@@ -72,3 +72,14 @@ func TestFreshSkipsCache(t *testing.T) {
 		t.Fatalf("fresh read was served from the cache")
 	}
 }
+
+func TestCatalogueVisibilityDoesNotUseStaleWindow(t *testing.T) {
+	c := &readCache{entries: map[string]*cached{}}
+	for _, path := range []string{"/api/products", "/api/products/public-id", "/api/shops", "/api/shops/Shop/products", "/api/compare?group=Chargers"} {
+		c.entries[key("", path)] = &cached{raw: []byte("old public listing"), at: time.Now().Add(-fresh - time.Second)}
+		got, err := c.getRaw("", path, func(context.Context) ([]byte, error) { return []byte("store suspended"), nil }, context.Background())
+		if err != nil || string(got) != "store suspended" {
+			t.Fatalf("stale catalogue visibility: %s", path)
+		}
+	}
+}
