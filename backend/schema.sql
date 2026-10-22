@@ -841,3 +841,8 @@ ALTER TABLE admins ADD COLUMN IF NOT EXISTS mfa_secret text NOT NULL DEFAULT '',
 CREATE INDEX IF NOT EXISTS idx_orders_report_placed ON orders(placed_at);
 CREATE INDEX IF NOT EXISTS idx_orders_report_delivered ON orders(delivered_at) WHERE stage='delivered';
 CREATE INDEX IF NOT EXISTS idx_reviews_report_updated ON order_reviews(updated_at);
+
+-- Profile-card artwork and the last completed setup save (scoped to its owner).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS interest TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS setup_request_id TEXT NOT NULL DEFAULT '';

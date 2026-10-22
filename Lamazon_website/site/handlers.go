@@ -2147,42 +2147,58 @@ func (s *Site) handleProfileSetupPage(w http.ResponseWriter, r *http.Request) {
 	renderOK(w, r, pages.ProfileSetup(d))
 }
 
-// handleProfileSetup saves the details, then the first address, in that
-// order, the way the app does.
+// Profile details and the default address commit together in the backend.
 func (s *Site) handleProfileSetup(w http.ResponseWriter, r *http.Request) {
+	jsonReply := strings.Contains(r.Header.Get("Accept"), "application/json")
+	fail := func(status int, message string) {
+		if jsonReply {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+			return
+		}
+		errorToast(w, message)
+		w.WriteHeader(http.StatusOK)
+	}
 	p := s.buildPage(r)
 	if p.User == nil {
+		if jsonReply {
+			fail(401, "Your session expired. Sign in again to finish your profile.")
+			return
+		}
 		redirect(w, r, "/login?next=/profile/setup")
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		fail(400, "Could not read your details. Please try again.")
 		return
 	}
-	name := strings.TrimSpace(r.FormValue("name"))
-	phone := strings.TrimSpace(r.FormValue("phone"))
-	changes := map[string]any{"name": name, "phone": phone}
-	if pw := r.FormValue("password"); pw != "" {
-		changes["password"] = pw
+	name, phone := strings.TrimSpace(r.FormValue("name")), strings.TrimSpace(r.FormValue("phone"))
+	changes := map[string]any{"name": name, "phone": phone, "setupRequestId": r.FormValue("setupRequestId"), "setupAddress": backend.Address{
+		Label: r.FormValue("label"), Line: strings.TrimSpace(r.FormValue("line")), City: r.FormValue("city"), Name: name, Phone: phone,
+	}}
+	if avatar := r.FormValue("avatar"); avatar != "" {
+		changes["avatar"] = avatar
+	}
+	if password := r.FormValue("password"); password != "" {
+		changes["password"] = password
 	}
 	if err := s.backend.UpdateMe(r.Context(), p.AccessToken, changes); err != nil {
-		errorToast(w, apiMessage(err))
-		w.WriteHeader(http.StatusOK)
+		status := 503
+		var apiErr *backend.APIError
+		if errors.As(err, &apiErr) {
+			status = apiErr.Status
+		}
+		fail(status, apiMessage(err))
 		return
 	}
-	addr := backend.Address{
-		Label: r.FormValue("label"),
-		Line:  strings.TrimSpace(r.FormValue("line")),
-		City:  r.FormValue("city"),
-		Name:  name,
-		Phone: phone,
-	}
-	if _, err := s.backend.SaveAddress(r.Context(), p.AccessToken, addr, ""); err != nil {
-		errorToast(w, apiMessage(err))
-		w.WriteHeader(http.StatusOK)
+	next := localPath(r.FormValue("next"))
+	if jsonReply {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"saved": true, "redirect": next})
 		return
 	}
-	redirect(w, r, localPath(r.FormValue("next")))
+	redirect(w, r, next)
 }
 
 // afterSignIn sends a first-time shopper through "Your details" before

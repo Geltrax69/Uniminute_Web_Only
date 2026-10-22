@@ -530,6 +530,97 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  // A live profile card with five keyboard-friendly steps. Passwords stay in
+  // memory only and are cleared after an acknowledged save.
+  Alpine.data('profileSetup', (cfg) => ({
+    ...cfg,
+    step: 0, password: '', revealPassword: false, saving: false, complete: false,
+    error: '', saveKey: '',
+    init() {
+      if (!this.groups.some(g => g.id === this.interest)) this.interest = 'everyday';
+      if (!this.options.some(a => a.id === this.avatar)) this.avatar = this.options[0].id;
+      this.$watch('avatar', () => this.$nextTick(() => {
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          this.$el.querySelector('.profile-card-avatar')?.animate([{opacity:.55},{opacity:1}], {duration:140,easing:'ease-out'});
+        }
+      }));
+    },
+    get options() { return this.groups.find(g => g.id === this.interest)?.avatars || []; },
+    get interestLabel() { return this.groups.find(g => g.id === this.interest)?.label || 'Everyday shopper'; },
+    get avatarURL() { return '/static/images/avatars/' + this.avatar + '.png'; },
+    get progress() { return this.complete ? 100 : [20,40,60,80,95][this.step]; },
+    get stepLabel() { return ['Your avatar','Your name','Mobile number','Optional password','Delivery address'][this.step]; },
+    get title() { return ['Make it yours.','What should we call you?','Let’s stay in touch.','Keep a little secret.','Where should we deliver?'][this.step]; },
+    get description() { return [
+      'Pick a world you love. Then choose a face for your card.',
+      'Your name makes this card yours.',
+      'So your rider can reach you when your order arrives.',
+      'Add a password to sign in without waiting for an email code.',
+      'The last detail. Tell us where to bring your favourites.',
+    ][this.step]; },
+    get mobile() { let p = this.phone.replace(/[\s-]/g,''); if (p.startsWith('+91')) p=p.slice(3); else if (p.length===12 && p.startsWith('91')) p=p.slice(2); return p; },
+    get displayPhone() { return this.mobile ? '+91 ' + this.mobile : ''; },
+    chooseInterest(id) {
+      if (this.saving) return;
+      const group = this.groups.find(g => g.id === id);
+      if (!group) return;
+      this.interest = id;
+      if (!group.avatars.some(a => a.id === this.avatar)) this.avatar = group.avatars[0].id;
+      this.saveKey = ''; this.error = '';
+    },
+    focusStep() {
+      this.$nextTick(() => {
+        const input = [null,this.$refs.nameInput,this.$refs.phoneInput,this.hasPassword ? null : this.$refs.passwordInput,this.$refs.addressInput][this.step];
+        (input || this.$refs.stepTitle)?.focus({preventScroll:true});
+        input?.scrollIntoView({block:'nearest',behavior:'instant'});
+      });
+    },
+    back() { if (this.saving || this.step===0) return; this.step--; this.error=''; this.revealPassword=false; this.focusStep(); },
+    validation() {
+      if (this.step===1 && (!this.name.trim() || Array.from(this.name.trim()).length>100 || /[<>]/.test(this.name))) return 'Enter your name, up to 100 characters.';
+      if (this.step===2 && !/^[6-9]\d{9}$/.test(this.mobile)) return 'Enter a valid 10-digit Indian mobile number.';
+      if (this.step===3 && !this.hasPassword && this.password && (this.password.length<8 || this.password.length>200)) return 'Use at least 8 characters, or leave the password empty to skip.';
+      if (this.step===4 && (!this.line.trim() || Array.from(this.line.trim()).length>300 || /[<>]/.test(this.line))) return 'Add your hostel and room, or block and shop, up to 300 characters.';
+      if (this.step===4 && !this.city) return 'Delivery locations are unavailable. Reload this page and try again.';
+      return '';
+    },
+    async advance() {
+      if (this.saving || this.complete) return;
+      this.error=this.validation();
+      if (this.error) { this.focusStep(); return; }
+      if (this.step<4) { this.step++; this.revealPassword=false; this.focusStep(); return; }
+      await this.save();
+    },
+    async savedAfterTimeout() {
+      const [me,addresses] = await Promise.all([fetch('/api/me',{cache:'no-store'}),fetch('/api/addresses',{cache:'no-store'})]);
+      if (!me.ok || !addresses.ok) return false;
+      const user=await me.json(), list=await addresses.json();
+      return user.ready && user.name===this.name.trim() && user.phone===this.mobile && user.avatar===this.avatar &&
+        (!this.password || user.hasPassword) && Array.isArray(list) && list.some(a=>a.line===this.line.trim() && a.city===this.city);
+    },
+    finish(target) {
+      this.complete=true; this.password=''; this.revealPassword=false;
+      if (target && target.startsWith('/') && !target.startsWith('//')) this.next=target;
+      this.$nextTick(()=>{ this.$refs.successTitle?.focus({preventScroll:true}); window.scrollTo({top:0,behavior:'instant'}); });
+    },
+    async save() {
+      if (this.saving || this.complete) return;
+      this.saving=true; this.error=''; this.saveKey ||= crypto.randomUUID();
+      const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),20000);
+      const body=new URLSearchParams({name:this.name.trim(),phone:this.mobile,line:this.line.trim(),label:this.label,city:this.city,avatar:this.avatar,next:this.next,setupRequestId:this.saveKey});
+      if (!this.hasPassword && this.password) body.set('password',this.password);
+      try {
+        const response=await fetch('/profile/setup',{method:'POST',headers:{Accept:'application/json'},body,signal:controller.signal});
+        const result=await response.json();
+        if (!response.ok || !result.saved) { this.error=result.error || 'Your profile could not be saved. Please try again.'; return; }
+        this.finish(result.redirect);
+      } catch (err) {
+        try { if (await this.savedAfterTimeout()) { this.finish(this.next); return; } } catch {}
+        this.error=err.name==='AbortError' ? 'The connection is taking too long. Your details are still here; try again.' : 'We could not confirm your save. Check your connection and try again.';
+      } finally { clearTimeout(timer); this.saving=false; }
+    },
+  }));
+
   // ── seller: store form (SellerOnboardingScreen) ──────────────────────────
   Alpine.data('sellerStoreForm', (cfg) => ({
     ...cfg,

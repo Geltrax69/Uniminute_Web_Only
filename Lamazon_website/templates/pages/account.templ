@@ -53,7 +53,11 @@ templ accountBody(d AccountPageData) {
 			}
 		}
 		<div class="mx-auto mt-[18px] flex h-[92px] w-[92px] items-center justify-center rounded-full bg-white text-text">
-			@ui.Icon("user", "h-11 w-11")
+			if p.User != nil && p.User.Avatar != "" {
+                <img src={ profileAvatarURL(p.User.Avatar) } alt="Your avatar" width="92" height="92" class="h-full w-full rounded-full object-contain"/>
+            } else {
+                @ui.Icon("user", "h-11 w-11")
+            }
 		</div>
 		<h1 class="mt-3.5 text-center text-[24px] font-extrabold text-text">{ profileName(p) }</h1>
 		<p class="mt-1 text-center text-[14px] text-muted">{ tpl.When(p.User != nil, profileEmail(p), "Log in to view your complete profile") }</p>

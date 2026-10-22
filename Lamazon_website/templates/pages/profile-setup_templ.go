@@ -8,13 +8,7 @@ package pages
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-// profile-setup.templ — ProfileSetupScreen, asked once right after a first
-// sign-in: name, mobile, an optional password, and the one address an order
-// needs. The city is shown, not asked: there is one campus to deliver to.
-
 import (
-	"lamazon/website/templates/components/account"
-	"lamazon/website/templates/components/navigation"
 	"lamazon/website/templates/components/ui"
 	"lamazon/website/templates/layouts"
 	"lamazon/website/viewdata"
@@ -55,6 +49,7 @@ func ProfileSetup(d ProfileSetupData) templ.Component {
 	})
 }
 
+// The live card stays in place while its owner's details arrive, one step at a time.
 func profileSetupBody(d ProfileSetupData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -76,163 +71,260 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main id=\"main\" class=\"mx-auto w-full max-w-[560px]\"><form class=\"flex min-h-[100dvh] flex-col\" hx-post=\"/profile/setup\" hx-swap=\"none\" x-data=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main id=\"main\" class=\"setup-shell\" x-bind:class=\"{ 'is-avatar-step': step === 0 }\" x-data=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileSetupState(d))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 31, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 17, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" x-on:htmx:before-request=\"saving = true\" x-on:htmx:after-request=\"saving = false\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><header class=\"setup-heading\"><a href=\"/?browse=1\" class=\"setup-brand\" aria-label=\"Uniminute home\"><img src=\"/static/images/logo.png\" alt=\"\" width=\"28\" height=\"28\">Uniminute</a> <span class=\"setup-heading-note\">A little about you.</span></header><div class=\"setup-progress-label\"><span x-text=\"complete ? 'Ready to go' : 'Step ' + (step + 1) + ' of 5'\">Step 1 of 5</span><span x-text=\"progress + '%'\">20%</span></div><div class=\"setup-progress\" role=\"progressbar\" aria-label=\"Profile setup\" aria-valuemin=\"0\" aria-valuemax=\"100\" x-bind:aria-valuenow=\"progress\" x-bind:aria-valuetext=\"complete ? 'Profile saved' : stepLabel\"><span x-bind:style=\"'transform: scaleX(' + progress / 100 + ')'\" style=\"transform:scaleX(.2)\"></span></div><div class=\"setup-layout\" x-show=\"!complete\"><section class=\"setup-preview\" aria-label=\"Your profile card preview\"><p class=\"setup-card-caption\">YOUR UNIMINUTE CARD</p><div class=\"profile-card-stage\"><div class=\"profile-card\" x-bind:class=\"{ 'is-flipped': step === 3 }\"><div class=\"profile-card-face profile-card-front\" x-bind:aria-hidden=\"step === 3\"><div class=\"profile-card-top\"><span>Uniminute</span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = navigation.ScreenHeader("Your details").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("sparkles", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<input type=\"hidden\" name=\"next\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"profile-card-person\"><div class=\"profile-card-details\"><p class=\"profile-card-name\" x-text=\"name.trim() || 'Your name, right here.'\">Your name, right here.</p><p class=\"profile-card-email\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(d.Next)
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(profileSetupEmail(d))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 35, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 36, Col: 61}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"> <input type=\"hidden\" name=\"city\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</p><p class=\"profile-card-phone\" x-show=\"phone.trim()\" x-text=\"displayPhone\" x-cloak></p></div><img class=\"profile-card-avatar\" x-bind:src=\"avatarURL\" src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(d.City)
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileAvatarURL(profileSetupAvatar(d)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 36, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 39, Col: 109}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"> <input type=\"hidden\" name=\"label\" x-bind:value=\"label\"><div class=\"flex-1 px-5 pb-6 pt-1\"><p class=\"text-[13.5px] text-muted\">We ask once, so an order knows who it is for and where it is going.</p><div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" alt=\"Your selected avatar\" width=\"112\" height=\"112\"></div><div class=\"profile-card-footer\"><span class=\"profile-card-interest\" x-text=\"interestLabel\">Everyday shopper</span> <span class=\"profile-card-address\" x-text=\"line.trim() || 'Your neighbourhood. Your favourites.'\">Your neighbourhood. Your favourites.</span></div></div><div class=\"profile-card-face profile-card-back\" x-bind:aria-hidden=\"step !== 3\"><div class=\"profile-card-top\"><span>Just between us.</span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Name", "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("lock", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Field("name", "Full name", "user", "text", "name").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div class=\"profile-card-secret\" aria-hidden=\"true\">•••• &nbsp;••••</div><p>Your password never appears on your card.</p><span class=\"profile-card-back-mark\">Uniminute</span></div></div></div><p class=\"setup-preview-note\" x-text=\"step === 3 ? 'A private space for your password.' : 'A little more you, with every step.'\">A little more you, with every step.</p></section><form class=\"setup-form\" x-on:submit.prevent=\"advance()\" x-on:input=\"error = ''; if (!saving) saveKey = ''\" x-bind:aria-busy=\"saving\" novalidate><div class=\"setup-step-copy\" aria-live=\"polite\"><h1 x-ref=\"stepTitle\" tabindex=\"-1\" x-text=\"title\">Make it yours.</h1><p x-text=\"description\">Pick a world you love. Then choose a face for your card.</p></div><div x-show=\"step === 0\" class=\"setup-step\"><div class=\"setup-interests\" role=\"group\" aria-label=\"Choose your interest\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"h-[22px]\"></div>")
+		for _, group := range profileInterests {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<button type=\"button\" class=\"setup-interest\" x-bind:aria-pressed=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 string
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue("interest === " + jsonArg(group.ID))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 109}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" x-on:click=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 string
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("chooseInterest(" + jsonArg(group.ID) + ")")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 168}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(group.Label)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 64, Col: 184}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div class=\"setup-avatar-heading\"><span>Choose your avatar</span><span x-text=\"options.length === 1 ? 'This one’s you?' : options.length + ' to choose from'\"></span></div><div class=\"setup-avatar-options\" role=\"group\" aria-label=\"Choose your avatar\"><template x-for=\"option in options\" x-bind:key=\"option.id\"><button type=\"button\" class=\"setup-avatar-option\" x-on:click=\"avatar = option.id; saveKey = ''\" x-bind:aria-pressed=\"avatar === option.id\" x-bind:aria-label=\"'Choose ' + option.label + ' avatar'\"><img x-bind:src=\"'/static/images/avatars/' + option.id + '.png'\" x-bind:alt=\"option.label\" width=\"100\" height=\"100\"> <span class=\"setup-avatar-check\" x-show=\"avatar === option.id\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Mobile number", "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("check", "h-3.5 w-3.5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Field("phone", "So the rider can call you", "phone", "tel", "tel").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></button></template></div></div><div x-show=\"step === 1\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-name\">Full name</label> <input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-name\" x-ref=\"nameInput\" name=\"name\" x-model=\"name\" autocomplete=\"name\" maxlength=\"100\" placeholder=\"What should we call you?\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><div x-show=\"step === 2\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-phone\">Mobile number</label><div class=\"setup-phone-input\"><span>+91</span><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-phone\" x-ref=\"phoneInput\" name=\"phone\" x-model=\"phone\" type=\"tel\" inputmode=\"tel\" autocomplete=\"tel-national\" maxlength=\"18\" placeholder=\"Your 10-digit mobile number\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></div><p class=\"setup-field-hint\">Used for delivery updates and calls from your rider.</p></div><div x-show=\"step === 3\" class=\"setup-step\" x-cloak><div x-show=\"!hasPassword\"><label class=\"setup-field-label\" for=\"setup-password\">Password <span>Optional</span></label><div class=\"setup-password-input\"><input x-bind:disabled=\"saving\" class=\"setup-input\" id=\"setup-password\" x-ref=\"passwordInput\" name=\"password\" x-model=\"password\" x-bind:type=\"revealPassword ? 'text' : 'password'\" type=\"password\" autocomplete=\"new-password\" minlength=\"8\" maxlength=\"200\" placeholder=\"At least 8 characters\" aria-describedby=\"setup-error\"><button class=\"setup-reveal\" type=\"button\" x-on:click=\"revealPassword = !revealPassword\" x-bind:aria-label=\"revealPassword ? 'Hide password' : 'Show password'\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = ui.Icon("eye", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Password", "Optional — lets you sign in without waiting for a code").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</button></div><p class=\"setup-field-hint\">Or skip this. You can always sign in with an email code.</p></div><p class=\"setup-field-hint\" x-show=\"hasPassword\">You already have a password. Keep going to add your address.</p></div><div x-show=\"step === 4\" class=\"setup-step\" x-cloak><label class=\"setup-field-label\" for=\"setup-address\">Delivery address</label> <textarea x-bind:disabled=\"saving\" class=\"setup-input setup-address-input\" id=\"setup-address\" x-ref=\"addressInput\" name=\"line\" x-model=\"line\" autocomplete=\"street-address\" maxlength=\"300\" rows=\"2\" placeholder=\"Hostel and room, or block and shop\" x-bind:aria-invalid=\"!!error\" aria-describedby=\"setup-error\"></textarea><div class=\"setup-address-meta\"><span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Field("password", "At least 8 characters", "lock", "password", "new-password").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Var9 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "d.City ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = ui.Icon("map-pin", "h-4 w-4").Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span><span>Save as</span></div><div class=\"setup-address-labels\" role=\"group\" aria-label=\"Address label\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Address", "Hostel and room, or block and shop").Render(ctx, templ_7745c5c3_Buffer)
+		for _, label := range []string{"Home", "Office", "Other"} {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<button class=\"setup-interest\" x-bind:disabled=\"saving\" type=\"button\" x-bind:aria-pressed=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var10 string
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("label === " + jsonArg(label))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 128}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\" x-on:click=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("label = " + jsonArg(label) + "; saveKey = ''")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 190}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var12 string
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 100, Col: 200}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div><p id=\"setup-error\" class=\"setup-error\" role=\"alert\" x-show=\"error\" x-text=\"error\" x-cloak></p><p class=\"setup-save-note\" role=\"status\" x-show=\"saving\" x-cloak>Saving your profile and delivery address…</p><div class=\"setup-actions\"><button type=\"button\" class=\"setup-back\" x-on:click=\"back()\" x-bind:disabled=\"saving\" x-show=\"step > 0\" x-cloak>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Field("line", "e.g. Hostel BH-9, Room 214", "house", "text", "street-address").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("arrow-left", "h-4 w-4").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<span>Back</span></button> <button type=\"submit\" class=\"setup-next\" x-bind:disabled=\"saving\" x-bind:aria-busy=\"saving\"><span x-show=\"saving\" class=\"setup-spinner\" x-cloak></span><span x-text=\"saving ? 'Saving…' : step === 4 ? 'Create my card' : step === 3 && !password ? 'Skip for now' : 'Continue'\">Continue</span><span x-show=\"!saving\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Save as", "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("arrow-right", "h-4 w-4").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex flex-wrap gap-2\" role=\"radiogroup\" aria-label=\"Save as\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</span></button></div></form></div><section class=\"setup-success\" x-show=\"complete\" x-cloak aria-labelledby=\"setup-success-title\"><div class=\"setup-success-avatar\"><img x-bind:src=\"avatarURL\" src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Choice("Home", "home", "label").Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(profileAvatarURL(profileSetupAvatar(d)))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 113, Col: 110}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Choice("Office", "office", "label").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" alt=\"Your saved avatar\" width=\"112\" height=\"112\"><span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Choice("Other", "other", "label").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("check", "h-5 w-5").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div class=\"h-[22px]\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</span></div><p class=\"setup-success-percent\">100% YOU.</p><h1 id=\"setup-success-title\" x-ref=\"successTitle\" tabindex=\"-1\">Your card is ready.</h1><p>Your profile is saved. Your neighbourhood is waiting.</p><a class=\"setup-next\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = account.Section("Where we deliver", "").Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var14 templ.SafeURL
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(d.Next))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/pages/profile-setup.templ`, Line: 117, Col: 49}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"flex items-center rounded bg-white px-4 py-3.5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" x-bind:href=\"next\"><span>Start shopping</span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = ui.Icon("circle-check-big", "h-4 w-4 shrink-0 text-[#1B7F3B]").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ui.Icon("arrow-right", "h-4 w-4").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<p class=\"ml-2.5 flex-1 text-[14px] font-bold text-text\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(d.City)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/profile-setup.templ`, Line: 63, Col: 70}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</p></div></div>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = account.SubmitBar("Save and continue", "Saving…").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</form></main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</a></section><noscript><p>Enable JavaScript to complete your profile, or return to <a href=\"/\">the shop</a>.</p></noscript></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -240,18 +332,33 @@ func profileSetupBody(d ProfileSetupData) templ.Component {
 	})
 }
 
-func profileSetupState(d ProfileSetupData) string {
-	name, phone := "", ""
+func profileSetupEmail(d ProfileSetupData) string {
 	if d.Page.User != nil {
-		name, phone = d.Page.User.Name, d.Page.User.Phone
+		return d.Page.User.Email
 	}
-	return "{ name: " + jsonArg(name) + ", phone: " + jsonArg(phone) + ", password: '', line: '', label: 'home', saving: false," +
-		" get blocker() {" +
-		" if (!this.name.trim()) return 'Add your name';" +
-		" if (this.phone.trim().length < 7) return 'Add a mobile number';" +
-		" if (this.password && this.password.length < 8) return 'A password needs at least 8 characters';" +
-		" if (!this.line.trim()) return 'Add where we deliver to you';" +
-		" return null } }"
+	return ""
+}
+func profileSetupAvatar(d ProfileSetupData) string {
+	if d.Page.User != nil && d.Page.User.Avatar != "" {
+		return d.Page.User.Avatar
+	}
+	return "everyday-shopper"
+}
+func profileSetupState(d ProfileSetupData) string {
+	name, phone, avatar, interest, line, label, hasPassword := "", "", "everyday-shopper", "everyday", "", "Home", false
+	if d.Page.User != nil {
+		name, phone, hasPassword = d.Page.User.Name, d.Page.User.Phone, d.Page.User.HasPassword
+		if d.Page.User.Avatar != "" {
+			avatar = d.Page.User.Avatar
+		}
+		if d.Page.User.Interest != "" {
+			interest = d.Page.User.Interest
+		}
+	}
+	if d.Page.Address != nil {
+		line, label = d.Page.Address.Line, d.Page.Address.Label
+	}
+	return "profileSetup(" + jsonArg(map[string]any{"name": name, "phone": phone, "avatar": avatar, "interest": interest, "line": line, "label": label, "hasPassword": hasPassword, "city": d.City, "next": d.Next, "groups": profileInterests}) + ")"
 }
 
 var _ = templruntime.GeneratedTemplate

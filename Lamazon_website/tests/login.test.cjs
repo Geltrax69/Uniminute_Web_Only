@@ -5,7 +5,7 @@ const {readFileSync}=require('node:fs');
 function component(){
  const source=readFileSync(new URL('../static/js/app.js',`file://${__filename}`),'utf8');
  const begin=source.indexOf("  Alpine.data('login'");
- const end=source.indexOf('  // ── seller: store form',begin);
+ const end=source.indexOf("  Alpine.data(",begin+20);
  let factory,now=100000,callback,cleared=0;
  vm.runInNewContext(source.slice(begin,end),{Alpine:{data(_name,f){factory=f}},Date:{now:()=>now},setInterval(fn){callback=fn;return 1},clearInterval(){cleared++}});
  return {factory,advance(ms){now+=ms;if(callback)callback()},cleared:()=>cleared};

@@ -17,6 +17,8 @@ import (
 // change on the next read with nothing to keep in sync.
 type User struct {
 	Email    string   `json:"email"`
+	Avatar   string   `json:"avatar"`
+	Interest string   `json:"interest"`
 	PublicID string   `json:"id"` // LMZ-1001, the one a person quotes
 	Name     string   `json:"name"`
 	Phone    string   `json:"phone"`
@@ -57,10 +59,10 @@ func (d *DB) user(ctx context.Context, email string) (User, error) {
 		SELECT u.public_id, u.name, u.phone,
 		       EXISTS (SELECT 1 FROM seller_stores s WHERE s.owner = u.email),
 		       u.pass_hash <> '',
-		       EXISTS (SELECT 1 FROM addresses a WHERE a.email = u.email)
+		       EXISTS (SELECT 1 FROM addresses a WHERE a.email = u.email), u.avatar, u.interest
 		FROM users u WHERE u.email = $1`, email).
 		Scan(&u.PublicID, &u.Name, &u.Phone, &u.HasStore, &u.HasPassword,
-			&u.HasAddress)
+			&u.HasAddress, &u.Avatar, &u.Interest)
 	if err != nil {
 		return u, err
 	}
@@ -87,10 +89,13 @@ func (a *API) handleMe(w http.ResponseWriter, r *http.Request) {
 // PATCH /api/me — name, phone, and a password if they want one.
 func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name            *string `json:"name"`
-		Phone           *string `json:"phone"`
-		Password        *string `json:"password"`
-		CurrentPassword string  `json:"currentPassword"`
+		Name            *string  `json:"name"`
+		Phone           *string  `json:"phone"`
+		Password        *string  `json:"password"`
+		CurrentPassword string   `json:"currentPassword"`
+		Avatar          *string  `json:"avatar"`
+		SetupAddress    *Address `json:"setupAddress"`
+		SetupRequestID  string   `json:"setupRequestId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -110,6 +115,59 @@ func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		*in.Phone = normalisePhone(*in.Phone)
+	}
+	var interest *string
+	if in.Avatar != nil {
+		group, ok := profileAvatars[*in.Avatar]
+		if !ok {
+			writeError(w, 400, "Choose an avatar from the collection.")
+			return
+		}
+		interest = &group
+	}
+	if in.SetupAddress != nil {
+		if in.Name == nil || in.Phone == nil {
+			writeError(w, 400, "Name and mobile number are required.")
+			return
+		}
+		if err := validateAddress(in.SetupAddress); err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		city, ok := resolveCity(in.SetupAddress.City)
+		if !ok {
+			writeError(w, 400, "Choose a supported delivery location.")
+			return
+		}
+		in.SetupAddress.City = city
+		in.SetupAddress.Name, in.SetupAddress.Phone = *in.Name, *in.Phone
+		if in.SetupAddress.Label == "" {
+			in.SetupAddress.Label = "Home"
+		}
+		if len(in.SetupRequestID) < 16 || len(in.SetupRequestID) > 80 {
+			writeError(w, 400, "Invalid profile save. Reload and try again.")
+			return
+		}
+		// A response lost on a slow connection may be retried after its
+		// password was committed. Replay the result without changing it again.
+		var completed bool
+		if err := a.db.sql.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM users WHERE email=$1 AND setup_request_id=$2)`, a.owner(r), in.SetupRequestID).Scan(&completed); err != nil {
+			writeError(w, 503, "Could not check profile save.")
+			return
+		}
+		if completed {
+			u, err := a.db.user(r.Context(), a.owner(r))
+			if err != nil {
+				writeError(w, 503, "Could not load profile.")
+				return
+			}
+			writeJSON(w, 200, u)
+			return
+		}
+	}
+
+	if in.SetupAddress == nil {
+		in.SetupRequestID = ""
 	}
 	email := a.owner(r)
 	if _, err := a.db.upsertUser(r.Context(), email); err != nil {
@@ -162,10 +220,26 @@ func (a *API) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(r.Context(), `UPDATE users SET name=COALESCE($2,name),phone=COALESCE($3,phone),pass_hash=COALESCE($4,pass_hash) WHERE email=$1`, email, in.Name, in.Phone, hash); err != nil {
+	if _, err = tx.ExecContext(r.Context(), `UPDATE users SET name=COALESCE($2,name),phone=COALESCE($3,phone),pass_hash=COALESCE($4,pass_hash),avatar=COALESCE($5,avatar),interest=COALESCE($6,interest),setup_request_id=CASE WHEN $7<>'' THEN $7 ELSE setup_request_id END WHERE email=$1`, email, in.Name, in.Phone, hash, in.Avatar, interest, in.SetupRequestID); err != nil {
 		writeError(w, 503, "could not update profile")
 		return
 	}
+	if address := in.SetupAddress; address != nil {
+		// The user UPDATE holds the same owner lock as address-book writes.
+		// Repeated saves update the default address rather than duplicating it.
+		var id string
+		err := tx.QueryRowContext(r.Context(), `SELECT id FROM addresses WHERE email=$1 ORDER BY is_default DESC,created_at,id LIMIT 1`, email).Scan(&id)
+		if errors.Is(err, sql.ErrNoRows) {
+			_, err = tx.ExecContext(r.Context(), `INSERT INTO addresses(email,label,line,city,name,phone,is_default) VALUES($1,$2,$3,$4,$5,$6,true)`, email, address.Label, address.Line, address.City, address.Name, address.Phone)
+		} else if err == nil {
+			_, err = tx.ExecContext(r.Context(), `UPDATE addresses SET label=$3,line=$4,city=$5,name=$6,phone=$7 WHERE id=$1 AND email=$2`, id, email, address.Label, address.Line, address.City, address.Name, address.Phone)
+		}
+		if err != nil {
+			writeError(w, 503, "Could not save delivery address. Your profile has not changed.")
+			return
+		}
+	}
+
 	if hash != nil {
 		current := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if _, err = tx.ExecContext(r.Context(), `DELETE FROM auth_sessions WHERE email=$1 AND access_hash<>$2`, email, hashCode(current)); err != nil {

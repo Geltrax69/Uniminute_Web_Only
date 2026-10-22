@@ -208,6 +208,8 @@ type Season struct {
 }
 
 type User struct {
+	Avatar      string   `json:"avatar"`
+	Interest    string   `json:"interest"`
 	Email       string   `json:"email"`
 	PublicID    string   `json:"id"`
 	Name        string   `json:"name"`
